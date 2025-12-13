@@ -523,7 +523,7 @@
       <div class="nav__menu" id="nav-menu">
         <ul class="nav__list">
           <li class="nav__item">
-            <a href="index.html" class="nav__link active">Home</a>
+            <a href="index.php" class="nav__link active">Home</a>
           </li>
 
           <li class="nav__item">
@@ -1026,7 +1026,7 @@
 
 
   <!-- Your GSAP animations file -->
-  <script src="assets/js/gsap.js"></script>
+  <script src="./assets/js/gsap.js"></script>
 
  
 

@@ -157,6 +157,7 @@ a {
 }
 
 #logo{
+  margin-top: 11px;
   height: 50px;
   width: auto;
   border-radius: 100px;
@@ -2904,7 +2905,7 @@ input:focus {
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 700px) {
   .modern-hero {
     height: 50vh;
   }
@@ -2990,7 +2991,7 @@ input:focus {
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 700px) {
   .modern-hero {
     height: 60vh;
   }
@@ -3128,7 +3129,7 @@ input:focus {
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 700px) {
   header {
     padding: 10px 20px;
   }
@@ -3161,7 +3162,7 @@ input:focus {
   color: #8b5cf6;
 }
 /* Responsive media query code for small screens */
-@media (max-width: 768px) {
+@media (max-width: 700px) {
   .wrapper {
     margin: 0 10px 25px;
   }
@@ -3190,7 +3191,7 @@ input:focus {
 }
 
 /* Mobile Responsiveness */
-@media (max-width: 768px) {
+@media (max-width: 700px) {
   .search-box {
     flex-direction: column;
     align-items: stretch;
