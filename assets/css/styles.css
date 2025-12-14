@@ -36,13 +36,14 @@
 }
 
 html {
-  scroll-behavior: smooth;
+
   overflow-x: hidden;
 }
 
 body,
 input {
   font-family: var(--body-font);
+   scroll-behavior: smooth;
   font-size: var(--normal-font-size);
 }
 

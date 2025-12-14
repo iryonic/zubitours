@@ -31,7 +31,7 @@
       overflow: hidden;
     }
 
-    .hero-video-background {
+    .hero-img-background {
       position: absolute;
       top: 0;
       left: 0;
@@ -42,7 +42,7 @@
       overflow: hidden;
     }
 
-    .hero-video-background img{
+    .hero-img-background img{
       width: 100%;
       height: 100%;
       object-fit: cover;
@@ -570,7 +570,7 @@
   <main class="main">
     <!-- Improved Hero Section -->
     <section class="modern-hero">
-      <div class="hero-video-background">
+      <div class="hero-img-background">
         <!-- You would replace this with an actual video file -->
         <img src="assets/img/dalbg.jpg" alt="Hero Background"  id="banner"/>
       </div>
@@ -1026,11 +1026,11 @@
 
 
   <!-- Your GSAP animations file -->
-  <script src="./assets/js/gsap.js"></script>
+  <!-- <script src="./assets/js/gsap.js"></script> -->
 
  
 
-  <script>
+  <!-- <script>
     // SEARCH TOUR
     document
       .getElementById("tourForm")
@@ -1085,15 +1085,15 @@
         observer.observe(card);
       });
     });
-  </script>
+  </script> -->
 
   <!-- Linking GSAP script -->
 
-  <script
+  <!-- <script
     src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/gsap.min.js"
     integrity="sha512-NcZdtrT77bJr4STcmsGAESr06BYGE8woZdSdEgqnpyqac7sugNO+Tr4bGwGF3MsnEkGKhU2KL2xh6Ec+BqsaHA=="
     crossorigin="anonymous"
-    referrerpolicy="no-referrer"></script>
+    referrerpolicy="no-referrer"></script> -->
 
   <script>
     let carouselList = document.querySelector('.brands-list');
@@ -1104,10 +1104,14 @@
       repeat: -1,
 
     });
-  </script>
+  </script> 
+
+  <!-- fast images loading script
+    -->
+
 
    <!--=============== MAIN JS ===============-->
-  <script src="./assets/js/main.js"></script>
+  <script src="./assets/js/main.js" defer></script>
 </body>
 
 </html>

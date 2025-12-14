@@ -3,17 +3,17 @@
 // local ENVIRONMENT  setup 
 
 
-// $servername = "localhost";
-// $usename = "root";
-// $password = "";
-// $dbname = "travel_db";
+$servername = "localhost";
+$usename = "root";
+$password = "";
+$dbname = "travel_db";
 
 
 // Production ENVIRONMENT  setup 
-$servername = "localhost";
-$usename = "u255290550_zubitours";
-$password = "Zubi@1234#";
-$dbname = "u255290550_zubitours";
+// $servername = "localhost";
+// $usename = "u255290550_zubitours";
+// $password = "Zubi@1234#";
+// $dbname = "u255290550_zubitours";
 
 
 
