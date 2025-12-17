@@ -63,7 +63,7 @@ body {
   color: var(--text-color);
 }
 body::-webkit-scrollbar {
-  width: 8px;
+  width: 12px;
   background: transparent;
 }
 
@@ -1977,9 +1977,6 @@ input:focus {
   font-size: 1.1rem;
 }
 
-.submit-btn:hover {
-  background: var(--first-color-alt);
-}
 
 .faq-section {
   padding: 80px 20px;
@@ -2298,7 +2295,6 @@ input:focus {
 
 .card-button {
   display: block;
-  width: 100%;
   padding: 12px;
   background: var(--first-color);
   color: white;
@@ -2310,6 +2306,7 @@ input:focus {
   text-align: center;
   text-decoration: none;
 }
+
 
 .card-button:hover {
   transform: translateY(-3px);

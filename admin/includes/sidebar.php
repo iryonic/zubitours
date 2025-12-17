@@ -14,16 +14,12 @@
                     <i class="ri-dashboard-line"></i>
                     <span>Dashboard</span>
                 </a>
-                <a href="#" class="menu-item">
-                    <i class="ri-calendar-event-line"></i>
-                    <span>Bookings</span>
-                    <span class="menu-badge">12</span>
-                </a>
+               
                
             </div>
 
             <div class="menu-section">
-                <div class="menu-label">Content</div>
+                <div class="menu-label">Website</div>
                 <a href="manage-destinations.php" class="menu-item">
                     <i class="ri-map-2-line"></i>
                     <span>Destinations</span>
@@ -39,6 +35,11 @@
                 <a href="manage-car-rentals.php" class="menu-item">
                     <i class="ri-car-line"></i>
                     <span>Car Rentals</span>
+                </a>
+                 <a href="./manage-contacts.php" class="menu-item active">
+                    <i class="ri-mail-line"></i>
+                    <span>Contact</span>
+                   
                 </a>
             </div>
 

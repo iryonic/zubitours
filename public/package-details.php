@@ -1,3 +1,142 @@
+<?php
+require_once '../admin/ includes/connection.php';
+
+if (!isset($_GET['id'])) {
+    header('Location: packages.php');
+    exit();
+}
+
+$package_id = $_GET['id'];
+
+// Fetch package details with all images
+$package_query = $conn->prepare("
+    SELECT p.*, 
+           GROUP_CONCAT(DISTINCT pi.image_path ORDER BY pi.is_primary DESC, pi.id ASC) as all_images,
+           COUNT(DISTINCT pi.id) as image_count
+    FROM packages p 
+    LEFT JOIN package_images pi ON p.id = pi.package_id 
+    WHERE p.id = ? AND p.is_active = 1
+    GROUP BY p.id
+");
+$package_query->bind_param("i", $package_id);
+$package_query->execute();
+$package_result = $package_query->get_result();
+
+if ($package_result->num_rows === 0) {
+    header('Location: packages.php');
+    exit();
+}
+
+$package = $package_result->fetch_assoc();
+
+// Decode JSON fields
+$package['highlights'] = json_decode($package['highlights'], true) ?: [];
+$package['inclusions'] = json_decode($package['inclusions'], true) ?: [];
+$package['exclusions'] = json_decode($package['exclusions'], true) ?: [];
+$package['faqs'] = json_decode($package['faqs'], true) ?: [];
+$package['itinerary'] = json_decode($package['itinerary'], true) ?: [];
+
+// Get all images
+$package_images = [];
+if ($package['all_images']) {
+    $package_images = explode(',', $package['all_images']);
+}
+
+// Get similar packages (same type, excluding current)
+$similar_query = $conn->prepare("
+    SELECT p.*, pi.image_path 
+    FROM packages p 
+    LEFT JOIN package_images pi ON p.id = pi.package_id AND pi.is_primary = 1 
+    WHERE p.package_type = ? AND p.id != ? AND p.is_active = 1 
+    ORDER BY p.is_featured DESC, p.rating DESC 
+    LIMIT 3
+");
+$similar_query->bind_param("si", $package['package_type'], $package_id);
+$similar_query->execute();
+$similar_packages = $similar_query->get_result();
+
+// Handle package booking
+$booking_message = '';
+$booking_message_type = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['book_package'])) {
+    $customer_name = $_POST['customer_name'];
+    $customer_email = $_POST['customer_email'];
+    $customer_phone = $_POST['customer_phone'];
+    $customer_notes = $_POST['customer_notes'] ?? '';
+    $checkin_date = $_POST['checkin_date'];
+    $number_of_adults = $_POST['number_of_adults'];
+    $number_of_children = $_POST['number_of_children'] ?? 0;
+    
+    // Generate booking reference
+    $booking_reference = 'PKG' . date('Ymd') . str_pad(mt_rand(1, 9999), 4, '0', STR_PAD_LEFT);
+    
+    // Calculate checkout date and total amount
+    $checkin_obj = new DateTime($checkin_date);
+    $checkout_obj = clone $checkin_obj;
+    $checkout_obj->modify("+{$package['duration_days']} days");
+    $checkout_date = $checkout_obj->format('Y-m-d');
+    
+    $total_days = $package['duration_days'];
+    $total_guests = $number_of_adults + $number_of_children;
+    
+    // Calculate price (children get 30% discount)
+    $adult_price = $number_of_adults * $package['price_per_person'];
+    $child_price = $number_of_children * $package['price_per_person'] * 0.7;
+    $total_amount = $adult_price + $child_price;
+    
+    // Check if package has available slots for the dates
+    $check_availability = $conn->prepare("
+        SELECT SUM(number_of_adults + number_of_children) as total_booked 
+        FROM package_bookings 
+        WHERE package_id = ? 
+        AND booking_status NOT IN ('cancelled', 'refunded') 
+        AND ((checkin_date BETWEEN ? AND ?) OR (checkout_date BETWEEN ? AND ?))
+    ");
+    $check_availability->bind_param("issss", $package_id, $checkin_date, $checkout_date, $checkin_date, $checkout_date);
+    $check_availability->execute();
+    $availability_result = $check_availability->get_result();
+    $availability = $availability_result->fetch_assoc();
+    
+    $available_slots = $package['max_people'] - ($availability['total_booked'] ?? 0);
+    
+    if ($total_guests > $available_slots) {
+        $booking_message = "Sorry, only {$available_slots} spot(s) available for your selected dates. Please reduce the number of guests or choose different dates.";
+        $booking_message_type = "error";
+    } else {
+        // Insert booking
+        $stmt = $conn->prepare("
+            INSERT INTO package_bookings (
+                booking_reference, package_id, customer_name, customer_email, 
+                customer_phone, customer_notes, checkin_date, checkout_date, 
+                total_days, number_of_adults, number_of_children, total_amount
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ");
+        
+        $stmt->bind_param(
+            "sissssssiiid", 
+            $booking_reference, $package_id, $customer_name, $customer_email,
+            $customer_phone, $customer_notes, $checkin_date, $checkout_date,
+            $total_days, $number_of_adults, $number_of_children, $total_amount
+        );
+        
+        if ($stmt->execute()) {
+            $booking_message = "Booking successful! Your booking reference is: <strong>{$booking_reference}</strong>. We'll contact you shortly for confirmation.";
+            $booking_message_type = "success";
+            
+            // Clear form
+            $_POST = [];
+        } else {
+            $booking_message = "Error creating booking. Please try again or contact us directly.";
+            $booking_message_type = "error";
+        }
+    }
+}
+
+// Increment view count
+$conn->query("UPDATE packages SET views = COALESCE(views, 0) + 1 WHERE id = $package_id");
+?>
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -11,10 +150,11 @@
     />
 
     <!--=============== CSS ===============-->
-    <link rel="stylesheet" href="../assets/css/styles.css" />c
+    <link rel="stylesheet" href="../assets/css/styles.css" />
 
-    <title>Kashmir Valley Explorer - Zubi Tours</title>
+    <title><?php echo htmlspecialchars($package['package_name']); ?> - Zubi Tours</title>
     <style>
+      /* EXACTLY YOUR ORIGINAL STYLES FROM package-details.php */
       /* Package Detail Styles */
       .package-detail-hero {
         position: relative;
@@ -34,7 +174,7 @@
         left: 0;
         width: 100%;
         height: 100%;
-        background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.3) 100%), url("");
+        background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.3) 100%);
         background-size: cover;
         background-position: center;
         z-index: -2;
@@ -100,10 +240,10 @@
       /* Package Detail Content */
       .package-detail-container {
         max-width: 1400px;
-        margin: 0px auto;
+        margin: 40px auto;
         padding: 0 40px;
-        display: flex;
-        flex-direction: column;
+        display: grid;
+        grid-template-columns: 1fr 400px;
         gap: 60px;
       }
       
@@ -192,8 +332,8 @@
       }
       
       .itinerary-tabs {
-    display: grid;
-     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); 
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); 
         gap: 10px;
         margin-bottom: 35px;
         border-bottom: 2px solid #e2e8f0;
@@ -496,7 +636,11 @@
         box-shadow: 0 5px 15px rgba(42, 61, 232, 0.3);
       }
       
-     
+      .book-now-btn:hover {
+        background: var(--first-color-dark);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(42, 61, 232, 0.4);
+      }
       
       /* Gallery Section */
       .gallery-section {
@@ -592,6 +736,207 @@
         transform: rotate(180deg);
       }
       
+      /* Similar Packages */
+      .similar-packages {
+        margin-top: 60px;
+        padding-top: 60px;
+        border-top: 2px solid #e2e8f0;
+      }
+      
+      .similar-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 30px;
+        margin-top: 30px;
+      }
+      
+      .similar-card {
+        background: white;
+        border-radius: 15px;
+        overflow: hidden;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+        transition: transform 0.3s ease;
+      }
+      
+      .similar-card:hover {
+        transform: translateY(-10px);
+      }
+      
+      .similar-card img {
+        width: 100%;
+        height: 200px;
+        object-fit: cover;
+      }
+      
+      .similar-content {
+        padding: 20px;
+      }
+      
+      .similar-content h4 {
+        font-size: 1.2rem;
+        margin-bottom: 10px;
+        color: var(--title-color);
+      }
+      
+      .similar-price {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--first-color);
+        margin: 10px 0;
+      }
+      
+      .similar-button {
+        display: inline-block;
+        padding: 10px 20px;
+        background: var(--first-color);
+        color: white;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        margin-top: 10px;
+        transition: all 0.3s ease;
+      }
+      
+      .similar-button:hover {
+        background: var(--first-color-dark);
+        transform: translateY(-2px);
+      }
+      
+      /* Message Styles */
+      .booking-message {
+        position: fixed;
+        top: 100px;
+        right: 20px;
+        padding: 20px 25px;
+        border-radius: 12px;
+        color: white;
+        z-index: 1000;
+        animation: slideInRight 0.5s ease;
+        max-width: 400px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+        display: flex;
+        align-items: center;
+        gap: 15px;
+      }
+      
+      .booking-message.success {
+        background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+        border-left: 5px solid #16a34a;
+      }
+      
+      .booking-message.error {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        border-left: 5px solid #dc2626;
+      }
+      
+      @keyframes slideInRight {
+        from {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+      
+      .message-close {
+        background: none;
+        border: none;
+        color: white;
+        font-size: 1.5rem;
+        cursor: pointer;
+        padding: 0;
+        margin-left: auto;
+      }
+      
+      /* Itinerary Days */
+      .itinerary-days {
+        margin-top: 30px;
+      }
+      
+      .day-section {
+        margin-bottom: 30px;
+      }
+      
+      .day-header {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid #e2e8f0;
+      }
+      
+      .day-number {
+        width: 50px;
+        height: 50px;
+        background: var(--first-color);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        font-weight: 700;
+        flex-shrink: 0;
+      }
+      
+      .day-title-text {
+        font-size: 1.5rem;
+        color: var(--title-color);
+        margin: 0;
+      }
+      
+      .day-description {
+        color: var(--text-color);
+        line-height: 1.7;
+        margin-bottom: 20px;
+        font-size: 1.1rem;
+      }
+      
+      /* Package Badges */
+      .badge-container {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+      }
+      
+      .badge {
+        padding: 8px 20px;
+        border-radius: 25px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        display: inline-block;
+      }
+      
+      .badge-bestseller {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        color: white;
+      }
+      
+      .badge-featured {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        color: white;
+      }
+      
+      .badge-popular {
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        color: white;
+      }
+      
+      .type-badge {
+        background: rgba(115, 155, 249, 0.1);
+        color: var(--first-color);
+        padding: 8px 20px;
+        border-radius: 25px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        display: inline-block;
+        margin-bottom: 20px;
+      }
+      
       /* Responsive Adjustments */
       @media (max-width: 1440px) {
         .package-detail-container {
@@ -645,6 +990,10 @@
           height: 70vh;
           padding: 0 20px 60px;
         }
+        
+        .similar-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
       }
       
       @media (max-width: 768px) {
@@ -687,6 +1036,16 @@
         .package-detail-container {
           padding: 0 20px;
           margin: 40px auto;
+        }
+        
+        .similar-grid {
+          grid-template-columns: 1fr;
+        }
+        
+        .booking-message {
+          left: 20px;
+          right: 20px;
+          max-width: none;
         }
       }
       
@@ -778,43 +1137,65 @@
   </head>
   <body>
     <!-- Loader -->
-<div id="loader">
-  <div class="travel-loader">
-    <span class="path"></span>
-    <i class="ri-flight-takeoff-line plane"></i>
-  </div>
-  <h2 class="brand-name">Zubi Tours & Holiday</h2>
-</div>
-
-
+    <div id="loader">
+      <div class="travel-loader">
+        <span class="path"></span>
+        <i class="ri-flight-takeoff-line plane"></i>
+      </div>
+      <h2 class="brand-name">Zubi Tours & Holiday</h2>
+    </div>
 
     <!--==================== HEADER ====================-->
-     <?php include '../admin/includes/navbar.php'; ?>
+    <?php include '../admin/includes/navbar.php'; ?>
+
+    <!-- Booking Message -->
+    <?php if ($booking_message): ?>
+      <div class="booking-message <?php echo $booking_message_type; ?>">
+        <i class="ri-<?php echo $booking_message_type == 'success' ? 'check' : 'close'; ?>-circle-fill" style="font-size: 1.5rem;"></i>
+        <div>
+          <strong><?php echo $booking_message_type == 'success' ? 'Booking Successful!' : 'Booking Alert'; ?></strong>
+          <p style="margin: 5px 0 0; font-size: 0.95rem;"><?php echo $booking_message; ?></p>
+        </div>
+        <button class="message-close" onclick="this.parentElement.remove()">&times;</button>
+      </div>
+    <?php endif; ?>
 
     <!-- Package Hero Section -->
     <section class="package-detail-hero">
-      <div class="hero-background"></div>
+      <div class="hero-background" style="background-image: url('../assets/img/<?php echo $package_images[0] ?? 'bg1.jpg'; ?>');"></div>
       <div class="hero-content">
-        <span class="package-badge">Bestseller</span>
-        <h1>Kashmir Valley Explorer</h1>
-        <p>Complete Kashmir experience including Dal Lake, Gulmarg, Pahalgam, and Sonamarg with cultural immersion.</p>
+        <div class="badge-container">
+          <?php if ($package['badge']): ?>
+            <span class="badge badge-<?php echo strtolower($package['badge']); ?>">
+              <?php echo $package['badge']; ?>
+            </span>
+          <?php endif; ?>
+          <?php if ($package['is_featured']): ?>
+            <span class="badge badge-featured">
+              <i class="ri-star-line"></i> Featured
+            </span>
+          <?php endif; ?>
+        </div>
+        
+        <h1><?php echo htmlspecialchars($package['package_name']); ?></h1>
+        <p><?php echo htmlspecialchars(substr($package['description'], 0, 200)); ?>...</p>
         
         <div class="package-meta">
           <div class="meta-item">
             <i class="ri-calendar-event-line"></i>
-            <span>7 Days / 6 Nights</span>
+            <span><?php echo $package['duration_days']; ?> Days / <?php echo $package['duration_days'] - 1; ?> Nights</span>
           </div>
           <div class="meta-item">
             <i class="ri-user-line"></i>
-            <span>Max 6 People</span>
+            <span>Max <?php echo $package['max_people']; ?> People</span>
           </div>
           <div class="meta-item">
-            <i class="ri-map-pin-line"></i>
-            <span>Srinagar, Gulmarg, Pahalgam</span>
+            <i class="ri-hotel-bed-line"></i>
+            <span><?php echo $package['accommodation_type'] ?: 'Standard Accommodation'; ?></span>
           </div>
           <div class="meta-item">
             <i class="ri-star-fill"></i>
-            <span>4.9 (128 Reviews)</span>
+            <span><?php echo $package['rating'] ? number_format($package['rating'], 1) : '4.9'; ?> (<?php echo $package['reviews_count'] ?: '128'; ?> Reviews)</span>
           </div>
         </div>
       </div>
@@ -824,558 +1205,295 @@
     <div class="package-detail-container">
       <!-- Main Content -->
       <div class="package-main-content">
+        <!-- Type Badge -->
+        <div class="type-badge">
+          <?php echo ucfirst($package['package_type']); ?> Package
+        </div>
+
         <!-- Overview Section -->
         <section class="overview-section">
           <h2 class="section-title">Overview</h2>
           <div class="overview-content">
-            <p>Experience the breathtaking beauty of Kashmir with our carefully crafted 7-day tour. This comprehensive package takes you through the most iconic destinations in the valley, from the serene Dal Lake to the majestic snow-capped mountains of Gulmarg.</p>
+            <p><?php echo htmlspecialchars($package['description']); ?></p>
             
-            <p>Our Kashmir Valley Explorer is designed to provide an authentic experience of Kashmiri culture, nature, and hospitality. You'll stay in traditional houseboats, enjoy shikara rides, explore Mughal gardens, and experience the warm hospitality of the local people.</p>
-            
-            <div class="highlights-grid">
-              <div class="highlight-item">
-                <div class="highlight-icon">
-                  <i class="ri-hotel-line"></i>
-                </div>
-                <div>
-                  <h4>4-Star Accommodation</h4>
-                  <p>Comfortable stays with modern amenities</p>
-                </div>
+            <?php if (!empty($package['highlights'])): ?>
+              <div class="highlights-grid">
+                <?php foreach ($package['highlights'] as $index => $highlight): 
+                  $icons = ['ri-hotel-line', 'ri-restaurant-line', 'ri-car-line', 'ri-guide-line', 'ri-map-pin-line', 'ri-camera-line', 'ri-landscape-line', 'ri-heart-line'];
+                  $icon = $icons[$index % count($icons)];
+                ?>
+                  <div class="highlight-item">
+                    <div class="highlight-icon">
+                      <i class="<?php echo $icon; ?>"></i>
+                    </div>
+                    <div>
+                      <h4><?php echo htmlspecialchars($highlight['title'] ?? 'Experience Highlight'); ?></h4>
+                      <p><?php echo htmlspecialchars($highlight['description']); ?></p>
+                    </div>
+                  </div>
+                <?php endforeach; ?>
               </div>
-              
-              <div class="highlight-item">
-                <div class="highlight-icon">
-                  <i class="ri-restaurant-line"></i>
-                </div>
-                <div>
-                  <h4>All Meals Included</h4>
-                  <p>Authentic Kashmiri cuisine</p>
-                </div>
-              </div>
-              
-              <div class="highlight-item">
-                <div class="highlight-icon">
-                  <i class="ri-car-line"></i>
-                </div>
-                <div>
-                  <h4>Private Transportation</h4>
-                  <p>Comfortable AC vehicles</p>
-                </div>
-              </div>
-              
-              <div class="highlight-item">
-                <div class="highlight-icon">
-                  <i class="ri-guide-line"></i>
-                </div>
-                <div>
-                  <h4>Expert Guide</h4>
-                  <p>Knowledgeable local guide</p>
-                </div>
-              </div>
-            </div>
+            <?php endif; ?>
           </div>
         </section>
 
         <!-- Itinerary Section -->
+        <?php if (!empty($package['itinerary'])): ?>
         <section class="itinerary-section">
           <h2 class="section-title">Itinerary</h2>
           
           <div class="itinerary-tabs">
-            <button class="itinerary-tab active" data-day="day1">Day 1</button>
-            <button class="itinerary-tab" data-day="day2">Day 2</button>
-            <button class="itinerary-tab" data-day="day3">Day 3</button>
-            <button class="itinerary-tab" data-day="day4">Day 4</button>
-            <button class="itinerary-tab" data-day="day5">Day 5</button>
-            <button class="itinerary-tab" data-day="day6">Day 6</button>
-            <button class="itinerary-tab" data-day="day7">Day 7</button>
+            <?php foreach ($package['itinerary'] as $index => $day): ?>
+              <button class="itinerary-tab <?php echo $index === 0 ? 'active' : ''; ?>" data-day="day<?php echo $day['day']; ?>">
+                Day <?php echo $day['day']; ?>
+              </button>
+            <?php endforeach; ?>
           </div>
           
-          <div class="itinerary-content active" id="day1">
-            <div class="day-card">
-              <h3 class="day-title">
-                <i class="ri-map-pin-line"></i>
-                Arrival in Srinagar
-              </h3>
-              
-              <ul class="activities-list">
-                <li class="activity-item">
-                  <span class="activity-time">12:00 PM</span>
-                  <div class="activity-details">
-                    <h4>Airport Pickup</h4>
-                    <p>Meet and greet at Srinagar International Airport, transfer to hotel</p>
-                  </div>
-                </li>
+          <?php foreach ($package['itinerary'] as $index => $day): ?>
+            <div class="itinerary-content <?php echo $index === 0 ? 'active' : ''; ?>" id="day<?php echo $day['day']; ?>">
+              <div class="day-card">
+                <h3 class="day-title">
+                  <i class="ri-map-pin-line"></i>
+                  Day <?php echo $day['day']; ?>: <?php echo htmlspecialchars($day['title']); ?>
+                </h3>
                 
-                <li class="activity-item">
-                  <span class="activity-time">2:00 PM</span>
-                  <div class="activity-details">
-                    <h4>Lunch</h4>
-                    <p>Welcome lunch with authentic Kashmiri cuisine</p>
-                  </div>
-                </li>
+                <?php if (!empty($day['description'])): ?>
+                  <p style="color: var(--text-color); margin-bottom: 25px; line-height: 1.7; font-size: 1.1rem;">
+                    <?php echo htmlspecialchars($day['description']); ?>
+                  </p>
+                <?php endif; ?>
                 
-                <li class="activity-item">
-                  <span class="activity-time">4:00 PM</span>
-                  <div class="activity-details">
-                    <h4>Shikara Ride</h4>
-                    <p>Evening shikara ride on Dal Lake, witness floating gardens</p>
-                  </div>
-                </li>
-                
-                <li class="activity-item">
-                  <span class="activity-time">7:00 PM</span>
-                  <div class="activity-details">
-                    <h4>Dinner</h4>
-                    <p>Dinner at hotel with traditional Kashmiri music performance</p>
-                  </div>
-                </li>
-              </ul>
+                <?php if (!empty($day['activities'])): ?>
+                  <ul class="activities-list">
+                    <?php foreach ($day['activities'] as $activity): ?>
+                      <li class="activity-item">
+                        <span class="activity-time"><?php echo htmlspecialchars($activity['time']); ?></span>
+                        <div class="activity-details">
+                          <h4>Activity</h4>
+                          <p><?php echo htmlspecialchars($activity['description']); ?></p>
+                        </div>
+                      </li>
+                    <?php endforeach; ?>
+                  </ul>
+                <?php endif; ?>
+              </div>
             </div>
-          </div>
-          
-
-          <!-- day 2 itenary -->
-         <div class="itinerary-content active" id="day2">
-            <div class="day-card">
-              <h3 class="day-title">
-                <i class="ri-map-pin-line"></i>
-                Arrival in Srinagar
-              </h3>
-              
-              <ul class="activities-list">
-                <li class="activity-item">
-                  <span class="activity-time">12:00 PM</span>
-                  <div class="activity-details">
-                    <h4>Airport Pickup</h4>
-                    <p>Meet and greet at Srinagar International Airport, transfer to hotel</p>
-                  </div>
-                </li>
-                
-                <li class="activity-item">
-                  <span class="activity-time">2:00 PM</span>
-                  <div class="activity-details">
-                    <h4>Lunch</h4>
-                    <p>Welcome lunch with authentic Kashmiri cuisine</p>
-                  </div>
-                </li>
-                
-                <li class="activity-item">
-                  <span class="activity-time">4:00 PM</span>
-                  <div class="activity-details">
-                    <h4>Shikara Ride</h4>
-                    <p>Evening shikara ride on Dal Lake, witness floating gardens</p>
-                  </div>
-                </li>
-                
-                <li class="activity-item">
-                  <span class="activity-time">7:00 PM</span>
-                  <div class="activity-details">
-                    <h4>Dinner</h4>
-                    <p>featuring local delicacies</p>
-                  </div>
-                </li>
-              </ul>
-            </div>
-          </div>
-
-
-          <!-- day 3 itinerary -->
-          <div class="itinerary-content active" id="day3">
-            <div class="day-card">
-              <h3 class="day-title">
-                <i class="ri-map-pin-line"></i>
-                Arrival in Srinagar
-              </h3>
-              
-              <ul class="activities-list">
-                <li class="activity-item">
-                  <span class="activity-time">12:00 PM</span>
-                  <div class="activity-details">
-                    <h4>Visit Mughal Gardens</h4>
-                    <p>Explore the beautiful Mughal Gardens of Srinagar</p>
-                  </div>
-                </li>
-                
-                <li class="activity-item">
-                  <span class="activity-time">2:00 PM</span>
-                  <div class="activity-details">
-                    <h4>Lunch</h4>
-                    <p>Welcome lunch with authentic Kashmiri cuisine</p>
-                  </div>
-                </li>
-                
-                <li class="activity-item">
-                  <span class="activity-time">4:00 PM</span>
-                  <div class="activity-details">
-                    <h4>Shikara Ride</h4>
-                    <p>Evening shikara ride on Dal Lake, witness floating gardens</p>
-                  </div>
-                </li>
-                
-                <li class="activity-item">
-                  <span class="activity-time">7:00 PM</span>
-                  <div class="activity-details">
-                    <h4>Dinner</h4>
-                    <p>Dinner at hotel with traditional Kashmiri music performance</p>
-                  </div>
-                </li>
-              </ul>
-            </div>
-          </div>
-
-          <!-- day 4 itinerary -->
-          <div class="itinerary-content active" id="day4">
-            <div class="day-card">
-              <h3 class="day-title">
-                <i class="ri-map-pin-line"></i>
-                Departure from Srinagar
-              </h3>
-              
-              <ul class="activities-list">
-                <li class="activity-item">
-                  <span class="activity-time">12:00 PM</span>
-                  <div class="activity-details">
-                    <h4>Airport Pickup</h4>
-                    <p>Meet and greet at Srinagar International Airport, transfer to hotel</p>
-                  </div>
-                </li>
-                
-                <li class="activity-item">
-                  <span class="activity-time">2:00 PM</span>
-                  <div class="activity-details">
-                    <h4>Lunch</h4>
-                    <p>Welcome lunch with authentic Kashmiri cuisine</p>
-                  </div>
-                </li>
-                
-                <li class="activity-item">
-                  <span class="activity-time">4:00 PM</span>
-                  <div class="activity-details">
-                    <h4>Shikara Ride</h4>
-                    <p>Evening shikara ride on Dal Lake, witness floating gardens</p>
-                  </div>
-                </li>
-                
-                <li class="activity-item">
-                  <span class="activity-time">7:00 PM</span>
-                  <div class="activity-details">
-                    <h4>Dinner</h4>
-                    <p>Dinner at hotel with traditional Kashmiri music performance</p>
-                  </div>
-                </li>
-              </ul>
-            </div>
-          </div>
-
-          <!-- day 5 itinerary -->
-          <div class="itinerary-content active" id="day5">
-            <div class="day-card">
-              <h3 class="day-title">
-                <i class="ri-map-pin-line"></i>
-                Arrival in Srinagar
-              </h3>
-              
-              <ul class="activities-list">
-                <li class="activity-item">
-                  <span class="activity-time">12:00 PM</span>
-                  <div class="activity-details">
-                    <h4>Airport Pickup</h4>
-                    <p>Meet and greet at Srinagar International Airport, transfer to hotel</p>
-                  </div>
-                </li>
-                
-                <li class="activity-item">
-                  <span class="activity-time">2:00 PM</span>
-                  <div class="activity-details">
-                    <h4>Lunch</h4>
-                    <p>Welcome lunch with authentic Kashmiri cuisine</p>
-                  </div>
-                </li>
-                
-                <li class="activity-item">
-                  <span class="activity-time">4:00 PM</span>
-                  <div class="activity-details">
-                    <h4>Shikara Ride</h4>
-                    <p>Evening shikara ride on Dal Lake, witness floating gardens</p>
-                  </div>
-                </li>
-                
-                <li class="activity-item">
-                  <span class="activity-time">7:00 PM</span>
-                  <div class="activity-details">
-                    <h4>Dinner</h4>
-                    <p>Dinner at hotel with traditional Kashmiri music performance</p>
-                  </div>
-                </li>
-              </ul>
-            </div>
-          </div>
-
-          <!-- day 6 itinerary -->
-          <div class="itinerary-content active" id="day6">
-            <div class="day-card">
-              <h3 class="day-title">
-                <i class="ri-map-pin-line"></i>
-                Arrival in Srinagar
-              </h3>
-              
-              <ul class="activities-list">
-                <li class="activity-item">
-                  <span class="activity-time">12:00 PM</span>
-                  <div class="activity-details">
-                    <h4>Airport Pickup</h4>
-                    <p>Meet and greet at Srinagar International Airport, transfer to hotel</p>
-                  </div>
-                </li>
-                
-                <li class="activity-item">
-                  <span class="activity-time">2:00 PM</span>
-                  <div class="activity-details">
-                    <h4>Lunch</h4>
-                    <p>Welcome lunch with authentic Kashmiri cuisine</p>
-                  </div>
-                </li>
-                
-                <li class="activity-item">
-                  <span class="activity-time">4:00 PM</span>
-                  <div class="activity-details">
-                    <h4>Shikara Ride</h4>
-                    <p>Evening shikara ride on Dal Lake, witness floating gardens</p>
-                  </div>
-                </li>
-                
-                <li class="activity-item">
-                  <span class="activity-time">7:00 PM</span>
-                  <div class="activity-details">
-                    <h4>Dinner</h4>
-                    <p>Dinner at hotel with traditional Kashmiri music performance</p>
-                  </div>
-                </li>
-              </ul>
-            </div>
-          </div>
-
-          <!-- day 7 itinerary -->
-          <div class="itinerary-content active" id="day7">
-            <div class="day-card">
-              <h3 class="day-title">
-                <i class="ri-map-pin-line"></i>
-                Departure from Srinagar
-              </h3>
-
-              <ul class="activities-list">
-                <li class="activity-item">
-                  <span class="activity-time">12:00 PM</span>
-                  <div class="activity-details">
-                    <h4>Airport Drop</h4>
-                    <p>Transfer to Srinagar International Airport for departure</p>
-                  </div>
-                </li>
-              </ul>
-            </div>
-          </div>
-
-          <!-- Additional days would be here -->
+          <?php endforeach; ?>
         </section>
+        <?php endif; ?>
 
         <!-- Inclusions Section -->
         <section class="inclusions-section">
           <h2 class="section-title">Inclusions & Exclusions</h2>
           
           <div class="inclusions-grid">
-            <div class="inclusion-category">
-              <h4>What's Included</h4>
-              <ul class="inclusion-list">
-                <li class="inclusion-item">
-                  <i class="ri-checkbox-circle-fill"></i>
-                  <span>Accommodation in 4-star hotels</span>
-                </li>
-                <li class="inclusion-item">
-                  <i class="ri-checkbox-circle-fill"></i>
-                  <span>Daily breakfast, lunch, and dinner</span>
-                </li>
-                <li class="inclusion-item">
-                  <i class="ri-checkbox-circle-fill"></i>
-                  <span>Private transportation throughout</span>
-                </li>
-                <li class="inclusion-item">
-                  <i class="ri-checkbox-circle-fill"></i>
-                  <span>Expert English-speaking guide</span>
-                </li>
-                <li class="inclusion-item">
-                  <i class="ri-checkbox-circle-fill"></i>
-                  <span>All entrance fees to monuments</span>
-                </li>
-                <li class="inclusion-item">
-                  <i class="ri-checkbox-circle-fill"></i>
-                  <span>Shikara ride on Dal Lake</span>
-                </li>
-                <li class="inclusion-item">
-                  <i class="ri-checkbox-circle-fill"></i>
-                  <span>Gondola ride in Gulmarg (Phase 1)</span>
-                </li>
-              </ul>
-            </div>
+            <?php if (!empty($package['inclusions'])): ?>
+              <div class="inclusion-category">
+                <h4>What's Included</h4>
+                <ul class="inclusion-list">
+                  <?php foreach ($package['inclusions'] as $inclusion): ?>
+                    <li class="inclusion-item">
+                      <i class="ri-checkbox-circle-fill"></i>
+                      <span><?php echo htmlspecialchars($inclusion); ?></span>
+                    </li>
+                  <?php endforeach; ?>
+                </ul>
+              </div>
+            <?php endif; ?>
             
-            <div class="inclusion-category">
-              <h4>What's Not Included</h4>
-              <ul class="inclusion-list">
-                <li class="exclusion-item">
-                  <i class="ri-close-circle-fill"></i>
-                  <span>Airfare to/from Srinagar</span>
-                </li>
-                <li class="exclusion-item">
-                  <i class="ri-close-circle-fill"></i>
-                  <span>Travel insurance</span>
-                </li>
-                <li class="exclusion-item">
-                  <i class="ri-close-circle-fill"></i>
-                  <span>Personal expenses</span>
-                </li>
-                <li class="exclusion-item">
-                  <i class="ri-close-circle-fill"></i>
-                  <span>Optional activities</span>
-                </li>
-                <li class="exclusion-item">
-                  <i class="ri-close-circle-fill"></i>
-                  <span>Tips for guides and drivers</span>
-                </li>
-              </ul>
-            </div>
+            <?php if (!empty($package['exclusions'])): ?>
+              <div class="inclusion-category">
+                <h4>What's Not Included</h4>
+                <ul class="inclusion-list">
+                  <?php foreach ($package['exclusions'] as $exclusion): ?>
+                    <li class="exclusion-item">
+                      <i class="ri-close-circle-fill"></i>
+                      <span><?php echo htmlspecialchars($exclusion); ?></span>
+                    </li>
+                  <?php endforeach; ?>
+                </ul>
+              </div>
+            <?php endif; ?>
           </div>
         </section>
 
         <!-- Gallery Section -->
-        <section class="gallery-section">
-          <h2 class="section-title">Package Gallery</h2>
-          
-          <div class="gallery-grid">
-            <div class="gallery-item">
-              <img src="../assets/img/bg1.jpg" alt="Dal Lake">
+        <?php if (!empty($package_images)): ?>
+          <section class="gallery-section">
+            <h2 class="section-title">Package Gallery</h2>
+            
+            <div class="gallery-grid">
+              <?php foreach ($package_images as $index => $image): ?>
+                <div class="gallery-item">
+                  <img src="../assets/img/<?php echo $image; ?>" 
+                       alt="<?php echo htmlspecialchars($package['package_name']); ?> - Image <?php echo $index + 1; ?>"
+                       onerror="this.src='../assets/img/bg1.jpg'">
+                </div>
+              <?php endforeach; ?>
             </div>
-            <div class="gallery-item">
-              <img src="../assets/img/bg1.jpg" alt="Gulmarg">
-            </div>
-            <div class="gallery-item">
-              <img src="../assets/img/bg1.jpg" alt="Shikara Ride">
-            </div>
-            <div class="gallery-item">
-              <img src="../assets/img/bg1.jpg" alt="Pahalgam Valley">
-            </div>
-            <div class="gallery-item">
-              <img src="../assets/img/bg1.jpg" alt="Kashmiri Cuisine">
-            </div>
-            <div class="gallery-item">
-              <img src="../assets/img/bg1.jpg" alt="Houseboat Stay">
-            </div>
-          </div>
-        </section>
+          </section>
+        <?php endif; ?>
 
         <!-- FAQ Section -->
-        <section class="faq-section">
-          <h2 class="section-title">Frequently Asked Questions</h2>
-          
-          <div class="faq-item">
-            <div class="faq-question">
-              What is the best time to take this tour?
-              <i class="ri-arrow-down-s-line"></i>
+        <?php if (!empty($package['faqs'])): ?>
+          <section class="faq-section">
+            <h2 class="section-title">Frequently Asked Questions</h2>
+            
+            <?php foreach ($package['faqs'] as $faq): ?>
+              <div class="faq-item">
+                <div class="faq-question">
+                  <?php echo htmlspecialchars($faq['question']); ?>
+                  <i class="ri-arrow-down-s-line"></i>
+                </div>
+                <div class="faq-answer">
+                  <p><?php echo htmlspecialchars($faq['answer']); ?></p>
+                </div>
+              </div>
+            <?php endforeach; ?>
+          </section>
+        <?php endif; ?>
+
+        <!-- Similar Packages Section -->
+        <?php if ($similar_packages->num_rows > 0): ?>
+          <section class="similar-packages">
+            <h2 class="section-title">Similar Packages</h2>
+            <div class="similar-grid">
+              <?php while ($similar = $similar_packages->fetch_assoc()): 
+                $similar_highlights = json_decode($similar['highlights'], true) ?: [];
+                $similar_desc = !empty($similar_highlights) ? $similar_highlights[0]['description'] : substr($similar['description'], 0, 100) . '...';
+              ?>
+                <div class="similar-card">
+                  <img src="../assets/img/<?php echo $similar['image_path'] ?: 'bg1.jpg'; ?>" 
+                       alt="<?php echo htmlspecialchars($similar['package_name']); ?>"
+                       onerror="this.src='../assets/img/bg1.jpg'">
+                  <div class="similar-content">
+                    <h4><?php echo htmlspecialchars($similar['package_name']); ?></h4>
+                    <p style="color: var(--text-color); font-size: 0.95rem; margin-bottom: 10px;">
+                      <?php echo htmlspecialchars($similar_desc); ?>
+                    </p>
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                      <i class="ri-calendar-event-line" style="color: var(--first-color);"></i>
+                      <span><?php echo $similar['duration_days']; ?> Days</span>
+                      <i class="ri-user-line" style="color: var(--first-color); margin-left: 10px;"></i>
+                      <span>Max <?php echo $similar['max_people']; ?></span>
+                    </div>
+                    <div class="similar-price">
+                      ₹<?php echo number_format($similar['price_per_person'], 2); ?>
+                    </div>
+                    <a href="./package-details.php?id=<?php echo $similar['id']; ?>" class="similar-button">View Details</a>
+                  </div>
+                </div>
+              <?php endwhile; ?>
             </div>
-            <div class="faq-answer">
-              <p>The Kashmir Valley Explorer is best enjoyed from April to October when the weather is pleasant and all destinations are accessible. Spring (April-May) offers blooming flowers, while autumn (September-October) provides clear skies and stunning foliage.</p>
-            </div>
-          </div>
-          
-          <div class="faq-item">
-            <div class="faq-question">
-              What should I pack for this trip?
-              <i class="ri-arrow-down-s-line"></i>
-            </div>
-            <div class="faq-answer">
-              <p>We recommend packing layered clothing as temperatures can vary. Include warm clothes for evenings, comfortable walking shoes, sunscreen, sunglasses, and a hat. Don't forget your camera to capture the beautiful landscapes!</p>
-            </div>
-          </div>
-          
-          <div class="faq-item">
-            <div class="faq-question">
-              Is this tour suitable for children and elderly?
-              <i class="ri-arrow-down-s-line"></i>
-            </div>
-            <div class="faq-answer">
-              <p>Yes, this tour is suitable for all age groups. We can customize the pace and activities based on your group's needs. Please inform us in advance if you have any specific requirements.</p>
-            </div>
-          </div>
-          
-          <div class="faq-item">
-            <div class="faq-question">
-              What is the cancellation policy?
-              <i class="ri-arrow-down-s-line"></i>
-            </div>
-            <div class="faq-answer">
-              <p>Cancellations made 30 days before departure receive a full refund. Between 15-30 days, we offer a 70% refund. Cancellations within 15 days of departure are eligible for a 50% refund or the option to reschedule.</p>
-            </div>
-          </div>
-        </section>
+          </section>
+        <?php endif; ?>
       </div>
 
       <!-- Booking Widget -->
       <div class="booking-widget">
         <div class="price-section">
-          <div class="price-amount">₹25,999</div>
+          <div class="price-amount">₹<?php echo number_format($package['price_per_person'], 2); ?></div>
           <div class="price-note">per person (double occupancy)</div>
-          <span class="discount-badge">Save 15% if booked 60 days in advance</span>
+          <?php if ($package['badge'] == 'Bestseller' || $package['is_featured']): ?>
+            <span class="discount-badge">
+              <i class="ri-flashlight-line"></i> Limited Time Offer
+            </span>
+          <?php endif; ?>
         </div>
         
-        <form class="booking-form">
+        <form class="booking-form" method="POST" action="">
+          <input type="hidden" name="book_package" value="1">
+          
           <div class="form-group">
-            <label for="checkin">Check-in Date</label>
-            <input type="date" id="checkin" required>
+            <label for="checkin_date">Check-in Date</label>
+            <input type="date" id="checkin_date" name="checkin_date" 
+                   min="<?php echo date('Y-m-d'); ?>" 
+                   value="<?php echo isset($_POST['checkin_date']) ? htmlspecialchars($_POST['checkin_date']) : date('Y-m-d', strtotime('+7 days')); ?>" 
+                   required>
+          </div>
+          
+          <div class="form-group">
+            <label for="customer_name">Full Name</label>
+            <input type="text" id="customer_name" name="customer_name" 
+                   value="<?php echo isset($_POST['customer_name']) ? htmlspecialchars($_POST['customer_name']) : ''; ?>"
+                   required>
+          </div>
+          
+          <div class="form-group">
+            <label for="customer_email">Email</label>
+            <input type="email" id="customer_email" name="customer_email" 
+                   value="<?php echo isset($_POST['customer_email']) ? htmlspecialchars($_POST['customer_email']) : ''; ?>"
+                   required>
+          </div>
+          
+          <div class="form-group">
+            <label for="customer_phone">Phone Number</label>
+            <input type="tel" id="customer_phone" name="customer_phone" 
+                   value="<?php echo isset($_POST['customer_phone']) ? htmlspecialchars($_POST['customer_phone']) : ''; ?>"
+                   required>
           </div>
           
           <div class="form-group">
             <label for="guests">Number of Guests</label>
             <div class="guest-counter">
               <button type="button" class="counter-btn" id="decrease-guests">-</button>
-              <input type="number" id="guests" value="2" min="1" max="6" readonly>
+              <input type="number" id="guests" value="<?php echo isset($_POST['number_of_adults']) ? max(1, min($package['max_people'], intval($_POST['number_of_adults']) + intval($_POST['number_of_children'] ?? 0))) : 2; ?>" min="1" max="<?php echo $package['max_people']; ?>" readonly>
               <button type="button" class="counter-btn" id="increase-guests">+</button>
             </div>
           </div>
           
           <div class="form-row">
             <div class="form-group">
-              <label for="adults">Adults</label>
-              <select id="adults" required>
-                <option value="1">1 Adult</option>
-                <option value="2" selected>2 Adults</option>
-                <option value="3">3 Adults</option>
-                <option value="4">4 Adults</option>
-                <option value="5">5 Adults</option>
-                <option value="6">6 Adults</option>
+              <label for="number_of_adults">Adults</label>
+              <select id="number_of_adults" name="number_of_adults" required>
+                <?php 
+                $selected_adults = isset($_POST['number_of_adults']) ? intval($_POST['number_of_adults']) : 2;
+                for ($i = 1; $i <= $package['max_people']; $i++): 
+                ?>
+                  <option value="<?php echo $i; ?>" <?php echo $selected_adults == $i ? 'selected' : ''; ?>>
+                    <?php echo $i; ?> Adult<?php echo $i > 1 ? 's' : ''; ?>
+                  </option>
+                <?php endfor; ?>
               </select>
             </div>
             
             <div class="form-group">
-              <label for="children">Children</label>
-              <select id="children">
-                <option value="0" selected>No Children</option>
-                <option value="1">1 Child</option>
-                <option value="2">2 Children</option>
-                <option value="3">3 Children</option>
+              <label for="number_of_children">Children</label>
+              <select id="number_of_children" name="number_of_children">
+                <?php 
+                $selected_children = isset($_POST['number_of_children']) ? intval($_POST['number_of_children']) : 0;
+                for ($i = 0; $i <= 3; $i++): 
+                ?>
+                  <option value="<?php echo $i; ?>" <?php echo $selected_children == $i ? 'selected' : ''; ?>>
+                    <?php echo $i == 0 ? 'No Children' : $i . ' Child' . ($i > 1 ? 'ren' : ''); ?>
+                  </option>
+                <?php endfor; ?>
               </select>
             </div>
           </div>
           
+          <div class="form-group">
+            <label for="customer_notes">Special Requests (Optional)</label>
+            <textarea id="customer_notes" name="customer_notes" rows="3" placeholder="Any special requirements or requests..."><?php echo isset($_POST['customer_notes']) ? htmlspecialchars($_POST['customer_notes']) : ''; ?></textarea>
+          </div>
+          
           <div class="booking-summary">
             <div class="summary-item">
-              <span>2 Adults x ₹25,999</span>
-              <span>₹51,998</span>
+              <span>2 Adults x ₹<?php echo number_format($package['price_per_person'], 2); ?></span>
+              <span>₹<span id="summary-adults"><?php echo number_format($package['price_per_person'] * 2, 2); ?></span></span>
+            </div>
+            <div class="summary-item">
+              <span>Children Discount (30%)</span>
+              <span>-₹<span id="summary-discount">0.00</span></span>
             </div>
             <div class="summary-item">
               <span>Taxes & Fees</span>
-              <span>₹2,600</span>
+              <span>₹<span id="summary-taxes"><?php echo number_format($package['price_per_person'] * 0.1, 2); ?></span></span>
             </div>
             <div class="summary-item">
               <span>Total</span>
-              <span>₹54,598</span>
+              <span>₹<span id="summary-total"><?php echo number_format($package['price_per_person'] * 2 * 1.1, 2); ?></span></span>
             </div>
           </div>
           
@@ -1420,8 +1538,8 @@
         const decreaseBtn = document.getElementById('decrease-guests');
         const increaseBtn = document.getElementById('increase-guests');
         const guestsInput = document.getElementById('guests');
-        const adultsSelect = document.getElementById('adults');
-        const childrenSelect = document.getElementById('children');
+        const adultsSelect = document.getElementById('number_of_adults');
+        const childrenSelect = document.getElementById('number_of_children');
         
         decreaseBtn.addEventListener('click', () => {
           let value = parseInt(guestsInput.value);
@@ -1433,7 +1551,8 @@
         
         increaseBtn.addEventListener('click', () => {
           let value = parseInt(guestsInput.value);
-          if (value < 6) {
+          const maxPeople = <?php echo $package['max_people']; ?>;
+          if (value < maxPeople) {
             guestsInput.value = value + 1;
             updateGuestDetails();
           }
@@ -1444,9 +1563,10 @@
           const children = parseInt(childrenSelect.value);
           const adults = totalGuests - children;
           
-          if (adults >= 1) {
+          if (adults >= 1 && adults <= <?php echo $package['max_people']; ?>) {
             adultsSelect.value = adults;
           }
+          updateBookingSummary();
         }
         
         adultsSelect.addEventListener('change', updateTotalGuests);
@@ -1456,69 +1576,137 @@
           const adults = parseInt(adultsSelect.value);
           const children = parseInt(childrenSelect.value);
           guestsInput.value = adults + children;
+          updateBookingSummary();
         }
         
         // Initialize animations
         setTimeout(() => {
-          document.querySelectorAll('.highlight-item, .day-card, .gallery-item, .faq-item').forEach((item, index) => {
+          document.querySelectorAll('.highlight-item, .day-card, .gallery-item, .faq-item, .similar-card').forEach((item, index) => {
             setTimeout(() => {
               item.style.opacity = '1';
               item.style.transform = 'translateY(0)';
             }, index * 100);
           });
         }, 500);
+        
+        // Initialize date picker
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('checkin_date').min = today;
+        
+        // Calculate initial booking summary
+        updateBookingSummary();
       });
-    </script>
-    <script>
+      
       // Smooth Scroll Functionality
       document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener('click', function(e) {
           e.preventDefault();
-
-          document.querySelector(this.getAttribute('href')).scrollIntoView({
-            behavior: 'smooth'
-          });
+          
+          const targetId = this.getAttribute('href');
+          if (targetId === '#') return;
+          
+          const targetElement = document.querySelector(targetId);
+          if (targetElement) {
+            targetElement.scrollIntoView({
+              behavior: 'smooth'
+            });
+          }
         });
       });
-    </script>
-    <script>
-      //calculate package booking widget
-      document.addEventListener('DOMContentLoaded', function() {
-        const pricePerPerson = 25999;
-        const taxAndFees = 2600;
-        const guestsInput = document.getElementById('guests');
-        const adultsSelect = document.getElementById('adults');
-        const childrenSelect = document.getElementById('children');
-        const summaryItems = document.querySelectorAll('.booking-summary .summary-item');
-        const priceAmount = document.querySelector('.price-amount');
-
-        function updateBookingSummary() {
-          const adults = parseInt(adultsSelect.value);
-          const children = parseInt(childrenSelect.value);
-          const totalGuests = adults + children;
-          guestsInput.value = totalGuests;
-
-          // Calculate base price (children under 12 get 30% discount, if needed you can adjust)
-          let childrenDiscount = 0.7; // 30% off
-          let total = (adults * pricePerPerson) + (children * pricePerPerson * childrenDiscount);
-          let totalWithTax = total + taxAndFees;
-
-          // Update summary
-          summaryItems[0].children[0].textContent = `${adults} Adult${adults > 1 ? 's' : ''}${children > 0 ? ` + ${children} Child${children > 1 ? 'ren' : ''}` : ''} x ₹${pricePerPerson}`;
-          summaryItems[0].children[1].textContent = `₹${total.toLocaleString()}`;
-          summaryItems[2].children[1].textContent = `₹${totalWithTax.toLocaleString()}`;
+      
+      // Calculate package booking widget
+      const pricePerPerson = <?php echo $package['price_per_person']; ?>;
+      const taxRate = 0.1; // 10% tax
+      const childDiscount = 0.3; // 30% discount for children
+      
+      function updateBookingSummary() {
+        const adults = parseInt(document.getElementById('number_of_adults').value);
+        const children = parseInt(document.getElementById('number_of_children').value);
+        const totalGuests = adults + children;
+        
+        // Calculate base prices
+        const adultPrice = adults * pricePerPerson;
+        const childPrice = children * pricePerPerson * (1 - childDiscount);
+        const subtotal = adultPrice + childPrice;
+        const taxes = subtotal * taxRate;
+        const total = subtotal + taxes;
+        
+        // Calculate child discount amount
+        const childFullPrice = children * pricePerPerson;
+        const childDiscountAmount = childFullPrice - childPrice;
+        
+        // Update summary
+        document.getElementById('summary-adults').textContent = adultPrice.toLocaleString('en-IN', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        });
+        
+        document.getElementById('summary-discount').textContent = childDiscountAmount.toLocaleString('en-IN', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        });
+        
+        document.getElementById('summary-taxes').textContent = taxes.toLocaleString('en-IN', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        });
+        
+        document.getElementById('summary-total').textContent = total.toLocaleString('en-IN', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        });
+      }
+      
+      // Auto-close booking message after 10 seconds
+      setTimeout(() => {
+        const bookingMessage = document.querySelector('.booking-message');
+        if (bookingMessage) {
+          bookingMessage.style.transition = 'all 0.5s ease';
+          bookingMessage.style.opacity = '0';
+          bookingMessage.style.transform = 'translateX(100%)';
+          setTimeout(() => bookingMessage.remove(), 500);
         }
-
-        // Update on input changes
-        adultsSelect.addEventListener('change', updateBookingSummary);
-        childrenSelect.addEventListener('change', updateBookingSummary);
-
-        // Also update on plus/minus buttons
-        document.getElementById('increase-guests').addEventListener('click', updateBookingSummary);
-        document.getElementById('decrease-guests').addEventListener('click', updateBookingSummary);
-
-        // Initial update
-        updateBookingSummary();
+      }, 10000);
+      
+      // Form validation
+      document.querySelector('.booking-form').addEventListener('submit', function(e) {
+        const checkinDate = new Date(document.getElementById('checkin_date').value);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        if (checkinDate < today) {
+          e.preventDefault();
+          alert('Check-in date cannot be in the past.');
+          return false;
+        }
+        
+        const maxPeople = <?php echo $package['max_people']; ?>;
+        const adults = parseInt(document.getElementById('number_of_adults').value);
+        const children = parseInt(document.getElementById('number_of_children').value);
+        const totalGuests = adults + children;
+        
+        if (totalGuests > maxPeople) {
+          e.preventDefault();
+          alert(`Maximum ${maxPeople} people allowed for this package.`);
+          return false;
+        }
+        
+        if (adults < 1) {
+          e.preventDefault();
+          alert('At least one adult is required.');
+          return false;
+        }
+        
+        // Validate phone number
+        const phone = document.getElementById('customer_phone').value;
+        const phoneRegex = /^[0-9]{10}$/;
+        if (!phoneRegex.test(phone.replace(/\D/g, ''))) {
+          e.preventDefault();
+          alert('Please enter a valid 10-digit phone number.');
+          return false;
+        }
+        
+        return true;
       });
     </script>
   </body>
