@@ -19,7 +19,11 @@
             </div>
 
             <div class="menu-section">
-                <div class="menu-label">Website</div>
+                <div class="menu-label">Manage Website</div>
+                <a href="manage-homepage.php" class="menu-item">
+                   <i class="ri-home-4-line"></i>
+                    <span>Homepage</span>
+                </a>
                 <a href="manage-destinations.php" class="menu-item">
                     <i class="ri-map-2-line"></i>
                     <span>Destinations</span>
@@ -36,32 +40,22 @@
                     <i class="ri-car-line"></i>
                     <span>Car Rentals</span>
                 </a>
-                 <a href="./manage-contacts.php" class="menu-item active">
+                 <a href="./manage-contacts.php" class="menu-item ">
                     <i class="ri-mail-line"></i>
                     <span>Contact</span>
                    
                 </a>
             </div>
 
-            <div class="menu-section">
-                <div class="menu-label">Users</div>
-                <!-- <a href="#" class="menu-item">
-                    <i class="ri-user-line"></i>
-                    <span>Customers</span>
-                </a> -->
-                <a href="#" class="menu-item">
-                    <i class="ri-user-settings-line"></i>
-                    <span>Admin Users</span>
-                </a>
-            </div>
+          
 
             <div class="menu-section">
                 <div class="menu-label">Settings</div>
-                <a href="#" class="menu-item">
+                <a href="../pages/admin-setting.php" class="menu-item">
                     <i class="ri-settings-3-line"></i>
                     <span>Settings</span>
                 </a>
-                <a href="#" class="menu-item">
+                <a href="../logout.php" class="menu-item">
                     <i class="ri-logout-box-line"></i>
                     <span>Logout</span>
                 </a>

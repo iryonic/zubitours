@@ -1,5 +1,4 @@
- <!-- FOOTER -->
-  <footer class="footer">
+ <footer class="footer">
     <div class="footer-container">
       <div class="footer-col">
         <h3>Zubi Tours & Holidays</h3>
@@ -18,21 +17,21 @@
       <div class="footer-col">
         <h4>Quick Links</h4>
         <ul>
-          <li><a href="../index.html">Home</a></li>
-          <li><a href="/public/about.html">About Us</a></li>
-          <li><a href="/public/destinations.html">Destinations</a></li>
-          <li><a href="/public/packages.html">Packages</a></li>
-          <li><a href="/public/gallery.html">Gallery</a></li>
+          <li><a href="../index.php">Home</a></li>
+          <li><a href="./about.php">About Us</a></li>
+          <li><a href="./destinations.php">Destinations</a></li>
+          <li><a href="./packages.php">Packages</a></li>
+          <li><a href="./gallery.php">Gallery</a></li>
         </ul>
       </div>
 
       <div class="footer-col">
         <h4>Services</h4>
         <ul>
-          <li><a href="/public/packages.html">Tour Packages</a></li>
-          <li><a href="/public/car-rentals.html">Car Rentals</a></li>
-          <li><a href="#">Adventure Activities</a></li>
-          <li><a href="#">Pilgrimage Tours</a></li>
+          <li><a href="./packages.php">Tour Packages</a></li>
+          <li><a href="./car-rentals.php">Car Rentals</a></li>
+          <li><a href="#">Our Policy</a></li>
+          <li><a href="#">Terms and Conditions</a></li>
         </ul>
       </div>
 

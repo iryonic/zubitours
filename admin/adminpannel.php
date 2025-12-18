@@ -1,23 +1,95 @@
-<?php
-session_start();
+   <?php
+  
+  session_start();
 
-?>
+// Redirect to login if not authenticated
+if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
+    header('Location: index.php');
+    exit();
+}
+
+   $host = 'localhost';
+    $dbname = 'travel_db';
+    $username = 'root'; // Change as per your configuration
+    $password = ''; // Change as per your configuration
+    
+    try {
+        $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $username, $password);
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        
+        // Fetch dashboard statistics
+        $stats = [];
+        
+        // Total Users (assuming from package_bookings table)
+        $stmt = $pdo->query("SELECT COUNT(DISTINCT customer_email) as total_users FROM package_bookings");
+        $stats['total_users'] = $stmt->fetch(PDO::FETCH_ASSOC)['total_users'];
+        
+        // Total Bookings
+        $stmt = $pdo->query("SELECT COUNT(*) as total_bookings FROM package_bookings");
+        $stats['total_bookings'] = $stmt->fetch(PDO::FETCH_ASSOC)['total_bookings'];
+        
+        // Total Revenue
+        $stmt = $pdo->query("SELECT SUM(total_amount) as total_revenue FROM package_bookings WHERE payment_status = 'paid'");
+        $revenue = $stmt->fetch(PDO::FETCH_ASSOC)['total_revenue'];
+        $stats['total_revenue'] = $revenue ? $revenue : 0;
+        
+        // Total Packages
+        $stmt = $pdo->query("SELECT COUNT(*) as total_packages FROM packages WHERE is_active = 1");
+        $stats['total_packages'] = $stmt->fetch(PDO::FETCH_ASSOC)['total_packages'];
+        
+        // Fetch recent package bookings
+        $stmt = $pdo->query("
+            SELECT pb.*, p.package_name 
+            FROM package_bookings pb 
+            LEFT JOIN packages p ON pb.package_id = p.id 
+            ORDER BY pb.booked_at DESC 
+            LIMIT 5
+        ");
+        $recent_bookings = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Fetch recent car bookings
+        $stmt = $pdo->query("
+            SELECT cb.*, cr.car_name 
+            FROM car_bookings cb 
+            LEFT JOIN car_rentals cr ON cb.car_id = cr.id 
+            ORDER BY cb.booking_date DESC 
+            LIMIT 5
+        ");
+        $recent_car_bookings = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Fetch recent contact messages
+        $stmt = $pdo->query("
+            SELECT * FROM contact_messages 
+            WHERE status = 'new' 
+            ORDER BY created_at DESC 
+            LIMIT 10
+        ");
+        $recent_messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Count new messages for badge
+        $stmt = $pdo->query("SELECT COUNT(*) as new_messages FROM contact_messages WHERE status = 'new'");
+        $new_messages_count = $stmt->fetch(PDO::FETCH_ASSOC)['new_messages'];
+        
+        // Count pending package bookings for badge
+        $stmt = $pdo->query("SELECT COUNT(*) as pending_bookings FROM package_bookings WHERE booking_status = 'pending'");
+        $pending_bookings_count = $stmt->fetch(PDO::FETCH_ASSOC)['pending_bookings'];
+        
+    } catch(PDOException $e) {
+        die("Database connection failed: " . $e->getMessage());
+    }
+    ?>
+
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard - Zubi Tours</title>
+    <title>Admin Panel - Dashboard</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/3.5.0/remixicon.css">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
 
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+   <style>
+        /* CSS Variables */
         :root {
             --primary-color: #2563eb;
             --primary-dark: #1d4ed8;
@@ -51,6 +123,14 @@ session_start();
             --shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
         }
 
+        /* Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
         body {
             background-color: var(--bg-primary);
             color: var(--text-primary);
@@ -59,34 +139,20 @@ session_start();
             transition: var(--transition);
         }
 
-        body::-webkit-scrollbar {
-            width: 8px;
-            background: transparent;
-
-        }
-
-        /* Sidebar Styles */
+        /* Sidebar */
         .sidebar {
             width: var(--sidebar-width);
             background: var(--bg-secondary);
-            color: var(--text-primary);
             height: 100vh;
             position: fixed;
             left: 0;
             top: 0;
             display: flex;
             flex-direction: column;
-            transition: var(--transition);
-            z-index: 1000;
             box-shadow: var(--shadow);
             border-right: 1px solid var(--border-color);
+            z-index: 1000;
         }
-
-        .sidebar-menu::-webkit-scrollbar {
-            width: 8px;
-            background: transparent;
-        }
-
 
         .sidebar-header {
             padding: 24px;
@@ -105,7 +171,6 @@ session_start();
             align-items: center;
             justify-content: center;
             margin-right: 12px;
-            transition: var(--transition);
         }
 
         .sidebar-logo i {
@@ -164,12 +229,6 @@ session_start();
         .menu-item i {
             margin-right: 16px;
             font-size: 1.3rem;
-            transition: var(--transition);
-        }
-
-        .menu-item.active i,
-        .menu-item:hover i {
-            transform: scale(1.1);
         }
 
         .menu-item span {
@@ -194,12 +253,6 @@ session_start();
             background: var(--bg-secondary);
         }
 
-        .admin-profile {
-            display: flex;
-            align-items: center;
-            width: 100%;
-        }
-
         .admin-avatar {
             width: 48px;
             height: 48px;
@@ -212,12 +265,6 @@ session_start();
             font-weight: 600;
             color: white;
             font-size: 1.1rem;
-            transition: var(--transition);
-        }
-
-        .admin-avatar:hover {
-            transform: rotate(10deg);
-            box-shadow: 0 5px 15px rgba(37, 99, 235, 0.3);
         }
 
         .admin-info {
@@ -235,12 +282,11 @@ session_start();
             color: var(--text-secondary);
         }
 
-        /* Main Content Styles */
+        /* Main Content */
         .main-content {
             flex: 1;
             margin-left: var(--sidebar-width);
             width: calc(100% - var(--sidebar-width));
-            transition: var(--transition);
         }
 
         .header {
@@ -254,7 +300,6 @@ session_start();
             position: sticky;
             top: 0;
             z-index: 100;
-            transition: var(--transition);
         }
 
         .page-title {
@@ -282,16 +327,8 @@ session_start();
             border-radius: 12px;
             width: 280px;
             font-size: 0.95rem;
-            transition: var(--transition);
             background: var(--bg-secondary);
             color: var(--text-primary);
-        }
-
-        .search-input:focus {
-            outline: none;
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
-            width: 320px;
         }
 
         .search-icon {
@@ -312,16 +349,14 @@ session_start();
             color: var(--text-secondary);
             position: relative;
             cursor: pointer;
-            transition: var(--transition);
             background: var(--bg-secondary);
             border: 1px solid var(--border-color);
+            transition: var(--transition);
         }
 
         .header-icon:hover {
             background: var(--primary-color);
             color: white;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(37, 99, 235, 0.2);
             border-color: var(--primary-color);
         }
 
@@ -352,171 +387,109 @@ session_start();
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            transition: var(--transition);
         }
 
-        .theme-toggle:hover {
-            background: var(--primary-light);
-            color: var(--primary-color);
-        }
-
+        /* Dashboard Content */
         .content {
-            padding: 32px;
+            padding: 32px 10px;
         }
 
-        /* Dashboard Stats */
-        .stats-grid {
+        .welcome-header {
+            margin-bottom: 30px;
+            padding: 25px;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+            border-radius: var(--card-radius);
+            color: white;
+            box-shadow: var(--shadow);
+        }
+
+        .welcome-header h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .overview-cards {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-            gap: 24px;
-            margin-bottom: 32px;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
         }
 
-        .stat-card {
+        .overview-card {
             background: var(--card-bg);
             border-radius: var(--card-radius);
-            padding: 24px;
+            padding: 25px;
             box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
             display: flex;
             align-items: center;
+            gap: 20px;
             transition: var(--transition);
-            border: 1px solid var(--border-color);
         }
 
-        .stat-card:hover {
+        .overview-card:hover {
             transform: translateY(-5px);
             box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
         }
 
-        .stat-icon {
+        .overview-icon {
             width: 70px;
             height: 70px;
             border-radius: 16px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-right: 20px;
             font-size: 2rem;
-            transition: var(--transition);
         }
 
-        .stat-card:hover .stat-icon {
-            transform: scale(1.1);
-        }
+        .icon-users { background: rgba(37, 99, 235, 0.15); color: var(--primary-color); }
+        .icon-bookings { background: rgba(16, 185, 129, 0.15); color: var(--success-color); }
+        .icon-revenue { background: rgba(245, 158, 11, 0.15); color: var(--warning-color); }
+        .icon-packages { background: rgba(239, 68, 68, 0.15); color: var(--error-color); }
 
-        .bookings-icon {
-            background: linear-gradient(135deg, rgba(37, 99, 235, 0.15) 0%, rgba(37, 99, 235, 0.1) 100%);
-            color: var(--primary-color);
-        }
-
-        .revenue-icon {
-            background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0.1) 100%);
-            color: var(--success-color);
-        }
-
-        .users-icon {
-            background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0.1) 100%);
-            color: var(--warning-color);
-        }
-
-        .destinations-icon {
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(239, 68, 68, 0.1) 100%);
-            color: var(--error-color);
-        }
-
-        .stat-info h3 {
-            font-size: 2rem;
+        .overview-info h3 {
+            font-size: 2.2rem;
             font-weight: 800;
-            margin-bottom: 8px;
+            margin-bottom: 5px;
             background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
 
-        .stat-info p {
+        .overview-info p {
             color: var(--text-secondary);
-            font-size: 0.95rem;
-            font-weight: 500;
         }
 
-        .stat-trend {
-            display: flex;
-            align-items: center;
-            margin-top: 8px;
-            font-size: 0.85rem;
-            font-weight: 600;
-        }
-
-        .trend-up {
-            color: var(--success-color);
-        }
-
-        .trend-down {
-            color: var(--error-color);
-        }
-
-        /* Charts and Graphs */
-        .charts-container {
+        .charts-section {
             display: grid;
-            grid-template-columns: 1fr;
-            gap: 24px;
-            margin-bottom: 32px;
+            grid-template-columns: 2fr 1fr;
+            gap: 25px;
+            margin-bottom: 30px;
         }
 
         .chart-card {
             background: var(--card-bg);
             border-radius: var(--card-radius);
-            padding: 24px;
+            padding: 25px;
             box-shadow: var(--shadow);
             border: 1px solid var(--border-color);
-            transition: var(--transition);
         }
 
-        .chart-card:hover {
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
-        }
-
-        .card-header {
+        .chart-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 24px;
+            margin-bottom: 25px;
         }
 
-        .card-title {
-            font-size: 1.2rem;
+        .chart-header h3 {
+            font-size: 1.3rem;
             font-weight: 700;
-            color: var(--text-primary);
-        }
-
-        .card-actions {
-            display: flex;
-            gap: 12px;
-        }
-
-        .card-action {
-            width: 36px;
-            height: 36px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--text-secondary);
-            cursor: pointer;
-            transition: var(--transition);
-            background: var(--bg-primary);
-            border: 1px solid var(--border-color);
-        }
-
-        .card-action:hover {
-            background: var(--primary-color);
-            color: white;
-            border-color: var(--primary-color);
         }
 
         .chart-placeholder {
-            height: 320px;
+            height: 300px;
             background: var(--bg-primary);
             border-radius: 12px;
             display: flex;
@@ -524,38 +497,34 @@ session_start();
             justify-content: center;
             color: var(--text-secondary);
             flex-direction: column;
-            transition: var(--transition);
         }
 
         .chart-placeholder i {
-            font-size: 2.5rem;
-            margin-bottom: 16px;
+            font-size: 3rem;
+            margin-bottom: 15px;
             opacity: 0.7;
         }
 
-        /* Recent Activities */
-        .activities-container {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 24px;
+        .recent-activity {
+            background: var(--card-bg);
+            border-radius: var(--card-radius);
+            padding: 25px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+            margin-bottom: 30px;
         }
 
-        .activity-list {
-            list-style: none;
+        .recent-activity h3 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 25px;
         }
 
         .activity-item {
             display: flex;
-            padding: 20px 0;
+            align-items: center;
+            padding: 15px 0;
             border-bottom: 1px solid var(--border-color);
-            transition: var(--transition);
-        }
-
-        .activity-item:hover {
-            background: var(--bg-primary);
-            border-radius: 12px;
-            padding: 20px;
-            margin: 0 -10px;
         }
 
         .activity-item:last-child {
@@ -563,40 +532,28 @@ session_start();
         }
 
         .activity-icon {
-            width: 48px;
-            height: 48px;
+            width: 50px;
+            height: 50px;
             border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
             margin-right: 20px;
             font-size: 1.4rem;
-            flex-shrink: 0;
-        }
-
-        .booking-activity {
-            background: linear-gradient(135deg, rgba(37, 99, 235, 0.15) 0%, rgba(37, 99, 235, 0.1) 100%);
-            color: var(--primary-color);
-        }
-
-        .payment-activity {
-            background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0.1) 100%);
-            color: var(--success-color);
-        }
-
-        .user-activity {
-            background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0.1) 100%);
-            color: var(--warning-color);
         }
 
         .activity-content {
             flex: 1;
         }
 
-        .activity-title {
+        .activity-content h4 {
             font-weight: 600;
-            margin-bottom: 8px;
-            color: var(--text-primary);
+            margin-bottom: 5px;
+        }
+
+        .activity-content p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
         }
 
         .activity-time {
@@ -604,148 +561,59 @@ session_start();
             color: var(--text-secondary);
         }
 
-        .activity-badge {
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            align-self: center;
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
         }
 
-        .completed-badge {
-            background: rgba(16, 185, 129, 0.15);
-            color: var(--success-color);
-        }
-
-        .pending-badge {
-            background: rgba(245, 158, 11, 0.15);
-            color: var(--warning-color);
-        }
-
-        /* Recent Bookings Table */
-        .table-card {
+        .quick-action {
             background: var(--card-bg);
             border-radius: var(--card-radius);
-            padding: 24px;
+            padding: 25px;
             box-shadow: var(--shadow);
-            overflow: auto;
             border: 1px solid var(--border-color);
-            transition: var(--transition);
-        }
-
-        .table-card:hover {
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
-        }
-
-        .table-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 24px;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        th,
-        td {
-            padding: 16px 20px;
-            text-align: left;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        th {
-            font-weight: 600;
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-            background: var(--bg-primary);
-        }
-
-        tbody tr {
-            transition: var(--transition);
-        }
-
-        tbody tr:hover {
-            background: var(--bg-primary);
-        }
-
-        .status-badge {
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 600;
-        }
-
-        .status-confirmed {
-            background: rgba(16, 185, 129, 0.15);
-            color: var(--success-color);
-        }
-
-        .status-pending {
-            background: rgba(245, 158, 11, 0.15);
-            color: var(--warning-color);
-        }
-
-        .status-cancelled {
-            background: rgba(239, 68, 68, 0.15);
-            color: var(--error-color);
-        }
-
-        .action-btn {
-            padding: 8px 14px;
-            border-radius: 8px;
-            font-size: 0.85rem;
-            font-weight: 500;
+            text-align: center;
             cursor: pointer;
-            border: none;
             transition: var(--transition);
-            margin-right: 8px;
+            text-decoration: none;
+            color: inherit;
         }
 
-        .view-btn {
+        .quick-action:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            border-color: var(--primary-color);
+        }
+
+        .quick-action-icon {
+            width: 70px;
+            height: 70px;
+            border-radius: 16px;
             background: rgba(37, 99, 235, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 2rem;
             color: var(--primary-color);
         }
 
-        .view-btn:hover {
-            background: var(--primary-color);
-            color: white;
+        .quick-action h4 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 10px;
         }
 
-        .edit-btn {
-            background: rgba(16, 185, 129, 0.15);
-            color: var(--success-color);
+        .quick-action p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
         }
 
-        .edit-btn:hover {
-            background: var(--success-color);
-            color: white;
-        }
-
-        .delete-btn {
-            background: rgba(239, 68, 68, 0.15);
-            color: var(--error-color);
-        }
-
-        .delete-btn:hover {
-            background: var(--error-color);
-            color: white;
-        }
-
-        /* Responsive Design */
+        /* Responsive */
         @media (max-width: 1200px) {
-            .charts-container {
+            .charts-section {
                 grid-template-columns: 1fr;
-            }
-
-            .search-input {
-                width: 200px;
-            }
-
-            .search-input:focus {
-                width: 240px;
             }
         }
 
@@ -798,16 +666,12 @@ session_start();
                 width: calc(100% - 80px);
             }
 
-            .stats-grid {
-                grid-template-columns: repeat(2, 1fr);
+            .search-input {
+                width: 200px;
             }
         }
 
         @media (max-width: 768px) {
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-
             .header {
                 padding: 0 20px;
             }
@@ -828,24 +692,34 @@ session_start();
                 width: 40px;
                 height: 40px;
             }
+
+            .overview-cards {
+                grid-template-columns: 1fr;
+            }
         }
 
         @media (max-width: 576px) {
-            .card-header {
+            .activity-item {
                 flex-direction: column;
                 align-items: flex-start;
-                gap: 12px;
+                gap: 10px;
             }
 
-            .card-actions {
+            .activity-icon {
+                margin-right: 0;
+            }
+
+            .activity-time {
                 align-self: flex-end;
             }
         }
     </style>
 </head>
-
 <body>
-    <
+ 
+    
+    <!-- Sidebar -->
+  
 <div class="sidebar">
         <div class="sidebar-header">
             <div class="sidebar-logo">
@@ -857,49 +731,44 @@ session_start();
         <div class="sidebar-menu">
             <div class="menu-section">
                 <div class="menu-label">Main</div>
-                <a href="./dashboard.php" class="menu-item active">
+                <a href="../admin/adminpannel.php" class="menu-item active">
                     <i class="ri-dashboard-line"></i>
                     <span>Dashboard</span>
                 </a>
-                <a href="#" class="menu-item">
-                    <i class="ri-calendar-event-line"></i>
-                    <span>Bookings</span>
-                    <span class="menu-badge">12</span>
-                </a>
+               
                
             </div>
 
             <div class="menu-section">
-                <div class="menu-label">Content</div>
-                <a href="./pages/manage-destinations.php" class="menu-item">
+                 <div class="menu-label">Manage Website</div>
+                <a href="../admin/pages/manage-homepage.php" class="menu-item">
+                   <i class="ri-home-4-line"></i>
+                    <span>Homepage</span>
+                </a>
+                <a href="../admin/pages/manage-destinations.php" class="menu-item">
                     <i class="ri-map-2-line"></i>
                     <span>Destinations</span>
                 </a>
-                <a href="./pages/manage-packages.php" class="menu-item">
+                <a href="../admin/pages/manage-packages.php" class="menu-item">
                     <i class="ri-briefcase-4-line"></i>
                     <span>Packages</span>
                 </a>
-                <a href="./pages/manage-gallery.php" class="menu-item">
+                <a href="../admin/pages/manage-gallery.php" class="menu-item">
                     <i class="ri-gallery-line"></i>
                     <span>Gallery</span>
                 </a>
-                <a href="./pages/manage-car-rentals.php" class="menu-item">
+                <a href="../admin/pages/manage-car-rentals.php" class="menu-item">
                     <i class="ri-car-line"></i>
                     <span>Car Rentals</span>
                 </a>
-            </div>
-
-            <div class="menu-section">
-                <div class="menu-label">Users</div>
-                <!-- <a href="#" class="menu-item">
-                    <i class="ri-user-line"></i>
-                    <span>Customers</span>
-                </a> -->
-                <a href="#" class="menu-item">
-                    <i class="ri-user-settings-line"></i>
-                    <span>Admin Users</span>
+                 <a href="../admin/pages/manage-contacts.php" class="menu-item ">
+                    <i class="ri-mail-line"></i>
+                    <span>Contact</span>
+                   
                 </a>
             </div>
+
+          
 
             <div class="menu-section">
                 <div class="menu-label">Settings</div>
@@ -907,7 +776,7 @@ session_start();
                     <i class="ri-settings-3-line"></i>
                     <span>Settings</span>
                 </a>
-                <a href="#" class="menu-item">
+                <a href="./logout.php" class="menu-item">
                     <i class="ri-logout-box-line"></i>
                     <span>Logout</span>
                 </a>
@@ -926,261 +795,218 @@ session_start();
     </div>
 
     <!-- Main Content -->
-    <div class="main-content">
-        <?php include './includes/header.php'; ?>
+    <main class="main-content">
+        <!-- Header -->
+        <header class="header">
+            <h1 class="page-title">Dashboard</h1>
+           
+        </header>
 
+        <!-- Content -->
         <div class="content">
-            <!-- Stats Overview -->
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-icon bookings-icon">
-                        <i class="ri-calendar-check-line"></i>
-                    </div>
-                    <div class="stat-info">
-                        <h3>3</h3>
-                        <p>Total packages</p>
+            <!-- Welcome Header -->
+            <div class="welcome-header">
+                <h1>Welcome back, Admin!</h1>
+                <p>Here's what's happening with your business today.</p>
+            </div>
 
+            <!-- Overview Cards -->
+            <div class="overview-cards">
+                <div class="overview-card">
+                    <div class="overview-icon icon-users">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="overview-info">
+                        <h3><?php echo number_format($stats['total_users']); ?></h3>
+                        <p>Total Users</p>
                     </div>
                 </div>
-
-                <div class="stat-card">
-                    <div class="stat-icon revenue-icon">
-                        <i class="ri-money-dollar-circle-line"></i>
+                
+                <div class="overview-card">
+                    <div class="overview-icon icon-bookings">
+                        <i class="fas fa-calendar-check"></i>
                     </div>
-                    <div class="stat-info">
-                        <h3>3</h3>
-                        <p>Total Vehicles</p>
-
-                    </div>
-                </div>
-
-                <div class="stat-card">
-                    <div class="stat-icon users-icon">
-                        <i class="ri-user-line"></i>
-                    </div>
-                    <div class="stat-info">
-                        <h3>8</h3>
-                        <p>Registered Admins</p>
-
+                    <div class="overview-info">
+                        <h3><?php echo number_format($stats['total_bookings']); ?></h3>
+                        <p>Bookings</p>
                     </div>
                 </div>
-
-                <div class="stat-card">
-                    <div class="stat-icon destinations-icon">
-                        <i class="ri-map-pin-line"></i>
+                
+                <div class="overview-card">
+                    <div class="overview-icon icon-revenue">
+                        <i class="fas fa-dollar-sign"></i>
                     </div>
-                    <div class="stat-info">
-                        <h3>12</h3>
-                        <p>Destinations</p>
+                    <div class="overview-info">
+                        <h3>$<?php echo number_format($stats['total_revenue'], 0); ?></h3>
+                        <p>Revenue</p>
+                    </div>
+                </div>
+                
+                <div class="overview-card">
+                    <div class="overview-icon icon-packages">
+                        <i class="fas fa-suitcase"></i>
+                    </div>
+                    <div class="overview-info">
+                        <h3><?php echo number_format($stats['total_packages']); ?></h3>
+                        <p>Packages</p>
                     </div>
                 </div>
             </div>
 
-
-
-            <!-- Recent Activities -->
-            <div class="charts-container">
-                <div class="chart-card">
-                    <div class="card-header">
-                        <div class="card-title">Recent Activities</div>
-                        <!-- <div class="card-actions">
-                            <div class="card-action">
-                                <i class="ri-more-2-fill"></i>
-                            </div>
-                        </div> -->
+            <!-- Recent Activity -->
+            <div class="recent-activity">
+                <h3>Recent Bookings</h3>
+                <div class="activity-list">
+                    <?php foreach($recent_bookings as $booking): ?>
+                    <div class="activity-item">
+                        <div class="activity-icon" style="background: rgba(16, 185, 129, 0.15); color: var(--success-color);">
+                            <i class="fas fa-shopping-cart"></i>
+                        </div>
+                        <div class="activity-content">
+                            <h4><?php echo htmlspecialchars($booking['customer_name']); ?></h4>
+                            <p>
+                                <?php echo htmlspecialchars($booking['package_name'] ?? 'Package'); ?> - 
+                                $<?php echo number_format($booking['total_amount'], 2); ?>
+                            </p>
+                        </div>
+                        <div class="activity-time">
+                            <?php 
+                                $timeAgo = strtotime($booking['booked_at']);
+                                $now = time();
+                                $diff = $now - $timeAgo;
+                                
+                                if ($diff < 60) {
+                                    echo $diff . ' seconds ago';
+                                } elseif ($diff < 3600) {
+                                    echo floor($diff / 60) . ' minutes ago';
+                                } elseif ($diff < 86400) {
+                                    echo floor($diff / 3600) . ' hours ago';
+                                } else {
+                                    echo floor($diff / 86400) . ' days ago';
+                                }
+                            ?>
+                        </div>
                     </div>
-                    <ul class="activity-list">
-                        <li class="activity-item">
-                            <div class="activity-icon booking-activity">
-                                <i class="ri-calendar-event-line"></i>
-                            </div>
-                            <div class="activity-content">
-                                <div class="activity-title">New booking for Kashmir Valley Explorer</div>
-                                <div class="activity-time">10 minutes ago</div>
-                            </div>
-                            <span class="activity-badge completed-badge">Completed</span>
-                        </li>
-
-                        <li class="activity-item">
-                            <div class="activity-icon payment-activity">
-                                <i class="ri-bank-card-line"></i>
-                            </div>
-                            <div class="activity-content">
-                                <div class="activity-title">Payment received from Rajesh Kumar</div>
-                                <div class="activity-time">45 minutes ago</div>
-                            </div>
-                            <span class="activity-badge completed-badge">Completed</span>
-                        </li>
-
-                        <li class="activity-item">
-                            <div class="activity-icon user-activity">
-                                <i class="ri-user-add-line"></i>
-                            </div>
-                            <div class="activity-content">
-                                <div class="activity-title">New user registered: Priya Singh</div>
-                                <div class="activity-time">2 hours ago</div>
-                            </div>
-                            <span class="activity-badge completed-badge">Completed</span>
-                        </li>
-
-                        <li class="activity-item">
-                            <div class="activity-icon booking-activity">
-                                <i class="ri-calendar-event-line"></i>
-                            </div>
-                            <div class="activity-content">
-                                <div class="activity-title">Booking cancellation request</div>
-                                <div class="activity-time">5 hours ago</div>
-                            </div>
-                            <span class="activity-badge pending-badge">Pending</span>
-                        </li>
-                    </ul>
-                </div>
-
-                <div class="chart-card">
-                    <div class="card-header">
-                        <div class="card-title">Upcoming Bookings</div>
-                        <!-- <div class="card-actions">
-                            <div class="card-action">
-                                <i class="ri-more-2-fill"></i>
-                            </div>
-                        </div> -->
-                    </div>
-                    <ul class="activity-list">
-                        <li class="activity-item">
-                            <div class="activity-icon booking-activity">
-                                <i class="ri-calendar-event-line"></i>
-                            </div>
-                            <div class="activity-content">
-                                <div class="activity-title">Kashmir Valley Explorer</div>
-                                <div class="activity-time">Tomorrow, 10:00 AM</div>
-                            </div>
-                        </li>
-
-                        <li class="activity-item">
-                            <div class="activity-icon booking-activity">
-                                <i class="ri-calendar-event-line"></i>
-                            </div>
-                            <div class="activity-content">
-                                <div class="activity-title">Ladakh Adventure</div>
-                                <div class="activity-time">Aug 15, 9:00 AM</div>
-                            </div>
-                        </li>
-
-                        <li class="activity-item">
-                            <div class="activity-icon booking-activity">
-                                <i class="ri-calendar-event-line"></i>
-                            </div>
-                            <div class="activity-content">
-                                <div class="activity-title">Gulmarg Ski Package</div>
-                                <div class="activity-time">Aug 18, 11:00 AM</div>
-                            </div>
-                        </li>
-
-                        <li class="activity-item">
-                            <div class="activity-icon booking-activity">
-                                <i class="ri-calendar-event-line"></i>
-                            </div>
-                            <div class="activity-content">
-                                <div class="activity-title">Pahalgam Family Tour</div>
-                                <div class="activity-time">Aug 20, 10:30 AM</div>
-                            </div>
-                        </li>
-                    </ul>
+                    <?php endforeach; ?>
                 </div>
             </div>
 
+            <!-- Quick Actions -->
+            <h3 style="margin-bottom: 20px; font-size: 1.3rem; font-weight: 700;">Quick Actions</h3>
+            <div class="quick-actions">
+                <a href="add_package.php" class="quick-action">
+                    <div class="quick-action-icon">
+                        <i class="fas fa-plus"></i>
+                    </div>
+                    <h4>Add Package</h4>
+                    <p>Create new travel package</p>
+                </a>
+                
+               <a href="add_package.php" class="quick-action">
+                    <div class="quick-action-icon">
+                        <i class="fas fa-plus"></i>
+                    </div>
+                    <h4>Add Destinations</h4>
+                    <p>Create new travel package</p>
+                </a>
+                
+               <a href="add_package.php" class="quick-action">
+                    <div class="quick-action-icon">
+                        <i class="fas fa-plus"></i>
+                    </div>
+                    <h4>Add Image</h4>
+                    <p>post another gallery Image </p>
+                </a>
 
+                 <a href="add_package.php" class="quick-action">
+                    <div class="quick-action-icon">
+                        <i class="fas fa-plus"></i>
+                    </div>
+                    <h4>Add Car</h4>
+                    <p>Add new car to your Car rentals</p>
+                </a>
+                
+                <a href="settings.php" class="quick-action">
+                    <div class="quick-action-icon">
+                        <i class="fas fa-cogs"></i>
+                    </div>
+                    <h4>Settings</h4>
+                    <p>Configure system settings</p>
+                </a>
+            </div>
         </div>
-    </div>
+    </main>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Dark/Light mode toggle
-            const themeToggle = document.getElementById('theme-toggle');
-            const themeIcon = themeToggle.querySelector('i');
-
-            themeToggle.addEventListener('click', function() {
-                document.body.classList.toggle('dark-mode');
-
-                if (document.body.classList.contains('dark-mode')) {
-                    themeIcon.classList.remove('ri-moon-line');
-                    themeIcon.classList.add('ri-sun-line');
-                    localStorage.setItem('theme', 'dark');
-                } else {
-                    themeIcon.classList.remove('ri-sun-line');
-                    themeIcon.classList.add('ri-moon-line');
-                    localStorage.setItem('theme', 'light');
-                }
-            });
-
-            // Check for saved theme preference
-            if (localStorage.getItem('theme') === 'dark') {
-                document.body.classList.add('dark-mode');
-                themeIcon.classList.remove('ri-moon-line');
-                themeIcon.classList.add('ri-sun-line');
+        // Dark/Light Mode Toggle
+        const themeToggle = document.getElementById('themeToggle');
+        const themeIcon = themeToggle.querySelector('i');
+        
+        themeToggle.addEventListener('click', function() {
+            document.body.classList.toggle('dark-mode');
+            
+            if (document.body.classList.contains('dark-mode')) {
+                themeIcon.classList.remove('fa-moon');
+                themeIcon.classList.add('fa-sun');
+            } else {
+                themeIcon.classList.remove('fa-sun');
+                themeIcon.classList.add('fa-moon');
             }
+            
+            // Save theme preference to localStorage
+            const isDarkMode = document.body.classList.contains('dark-mode');
+            localStorage.setItem('darkMode', isDarkMode);
+        });
 
-            // Simulate loading data with animations
-            setTimeout(() => {
-                // Update stats with animation
-                const stats = document.querySelectorAll('.stat-info h3');
-                stats.forEach(stat => {
-                    const originalText = stat.textContent;
-                    stat.textContent = '0';
+        // Check for saved theme preference
+        if (localStorage.getItem('darkMode') === 'true') {
+            document.body.classList.add('dark-mode');
+            themeIcon.classList.remove('fa-moon');
+            themeIcon.classList.add('fa-sun');
+        }
 
-                    let counter = 0;
-                    const target = originalText.replace(/\D/g, '');
-                    const duration = 2000;
-                    const increment = target / (duration / 16);
-
-                    const updateCounter = () => {
-                        if (counter < target) {
-                            counter += increment;
-                            stat.textContent = Math.ceil(counter).toLocaleString();
-                            setTimeout(updateCounter, 16);
-                        } else {
-                            stat.textContent = originalText;
-                        }
-                    };
-
-                    updateCounter();
-                });
-            }, 1000);
-
-            // Add hover effects to cards
-            const cards = document.querySelectorAll('.chart-card, .stat-card, .table-card');
-            cards.forEach(card => {
-                card.addEventListener('mouseenter', () => {
-                    card.style.transform = 'translateY(-5px)';
-                });
-
-                card.addEventListener('mouseleave', () => {
-                    card.style.transform = 'translateY(0)';
-                });
-            });
-
-            // Notification click handler
-            const notificationIcons = document.querySelectorAll('.header-icon');
-            notificationIcons.forEach(icon => {
-                icon.addEventListener('click', function() {
-                    const badge = this.querySelector('.notification-badge');
-                    if (badge) {
-                        badge.style.display = 'none';
-                    }
-                });
-            });
-
-            // Menu item active state
-            const menuItems = document.querySelectorAll('.menu-item');
-            menuItems.forEach(item => {
-                item.addEventListener('click', function(e) {
-
-                    menuItems.forEach(i => i.classList.remove('active'));
-                    this.classList.add('active');
-                });
+        // Menu Active State
+        const menuItems = document.querySelectorAll('.menu-item');
+        menuItems.forEach(item => {
+            item.addEventListener('click', function(e) {
+                e.preventDefault();
+                menuItems.forEach(i => i.classList.remove('active'));
+                this.classList.add('active');
             });
         });
+
+        // Search functionality
+        const searchInput = document.querySelector('.search-input');
+        searchInput.addEventListener('keyup', function(e) {
+            if (e.key === 'Enter') {
+                const searchTerm = this.value.trim();
+                if (searchTerm) {
+                    alert(`Searching for: ${searchTerm}`);
+                    // Implement actual search functionality here
+                }
+            }
+        });
+
+        // Quick Action Cards Hover
+        const quickActions = document.querySelectorAll('.quick-action');
+        quickActions.forEach(action => {
+            action.addEventListener('mouseenter', function() {
+                const icon = this.querySelector('.quick-action-icon i');
+                icon.style.transform = 'scale(1.1)';
+                icon.style.transition = 'transform 0.3s ease';
+            });
+            
+            action.addEventListener('mouseleave', function() {
+                const icon = this.querySelector('.quick-action-icon i');
+                icon.style.transform = 'scale(1)';
+            });
+        });
+
+        // Auto-refresh notifications every 30 seconds
+        setInterval(() => {
+            // You can implement AJAX call here to refresh notification counts
+            console.log('Refreshing notifications...');
+        }, 30000);
     </script>
 </body>
-
 </html>

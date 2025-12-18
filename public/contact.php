@@ -262,6 +262,31 @@ $contact_phones = [
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+<meta name="googlebot" content="index, follow">
+
+<meta name="language" content="English">
+<meta name="geo.region" content="IN-JK">
+<meta name="geo.placename" content="Kashmir, Srinagar">
+<meta name="distribution" content="global">
+<meta name="rating" content="general">
+<meta name="revisit-after" content="7 days">
+
+<meta name="author" content="Zubi Tours & Holidays">
+<meta name="copyright" content="Zubi Tours & Holidays">
+
+<meta property="og:site_name" content="Zubi Tours & Holidays">
+<meta property="og:locale" content="en_IN">
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@zubitours">
+
+<!-- --==============Favicon =============-- -->
+<link rel="icon" type="image/png" href="../assets/img/zubilogo.jpg" />
+
     
     <!--=============== REMIXICONS ===============-->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/3.5.0/remixicon.css" />
@@ -591,85 +616,8 @@ $contact_phones = [
         </div>
     </section>
 
-    <!-- FOOTER -->
-    <footer class="footer">
-        <div class="footer-container">
-            <div class="footer-col">
-                <h3>Zubi Tours & Holidays</h3>
-                <p>Creating unforgettable experiences in the paradise of Kashmir and the majestic landscapes of Ladakh.</p>
-                <div class="social-links">
-                    <?php if (!empty($social_links['social_facebook'])): ?>
-                        <a href="<?php echo htmlspecialchars($social_links['social_facebook']); ?>" target="_blank" rel="noopener noreferrer">
-                            <i class="ri-facebook-fill"></i>
-                        </a>
-                    <?php endif; ?>
-                    
-                    <?php if (!empty($social_links['social_instagram'])): ?>
-                        <a href="<?php echo htmlspecialchars($social_links['social_instagram']); ?>" target="_blank" rel="noopener noreferrer">
-                            <i class="ri-instagram-line"></i>
-                        </a>
-                    <?php endif; ?>
-                    
-                    <?php if (!empty($social_links['social_twitter'])): ?>
-                        <a href="<?php echo htmlspecialchars($social_links['social_twitter']); ?>" target="_blank" rel="noopener noreferrer">
-                            <i class="ri-twitter-fill"></i>
-                        </a>
-                    <?php endif; ?>
-                    
-                    <?php if (!empty($social_links['social_youtube'])): ?>
-                        <a href="<?php echo htmlspecialchars($social_links['social_youtube']); ?>" target="_blank" rel="noopener noreferrer">
-                            <i class="ri-youtube-fill"></i>
-                        </a>
-                    <?php endif; ?>
-                </div>
-            </div>
-            
-            <div class="footer-col">
-                <h4>Quick Links</h4>
-                <ul>
-                    <li><a href="../index.php">Home</a></li>
-                    <li><a href="/public/about.php">About Us</a></li>
-                    <li><a href="/public/destinations.php">Destinations</a></li>
-                    <li><a href="/public/packages.php">Packages</a></li>
-                    <li><a href="/public/gallery.php">Gallery</a></li>
-                </ul>
-            </div>
-            
-            <div class="footer-col">
-                <h4>Services</h4>
-                <ul>
-                    <li><a href="/public/packages.php">Tour Packages</a></li>
-                    <li><a href="/public/car-rentals.php">Car Rentals</a></li>
-                    <li><a href="#">Hotel Booking</a></li>
-                    <li><a href="#">Adventure Activities</a></li>
-                    <li><a href="#">Pilgrimage Tours</a></li>
-                </ul>
-            </div>
-            
-            <div class="footer-col">
-                <h4>Contact Info</h4>
-                <div class="contact-info">
-                    <p><i class="ri-map-pin-line"></i> 
-                        <?php echo htmlspecialchars($contact_info['contact_address'] ?? 'Srinagar, Jammu & Kashmir'); ?>
-                    </p>
-                    <p><i class="ri-phone-line"></i> 
-                        <?php echo htmlspecialchars($contact_phones[0] ?? '+91 7006296814'); ?>
-                    </p>
-                    <p><i class="ri-mail-line"></i> 
-                        <?php echo htmlspecialchars($contact_emails[0] ?? 'info@zubitours.com'); ?>
-                    </p>
-                    <p><i class="ri-time-line"></i> 
-                        <?php echo htmlspecialchars($business_hours_weekdays); ?>
-                    </p>
-                </div>
-            </div>
-        </div>
-        
-        <div class="footer-bottom">
-            <p>&copy; <span id="getYear"></span> Zubi Tours & Holidays. All rights reserved.</p>
-            <p> Powered By <a href="https://irfanmanzoor.in" target="_blank" rel="noopener noreferrer">EXORA</a></p>
-        </div>
-    </footer>
+     <!-- FOOTER -->
+<?php include '../admin/includes/footer.php'; ?>
 
     <!-- Linking Swiper script -->
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>

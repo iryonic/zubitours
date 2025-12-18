@@ -1,915 +1,448 @@
 <?php
 session_start();
+require_once '../includes/connection.php';
+
+
+// Redirect to login if not authenticated
+if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
+    header('Location: ../index.php');
+    exit();
+}
+// Handle CRUD operations
+$message = '';
+$message_type = '';
+// Flash messages (Post/Redirect/Get) — show once then clear
+if (isset($_SESSION['flash_message'])) {
+    $message = $_SESSION['flash_message'];
+    $message_type = $_SESSION['flash_type'] ?? 'success';
+    unset($_SESSION['flash_message'], $_SESSION['flash_type']);
+}
+
+// Add new destination
+if (isset($_POST['add_destination'])) {
+    $destination_name = $_POST['destination_name'];
+    $region = $_POST['region'];
+    $destination_type = $_POST['destination_type'];
+    $best_seasons = json_encode($_POST['best_seasons'] ?? []);
+    $location = $_POST['location'];
+    $short_description = $_POST['short_description'];
+ 
+    $badge = $_POST['badge'];
+    $rating = $_POST['rating'];
+    $reviews_count = $_POST['reviews_count'];
+    $is_featured = isset($_POST['is_featured']) ? 1 : 0;
+    $is_active = isset($_POST['is_active']) ? 1 : 0;
+    
+  
+    
+    // Handle activities
+    $activities = [];
+    if (isset($_POST['activity_names']) && isset($_POST['activity_descriptions'])) {
+        $names = $_POST['activity_names'];
+        $descriptions = $_POST['activity_descriptions'];
+        $difficulties = $_POST['activity_difficulties'] ?? [];
+        $durations = $_POST['activity_durations'] ?? [];
+        
+        for ($i = 0; $i < count($names); $i++) {
+            if (!empty(trim($names[$i]))) {
+                $activities[] = [
+                    'name' => $names[$i],
+                    'description' => $descriptions[$i] ?? '',
+                    'difficulty' => $difficulties[$i] ?? 'medium',
+                    'duration' => $durations[$i] ?? ''
+                ];
+            }
+        }
+    }
+    $activities_json = json_encode($activities);
+    
+    // Handle tips
+    $tips = [];
+    if (isset($_POST['tip_types']) && isset($_POST['tip_descriptions'])) {
+        $types = $_POST['tip_types'];
+        $tipTitles = $_POST['tip_titles'] ?? [];
+        $descriptions = $_POST['tip_descriptions'];
+        
+        for ($i = 0; $i < count($types); $i++) {
+            if (!empty(trim($descriptions[$i]))) {
+                $tips[] = [
+                    'type' => $types[$i],
+                    'title' => $tipTitles[$i] ?? '',
+                    'description' => $descriptions[$i]
+                ];
+            }
+        }
+    }
+    $tips_json = json_encode($tips);
+    
+    // Handle nearby attractions
+    $attractions = [];
+    if (isset($_POST['attraction_names']) && isset($_POST['attraction_distances'])) {
+        $names = $_POST['attraction_names'];
+        $distances = $_POST['attraction_distances'];
+        $attractionDescriptions = $_POST['attraction_descriptions'] ?? [];
+        
+        for ($i = 0; $i < count($names); $i++) {
+            if (!empty(trim($names[$i]))) {
+                $attractions[] = [
+                    'name' => $names[$i],
+                    'distance' => $distances[$i] ?? 0,
+                    'description' => $attractionDescriptions[$i] ?? ''
+                ];
+            }
+        }
+    }
+    $attractions_json = json_encode($attractions);
+    
+    $stmt = $conn->prepare("INSERT INTO destinations (destination_name, region, destination_type, best_seasons, location, short_description,  badge, rating, reviews_count, is_featured, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    $stmt->bind_param("sssssssdsii", $destination_name, $region, $destination_type, $best_seasons, $location, $short_description,   $badge, $rating, $reviews_count, $is_featured, $is_active);
+    
+    if ($stmt->execute()) {
+        $destination_id = $conn->insert_id;
+        
+        // Handle multiple image uploads
+        if (isset($_FILES['destination_images']) && !empty($_FILES['destination_images']['name'][0])) {
+            $upload_dir = '../upload/destinations/';
+            if (!is_dir($upload_dir)) {
+                mkdir($upload_dir, 0755, true);
+            }
+            foreach ($_FILES['destination_images']['tmp_name'] as $key => $tmp_name) {
+                if ($_FILES['destination_images']['error'][$key] === UPLOAD_ERR_OK) {
+                    $file_name = uniqid() . '_' . basename($_FILES['destination_images']['name'][$key]);
+                    $target_file = $upload_dir . $file_name;
+                    
+                    if (move_uploaded_file($tmp_name, $target_file)) {
+                        $image_path = 'destinations/' . $file_name;
+                        $is_primary = ($key === 0) ? 1 : 0;
+                        
+                        $img_stmt = $conn->prepare("INSERT INTO destination_images (destination_id, image_path, is_primary) VALUES (?, ?, ?)");
+                        $img_stmt->bind_param("iss", $destination_id, $image_path, $is_primary);
+                        $img_stmt->execute();
+                    }
+                }
+            }
+        }
+        
+        $_SESSION['flash_message'] = "Destination added successfully!";
+        $_SESSION['flash_type'] = "success";
+        header('Location: manage-destinations.php');
+        exit();
+    } else {
+        $_SESSION['flash_message'] = "Error adding destination: " . $conn->error;
+        $_SESSION['flash_type'] = "error";
+        header('Location: manage-destinations.php');
+        exit();
+    }
+}
+
+// Update destination
+if (isset($_POST['update_destination'])) {
+    $id = $_POST['destination_id'];
+    $destination_name = $_POST['destination_name'];
+    $region = $_POST['region'];
+    $destination_type = $_POST['destination_type'];
+    $best_seasons = json_encode($_POST['best_seasons'] ?? []);
+    $location = $_POST['location'];
+    $short_description = $_POST['short_description'];
+    $detailed_description = $_POST['detailed_description'];
+    $badge = $_POST['badge'];
+    $rating = $_POST['rating'];
+    $reviews_count = $_POST['reviews_count'];
+    $is_featured = isset($_POST['is_featured']) ? 1 : 0;
+    $is_active = isset($_POST['is_active']) ? 1 : 0;
+    
+    // Handle highlights
+    $highlights = [];
+    if (isset($_POST['highlight_titles']) && isset($_POST['highlight_descriptions'])) {
+        $titles = $_POST['highlight_titles'];
+        $descriptions = $_POST['highlight_descriptions'];
+        for ($i = 0; $i < count($titles); $i++) {
+            if (!empty(trim($titles[$i])) && !empty(trim($descriptions[$i]))) {
+                $highlights[] = [
+                    'title' => $titles[$i],
+                    'description' => $descriptions[$i]
+                ];
+            }
+        }
+    }
+    $highlights_json = json_encode($highlights);
+    
+    // Handle activities
+    $activities = [];
+    if (isset($_POST['activity_names']) && isset($_POST['activity_descriptions'])) {
+        $names = $_POST['activity_names'];
+        $descriptions = $_POST['activity_descriptions'];
+        $difficulties = $_POST['activity_difficulties'] ?? [];
+        $durations = $_POST['activity_durations'] ?? [];
+        
+        for ($i = 0; $i < count($names); $i++) {
+            if (!empty(trim($names[$i]))) {
+                $activities[] = [
+                    'name' => $names[$i],
+                    'description' => $descriptions[$i] ?? '',
+                    'difficulty' => $difficulties[$i] ?? 'medium',
+                    'duration' => $durations[$i] ?? ''
+                ];
+            }
+        }
+    }
+    $activities_json = json_encode($activities);
+    
+    // Handle tips
+    $tips = [];
+    if (isset($_POST['tip_types']) && isset($_POST['tip_descriptions'])) {
+        $types = $_POST['tip_types'];
+        $tipTitles = $_POST['tip_titles'] ?? [];
+        $descriptions = $_POST['tip_descriptions'];
+        
+        for ($i = 0; $i < count($types); $i++) {
+            if (!empty(trim($descriptions[$i]))) {
+                $tips[] = [
+                    'type' => $types[$i],
+                    'title' => $tipTitles[$i] ?? '',
+                    'description' => $descriptions[$i]
+                ];
+            }
+        }
+    }
+    $tips_json = json_encode($tips);
+    
+    // Handle nearby attractions
+    $attractions = [];
+    if (isset($_POST['attraction_names']) && isset($_POST['attraction_distances'])) {
+        $names = $_POST['attraction_names'];
+        $distances = $_POST['attraction_distances'];
+        $attractionDescriptions = $_POST['attraction_descriptions'] ?? [];
+        
+        for ($i = 0; $i < count($names); $i++) {
+            if (!empty(trim($names[$i]))) {
+                $attractions[] = [
+                    'name' => $names[$i],
+                    'distance' => $distances[$i] ?? 0,
+                    'description' => $attractionDescriptions[$i] ?? ''
+                ];
+            }
+        }
+    }
+    $attractions_json = json_encode($attractions);
+    
+    $stmt = $conn->prepare("UPDATE destinations SET destination_name = ?, region = ?, destination_type = ?, best_seasons = ?, location = ?, short_description = ?, detailed_description = ?, highlights = ?, activities = ?, tips = ?, nearby_attractions = ?, badge = ?, rating = ?, reviews_count = ?, is_featured = ?, is_active = ? WHERE id = ?");
+    $stmt->bind_param("ssssssssssssdsiii", $destination_name, $region, $destination_type, $best_seasons, $location, $short_description, $detailed_description, $highlights_json, $activities_json, $tips_json, $attractions_json, $badge, $rating, $reviews_count, $is_featured, $is_active, $id);
+    
+    if ($stmt->execute()) {
+        $destination_id = $id;
+        if (isset($_FILES['destination_images']) && !empty($_FILES['destination_images']['name'][0])) {
+            $upload_dir = '../upload/destinations/';
+            if (!is_dir($upload_dir)) {
+                mkdir($upload_dir, 0755, true);
+            }
+            foreach ($_FILES['destination_images']['tmp_name'] as $key => $tmp_name) {
+                if ($_FILES['destination_images']['error'][$key] === UPLOAD_ERR_OK) {
+                    $file_name = uniqid() . '_' . basename($_FILES['destination_images']['name'][$key]);
+                    $target_file = $upload_dir . $file_name;
+                    if (move_uploaded_file($tmp_name, $target_file)) {
+                        $image_path = 'destinations/' . $file_name;
+                        $is_primary = ($key === 0) ? 1 : 0;
+                        $img_stmt = $conn->prepare("INSERT INTO destination_images (destination_id, image_path, is_primary) VALUES (?, ?, ?)");
+                        $img_stmt->bind_param("iss", $destination_id, $image_path, $is_primary);
+                        $img_stmt->execute();
+                    }
+                }   
+            }
+        }
+
+        $_SESSION['flash_message'] = "Destination updated successfully!";
+        $_SESSION['flash_type'] = "success";
+        header('Location: manage-destinations.php');
+        exit();
+    } else {
+        $_SESSION['flash_message'] = "Error updating destination: " . $conn->error;
+        $_SESSION['flash_type'] = "error";
+        header('Location: manage-destinations.php');
+        exit();
+    }
+}
+
+// Delete destination
+if (isset($_GET['delete'])) {
+    $id = $_GET['delete'];
+    
+    // Delete related images first
+    $images = $conn->query("SELECT image_path FROM destination_images WHERE destination_id = $id");
+    while ($image = $images->fetch_assoc()) {
+        $file_path = '../upload/' . $image['image_path'];
+        if (file_exists($file_path)) {
+            unlink($file_path);
+        }
+    }
+    
+    // Delete image records
+    $conn->query("DELETE FROM destination_images WHERE destination_id = $id");
+    
+    if ($conn->query("DELETE FROM destinations WHERE id = $id")) {
+        $_SESSION['flash_message'] = "Destination deleted successfully!";
+        $_SESSION['flash_type'] = "success";
+        header('Location: manage-destinations.php');
+        exit();
+    } else {
+        $_SESSION['flash_message'] = "Error deleting destination: " . $conn->error;
+        $_SESSION['flash_type'] = "error";
+        header('Location: manage-destinations.php');
+        exit();
+    }
+}
+
+// Delete image
+if (isset($_GET['delete_image'])) {
+    $image_id = $_GET['delete_image'];
+    
+    $image_result = $conn->query("SELECT image_path FROM destination_images WHERE id = $image_id");
+    if ($image_result->num_rows > 0) {
+        $image = $image_result->fetch_assoc();
+        $file_path = '../upload/' . $image['image_path'];
+        if (file_exists($file_path)) {
+            unlink($file_path);
+        }
+    }
+    
+    if ($conn->query("DELETE FROM destination_images WHERE id = $image_id")) {
+        $_SESSION['flash_message'] = "Image deleted successfully!";
+        $_SESSION['flash_type'] = "success";
+        header('Location: manage-destinations.php');
+        exit();
+    } else {
+        $_SESSION['flash_message'] = "Error deleting image: " . $conn->error;
+        $_SESSION['flash_type'] = "error";
+        header('Location: manage-destinations.php');
+        exit();
+    }
+}
+
+// Upload images directly from Images modal (posts destination_id + destination_images[])
+if (isset($_POST['destination_id']) && isset($_FILES['destination_images']) && !empty($_FILES['destination_images']['name'][0])) {
+    $destination_id = intval($_POST['destination_id']);
+    $upload_dir = '../upload/destinations/';
+    if (!is_dir($upload_dir)) {
+        mkdir($upload_dir, 0755, true);
+    }
+    $uploadedAny = false;
+    foreach ($_FILES['destination_images']['tmp_name'] as $key => $tmp_name) {
+        if ($_FILES['destination_images']['error'][$key] === UPLOAD_ERR_OK) {
+            $file_name = uniqid() . '_' . basename($_FILES['destination_images']['name'][$key]);
+            $target_file = $upload_dir . $file_name;
+            if (move_uploaded_file($tmp_name, $target_file)) {
+                $image_path = 'destinations/' . $file_name;
+                $is_primary = 0; // do not change primary via this flow
+                $img_stmt = $conn->prepare("INSERT INTO destination_images (destination_id, image_path, is_primary) VALUES (?, ?, ?)");
+                $img_stmt->bind_param("iss", $destination_id, $image_path, $is_primary);
+                $img_stmt->execute();
+                $uploadedAny = true;
+            }
+        }
+    }
+    if ($uploadedAny) {
+        $_SESSION['flash_message'] = "Images uploaded successfully!";
+        $_SESSION['flash_type'] = "success";
+        header('Location: manage-destinations.php');
+        exit();
+    } else {
+        $_SESSION['flash_message'] = "No images uploaded or there was an upload error.";
+        $_SESSION['flash_type'] = "error";
+        header('Location: manage-destinations.php');
+        exit();
+    }
+}
+
+// Set primary image
+if (isset($_GET['set_primary'])) {
+    $image_id = $_GET['set_primary'];
+    
+    $img_result = $conn->query("SELECT destination_id FROM destination_images WHERE id = $image_id");
+    if ($img_result->num_rows > 0) {
+        $img = $img_result->fetch_assoc();
+        $destination_id = $img['destination_id'];
+        
+        $conn->query("UPDATE destination_images SET is_primary = 0 WHERE destination_id = $destination_id");
+        
+        if ($conn->query("UPDATE destination_images SET is_primary = 1 WHERE id = $image_id")) {
+            $_SESSION['flash_message'] = "Primary image updated successfully!";
+            $_SESSION['flash_type'] = "success";
+            header('Location: manage-destinations.php');
+            exit();
+        }
+    }
+}
+
+// Bulk actions
+if (isset($_POST['bulk_action'])) {
+    $action = $_POST['bulk_action'];
+    $selected_destinations = $_POST['selected_destinations'] ?? [];
+    
+    if (!empty($selected_destinations)) {
+        $ids = implode(',', array_map('intval', $selected_destinations));
+        
+        switch ($action) {
+            case 'activate':
+                $conn->query("UPDATE destinations SET is_active = 1 WHERE id IN ($ids)");
+                $flash = "Selected destinations activated!";
+                break;
+            case 'deactivate':
+                $conn->query("UPDATE destinations SET is_active = 0 WHERE id IN ($ids)");
+                $flash = "Selected destinations deactivated!";
+                break;
+            case 'feature':
+                $conn->query("UPDATE destinations SET is_featured = 1 WHERE id IN ($ids)");
+                $flash = "Selected destinations marked as featured!";
+                break;
+            case 'unfeature':
+                $conn->query("UPDATE destinations SET is_featured = 0 WHERE id IN ($ids)");
+                $flash = "Selected destinations unfeatured!";
+                break;
+            case 'delete':
+                // Delete images first
+                $images = $conn->query("SELECT image_path FROM destination_images WHERE destination_id IN ($ids)");
+                while ($image = $images->fetch_assoc()) {
+                    $file_path = '../../upload/' . $image['image_path'];
+                    if (file_exists($file_path)) {
+                        unlink($file_path);
+                    }
+                }
+                $conn->query("DELETE FROM destination_images WHERE destination_id IN ($ids)");
+                $conn->query("DELETE FROM destinations WHERE id IN ($ids)");
+                $flash = "Selected destinations deleted!";
+                break;
+        }
+        $_SESSION['flash_message'] = $flash ?? 'Bulk action completed.';
+        $_SESSION['flash_type'] = 'success';
+        header('Location: manage-destinations.php');
+        exit();
+    }
+}
+
+// Fetch all destinations with their primary images
+$destinations = $conn->query("
+    SELECT d.*, di.image_path 
+    FROM destinations d 
+    LEFT JOIN destination_images di ON d.id = di.destination_id AND di.is_primary = 1 
+    ORDER BY d.created_at DESC
+");
+
+// Get stats
+$total_destinations = $conn->query("SELECT COUNT(*) as count FROM destinations")->fetch_assoc()['count'];
+$active_destinations = $conn->query("SELECT COUNT(*) as count FROM destinations WHERE is_active = 1")->fetch_assoc()['count'];
+$featured_destinations = $conn->query("SELECT COUNT(*) as count FROM destinations WHERE is_featured = 1")->fetch_assoc()['count'];
+$kashmir_destinations = $conn->query("SELECT COUNT(*) as count FROM destinations WHERE region = 'kashmir'")->fetch_assoc()['count'];
+$ladakh_destinations = $conn->query("SELECT COUNT(*) as count FROM destinations WHERE region = 'ladakh'")->fetch_assoc()['count'];
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Destination Management - Zubi Tours Admin</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Destinations - Zubi Tours Admin</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/3.5.0/remixicon.css">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-
-        :root {
-            --primary-color: #2563eb;
-            --primary-dark: #1d4ed8;
-            --primary-light: #93c5fd;
-            --secondary-color: #64748b;
-            --light-color: #f8fafc;
-            --dark-color: #1e293b;
-            --success-color: #10b981;
-            --warning-color: #f59e0b;
-            --error-color: #ef4444;
-            --sidebar-width: 280px;
-            --header-height: 80px;
-            --card-radius: 16px;
-            --transition: all 0.3s ease;
-            --shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            --card-bg: #ffffff;
-            --text-primary: #1e293b;
-            --text-secondary: #64748b;
-            --bg-primary: #f8fafc;
-            --bg-secondary: #ffffff;
-            --border-color: #e2e8f0;
-        }
-
-        .dark-mode {
-            --card-bg: #1f2937;
-            --text-primary: #f3f4f6;
-            --text-secondary: #d1d5db;
-            --bg-primary: #111827;
-            --bg-secondary: #1f2937;
-            --border-color: #374151;
-            --shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-        }
-
-        body {
-            background-color: var(--bg-primary);
-            color: var(--text-primary);
-            display: flex;
-            min-height: 100vh;
-            transition: var(--transition);
-        }
-
-        /* Sidebar Styles */
-        .sidebar {
-            width: var(--sidebar-width);
-            background: var(--bg-secondary);
-            color: var(--text-primary);
-            height: 100vh;
-            position: fixed;
-            left: 0;
-            top: 0;
-            display: flex;
-            flex-direction: column;
-            transition: var(--transition);
-            z-index: 1000;
-            box-shadow: var(--shadow);
-            border-right: 1px solid var(--border-color);
-        }
-           .sidebar-menu::-webkit-scrollbar {
-            width: 8px;
-            background: transparent;
-        }
-
-        .sidebar-header {
-            padding: 24px;
-            display: flex;
-            align-items: center;
-            border-bottom: 1px solid var(--border-color);
-            height: var(--header-height);
-        }
-
-        .sidebar-logo {
-            width: 45px;
-            height: 45px;
-            background: var(--primary-color);
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 12px;
-            transition: var(--transition);
-        }
-
-        .sidebar-logo i {
-            font-size: 1.5rem;
-            color: white;
-        }
-
-        .sidebar-title {
-            font-size: 1.3rem;
-            font-weight: 700;
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .sidebar-menu {
-            padding: 24px 0;
-            flex: 1;
-            overflow-y: auto;
-        }
-
-        .menu-section {
-            margin-bottom: 32px;
-        }
-
-        .menu-label {
-            padding: 0 24px;
-            font-size: 0.8rem;
-            text-transform: uppercase;
-            color: var(--text-secondary);
-            margin-bottom: 16px;
-            letter-spacing: 1px;
-            font-weight: 600;
-        }
-
-        .menu-item {
-            display: flex;
-            align-items: center;
-            padding: 14px 24px;
-            color: var(--text-secondary);
-            text-decoration: none;
-            transition: var(--transition);
-            border-left: 4px solid transparent;
-            margin: 4px 0;
-            border-radius: 0 12px 12px 0;
-        }
-
-        .menu-item:hover,
-        .menu-item.active {
-            background: linear-gradient(90deg, rgba(37, 99, 235, 0.1) 0%, rgba(37, 99, 235, 0.05) 100%);
-            color: var(--primary-color);
-            border-left-color: var(--primary-color);
-        }
-
-        .menu-item i {
-            margin-right: 16px;
-            font-size: 1.3rem;
-            transition: var(--transition);
-        }
-
-        .menu-item.active i,
-        .menu-item:hover i {
-            transform: scale(1.1);
-        }
-
-        .menu-item span {
-            flex: 1;
-            font-weight: 500;
-        }
-
-        .menu-badge {
-            background: var(--primary-color);
-            color: white;
-            padding: 4px 10px;
-            border-radius: 12px;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-
-        .sidebar-footer {
-            padding: 20px 24px;
-            border-top: 1px solid var(--border-color);
-            display: flex;
-            align-items: center;
-            background: var(--bg-secondary);
-        }
-
-        .admin-profile {
-            display: flex;
-            align-items: center;
-            width: 100%;
-        }
-
-        .admin-avatar {
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 12px;
-            font-weight: 600;
-            color: white;
-            font-size: 1.1rem;
-            transition: var(--transition);
-        }
-
-        .admin-avatar:hover {
-            transform: rotate(10deg);
-            box-shadow: 0 5px 15px rgba(37, 99, 235, 0.3);
-        }
-
-        .admin-info {
-            flex: 1;
-        }
-
-        .admin-name {
-            font-size: 0.95rem;
-            font-weight: 600;
-            margin-bottom: 4px;
-        }
-
-        .admin-role {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-        }
-
-        /* Main Content Styles */
-        .main-content {
-            flex: 1;
-            margin-left: var(--sidebar-width);
-            width: calc(100% - var(--sidebar-width));
-            transition: var(--transition);
-        }
-
-        .header {
-            height: var(--header-height);
-            background: var(--bg-secondary);
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 32px;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            transition: var(--transition);
-        }
-
-        .page-title {
-            font-size: 1.7rem;
-            font-weight: 700;
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .header-actions {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-        }
-
-        .search-box {
-            position: relative;
-        }
-
-        .search-input {
-            padding: 12px 16px 12px 48px;
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            width: 280px;
-            font-size: 0.95rem;
-            transition: var(--transition);
-            background: var(--bg-secondary);
-            color: var(--text-primary);
-        }
-
-        .search-input:focus {
-            outline: none;
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
-            width: 320px;
-        }
-
-        .search-icon {
-            position: absolute;
-            left: 16px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--text-secondary);
-        }
-
-        .header-icon {
-            width: 46px;
-            height: 46px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--text-secondary);
-            position: relative;
-            cursor: pointer;
-            transition: var(--transition);
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-        }
-
-        .header-icon:hover {
-            background: var(--primary-color);
-            color: white;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(37, 99, 235, 0.2);
-            border-color: var(--primary-color);
-        }
-
-        .notification-badge {
-            position: absolute;
-            top: -5px;
-            right: -5px;
-            background: var(--error-color);
-            color: white;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.7rem;
-            font-weight: 600;
-            border: 2px solid var(--bg-secondary);
-        }
-
-        .theme-toggle {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            width: 46px;
-            height: 46px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: var(--transition);
-        }
-
-        .theme-toggle:hover {
-            background: var(--primary-light);
-            color: var(--primary-color);
-        }
-
-        .content {
-            padding: 32px;
-        }
-
-        /* Page Header */
-        .page-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 32px;
-        }
-
-        .breadcrumb {
-            display: flex;
-            align-items: center;
-            color: var(--text-secondary);
-            font-size: 0.95rem;
-        }
-
-        .breadcrumb a {
-            color: var(--primary-color);
-            text-decoration: none;
-            transition: var(--transition);
-        }
-
-        .breadcrumb a:hover {
-            text-decoration: underline;
-        }
-
-        .breadcrumb i {
-            margin: 0 10px;
-            font-size: 0.8rem;
-        }
-
-        .action-buttons {
-            display: flex;
-            gap: 16px;
-        }
-
-        .btn {
-            padding: 12px 24px;
-            border-radius: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: var(--transition);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            border: none;
-            font-size: 0.95rem;
-        }
-
-        .btn-primary {
-            background: var(--primary-color);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background: var(--primary-dark);
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(37, 99, 235, 0.3);
-        }
-
-        .btn-secondary {
-            background: var(--bg-secondary);
-            color: var(--text-primary);
-            border: 1px solid var(--border-color);
-        }
-
-        .btn-secondary:hover {
-            background: var(--primary-light);
-            color: var(--primary-color);
-            border-color: var(--primary-light);
-        }
-
-        /* Filters Section */
-        .filters-section {
-            background: var(--card-bg);
-            border-radius: var(--card-radius);
-            padding: 24px;
-            margin-bottom: 24px;
-            box-shadow: var(--shadow);
-            border: 1px solid var(--border-color);
-        }
-
-        .filters-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .filters-title {
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        .filters-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 16px;
-        }
-
-        .filter-group {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .filter-label {
-            margin-bottom: 8px;
-            font-weight: 500;
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-        }
-
-        .filter-select,
-        .filter-input {
-            padding: 12px 16px;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            font-size: 0.95rem;
-            transition: var(--transition);
-        }
-
-        .filter-select:focus,
-        .filter-input:focus {
-            outline: none;
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-        }
-
-        /* Destinations Grid */
-        .destinations-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 24px;
-            margin-bottom: 32px;
-        }
-
-        .destination-card {
-            background: var(--card-bg);
-            border-radius: var(--card-radius);
-            overflow: hidden;
-            box-shadow: var(--shadow);
-            transition: var(--transition);
-            border: 1px solid var(--border-color);
-        }
-
-        .destination-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
-        }
-
-        .card-image {
-            height: 200px;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .card-image img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            transition: var(--transition);
-        }
-
-        .destination-card:hover .card-image img {
-            transform: scale(1.05);
-        }
-
-        .card-badge {
-            position: absolute;
-            top: 16px;
-            right: 16px;
-            background: var(--primary-color);
-            color: white;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            z-index: 2;
-        }
-
-        .card-content {
-            padding: 20px;
-        }
-
-        .card-title {
-            font-size: 1.2rem;
-            font-weight: 700;
-            margin-bottom: 12px;
-            color: var(--text-primary);
-        }
-
-        .card-description {
-            color: var(--text-secondary);
-            margin-bottom: 20px;
-            line-height: 1.6;
-            font-size: 0.95rem;
-        }
-
-        .card-meta {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding-top: 16px;
-            border-top: 1px solid var(--border-color);
-        }
-
-        .meta-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-        }
-
-        .meta-item i {
-            color: var(--primary-color);
-        }
-
-        .card-actions {
-            display: flex;
-            gap: 12px;
-        }
-
-        .card-btn {
-            flex: 1;
-            padding: 10px 16px;
-            border-radius: 8px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: var(--transition);
-            border: none;
-            font-size: 0.9rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-        }
-
-        .card-btn-edit {
-            background: rgba(37, 99, 235, 0.1);
-            color: var(--primary-color);
-        }
-
-        .card-btn-edit:hover {
-            background: var(--primary-color);
-            color: white;
-        }
-
-        .card-btn-delete {
-            background: rgba(239, 68, 68, 0.1);
-            color: var(--error-color);
-        }
-
-        .card-btn-delete:hover {
-            background: var(--error-color);
-            color: white;
-        }
-
-        /* Pagination */
-        .pagination {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 12px;
-            margin-top: 32px;
-        }
-
-        .pagination-btn {
-            width: 40px;
-            height: 40px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: var(--bg-secondary);
-            color: var(--text-primary);
-            border: 1px solid var(--border-color);
-            cursor: pointer;
-            transition: var(--transition);
-        }
-
-        .pagination-btn:hover,
-        .pagination-btn.active {
-            background: var(--primary-color);
-            color: white;
-            border-color: var(--primary-color);
-        }
-
-        .pagination-btn.disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .pagination-btn.disabled:hover {
-            background: var(--bg-secondary);
-            color: var(--text-primary);
-            border-color: var(--border-color);
-        }
-
-        /* Modal */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 2000;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        .modal-content {
-            background: var(--card-bg);
-            border-radius: var(--card-radius);
-            width: 100%;
-            max-width: 600px;
-            box-shadow: var(--shadow);
-            overflow: hidden;
-            animation: modalFadeIn 0.3s ease;
-        }
-
-        @keyframes modalFadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .modal-header {
-            padding: 20px 24px;
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .modal-title {
-            font-size: 1.3rem;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        .modal-close {
-            background: none;
-            border: none;
-            font-size: 1.5rem;
-            color: var(--text-secondary);
-            cursor: pointer;
-            transition: var(--transition);
-        }
-
-        .modal-close:hover {
-            color: var(--error-color);
-            transform: rotate(90deg);
-        }
-
-        .modal-body {
-            padding: 24px;
-        }
-
-        .modal-form {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 20px;
-        }
-
-        .form-group {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .form-label {
-            margin-bottom: 8px;
-            font-weight: 500;
-            color: var(--text-primary);
-        }
-
-        .form-input,
-        .form-textarea,
-        .form-select {
-            padding: 12px 16px;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            font-size: 0.95rem;
-            transition: var(--transition);
-            font-family: inherit;
-        }
-
-        .form-textarea {
-            min-height: 120px;
-            resize: vertical;
-        }
-
-        .form-input:focus,
-        .form-textarea:focus,
-        .form-select:focus {
-            outline: none;
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-        }
-
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
-        }
-
-        .modal-footer {
-            padding: 20px 24px;
-            border-top: 1px solid var(--border-color);
-            display: flex;
-            justify-content: flex-end;
-            gap: 12px;
-        }
-
-        /* Responsive Design */
-        @media (max-width: 1200px) {
-            .form-row {
-                grid-template-columns: 1fr;
-            }
-
-            .search-input {
-                width: 200px;
-            }
-
-            .search-input:focus {
-                width: 240px;
-            }
-        }
-
-        @media (max-width: 992px) {
-            :root {
-                --sidebar-width: 80px;
-            }
-
-            .sidebar-title,
-            .menu-item span,
-            .menu-label,
-            .admin-info,
-            .menu-badge {
-                display: none;
-            }
-
-            .sidebar-header {
-                justify-content: center;
-                padding: 20px;
-            }
-
-            .sidebar-logo {
-                margin-right: 0;
-            }
-
-            .menu-item {
-                justify-content: center;
-                padding: 16px;
-                border-left: none;
-                border-radius: 12px;
-                margin: 6px 12px;
-            }
-
-            .menu-item i {
-                margin-right: 0;
-                font-size: 1.5rem;
-            }
-
-            .sidebar-footer {
-                justify-content: center;
-                padding: 16px;
-            }
-
-            .admin-avatar {
-                margin-right: 0;
-            }
-
-            .main-content {
-                margin-left: 80px;
-                width: calc(100% - 80px);
-            }
-
-            .destinations-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        @media (max-width: 768px) {
-            .destinations-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .header {
-                padding: 0 20px;
-            }
-
-            .search-box {
-                display: none;
-            }
-
-            .content {
-                padding: 20px;
-            }
-
-            .header-actions {
-                gap: 12px;
-            }
-
-            .header-icon {
-                width: 40px;
-                height: 40px;
-            }
-
-            .page-header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 16px;
-            }
-
-            .action-buttons {
-                width: 100%;
-                justify-content: space-between;
-            }
-
-            .btn {
-                flex: 1;
-            }
-
-            .filters-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        @media (max-width: 576px) {
-            .card-actions {
-                flex-direction: column;
-            }
-
-            .modal-content {
-                margin: 0;
-                border-radius: 0;
-                height: 100%;
-                overflow-y: auto;
-            }
-        }
-    </style>
+     <link rel="stylesheet" href="../assets/admin.css">
 </head>
 <body>
     <!-- Sidebar -->
@@ -917,533 +450,899 @@ session_start();
 
     <!-- Main Content -->
     <div class="main-content">
-        <!-- Header -->
         <?php include '../includes/header.php'; ?>
 
         <div class="content">
-            <!-- Page Header -->
-            <div class="page-header">
-                <div class="breadcrumb">
-                    <a href="#">Dashboard</a>
-                    <i class="ri-arrow-right-s-line"></i>
-                    <span>Destinations</span>
+            <?php if ($message): ?>
+                <div class="message <?php echo $message_type; ?>">
+                    <i class="ri-<?php echo $message_type == 'success' ? 'check' : 'close'; ?>-circle-fill"></i>
+                    <span><?php echo $message; ?></span>
                 </div>
-                <div class="action-buttons">
-                    <button class="btn btn-primary" id="add-destination-btn">
-                        <i class="ri-add-line"></i>
-                        Add Destination
+            <?php endif; ?>
+
+            <div class="section-header">
+                <h1 class="section-title">Manage Destinations</h1>
+                <div>
+                    <button class="btn btn-primary" onclick="openAddDestinationModal()">
+                        <i class="ri-add-line"></i> Add New Destination
                     </button>
                 </div>
             </div>
 
-            <!-- Filters Section -->
-            <div class="filters-section">
-                <div class="filters-header">
-                    <div class="filters-title">Filter Destinations</div>
-                    <div>
-                        <button class="btn btn-secondary" id="apply-filters">
-                            <i class="ri-filter-line"></i>
-                            Apply Filters
-                        </button>
-                        <button class="btn btn-secondary" id="reset-filters" style="margin-left:8px;">
-                            <i class="ri-refresh-line"></i>
-                            Reset Filters
-                        </button>
-                    </div>
-                </div>
-                <div class="filters-grid">
-                    <div class="filter-group">
-                        <label class="filter-label">Region</label>
-                        <select class="filter-select" id="filter-region">
-                            <option value="">All Regions</option>
-                            <option value="kashmir">Kashmir</option>
-                            <option value="ladakh">Ladakh</option>
-                            <option value="jammu">Jammu</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label class="filter-label">Category</label>
-                        <select class="filter-select" id="filter-category">
-                            <option value="">All Categories</option>
-                            <option value="lake">Lake</option>
-                            <option value="mountain">Mountain</option>
-                            <option value="valley">Valley</option>
-                            <option value="religious">Religious</option>
-                            <option value="adventure">Adventure</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label class="filter-label">Status</label>
-                        <select class="filter-select" id="filter-status">
-                            <option value="">All Statuses</option>
-                            <option value="active">Active</option>
-                            <option value="inactive">Inactive</option>
-                            <option value="draft">Draft</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label class="filter-label">Search</label>
-                        <input type="text" class="filter-input" id="filter-search" placeholder="Enter keyword...">
-                    </div>
-                </div>
+            <!-- Quick Actions -->
+            <div class="quick-actions">
+                <button class="quick-action-btn" onclick="filterDestinations('active')">
+                    <i class="ri-checkbox-circle-line"></i> Active
+                </button>
+                <button class="quick-action-btn" onclick="filterDestinations('featured')">
+                    <i class="ri-star-line"></i> Featured
+                </button>
+                <button class="quick-action-btn" onclick="filterDestinations('kashmir')">
+                    <i class="ri-map-pin-line"></i> Kashmir
+                </button>
+                <button class="quick-action-btn" onclick="filterDestinations('ladakh')">
+                    <i class="ri-map-pin-line"></i> Ladakh
+                </button>
+                <button class="quick-action-btn" onclick="filterDestinations('lake')">
+                    <i class="ri-water-flash-line"></i> Lakes
+                </button>
+                <button class="quick-action-btn" onclick="filterDestinations('adventure')">
+                    <i class="ri-landscape-line"></i> Adventure
+                </button>
             </div>
-            <!-- cards secton -->
-            <?php
-            include '../includes/connection.php';
 
-            $sql = "SELECT * FROM destinations ORDER BY id DESC";
-            $result = $conn->query($sql);
-            ?>
-
-            <!-- Destinations Grid -->
-            <div class="destinations-grid" id="destinations-grid">
-                <?php
-                if ($result && $result->num_rows > 0) {
-                    while ($row = $result->fetch_assoc()) {
-                        // Ensure safe values for data attributes
-                        $data_region = htmlspecialchars(strtolower($row['region']));
-                        $data_category = htmlspecialchars(strtolower($row['category']));
-                        $data_status = htmlspecialchars(strtolower($row['status']));
-                        $data_location = htmlspecialchars(strtolower($row['location']));
-                        $data_name = htmlspecialchars(strtolower($row['name']));
-                ?>
-                        <div class="destination-card"
-                             data-id="<?php echo htmlspecialchars($row['id']); ?>"
-                             data-region="<?php echo $data_region; ?>"
-                             data-category="<?php echo $data_category; ?>"
-                             data-status="<?php echo $data_status; ?>"
-                             data-location="<?php echo $data_location; ?>"
-                             data-name="<?php echo $data_name; ?>">
-                            <div class="card-image">
-                                <input type="hidden" value="<?php echo htmlspecialchars($row['id']); ?>">
-                                <img src="../upload/destinations/<?php echo htmlspecialchars($row['image']); ?>"
-                                    alt="<?php echo htmlspecialchars($row['name']); ?>">
-                                <span class="card-badge"><?php echo htmlspecialchars($row['status']); ?></span>
-                            </div>
-                            <div class="card-content">
-                                <h3 class="card-title"><?php echo htmlspecialchars($row['name']); ?></h3>
-                                <p class="card-description"><?php echo htmlspecialchars($row['description']); ?></p>
-                                <div class="card-meta">
-                                    <div class="meta-item">
-                                        <i class="ri-map-pin-line"></i>
-                                        <span><?php echo htmlspecialchars($row['location']); ?></span>
-                                    </div>
-                                    <div class="meta-item">
-                                        <i class="ri-star-line"></i>
-                                        <span><?php echo htmlspecialchars($row['rating']); ?></span>
-                                    </div>
-                                </div>
-                                <div class="card-actions">
-                                    <button class="card-btn card-btn-edit" data-id="<?php echo $row['id']; ?>">
-                                        <i class="ri-edit-line"></i> Edit
-                                    </button>
-                                    <button class="card-btn card-btn-delete delete-btn" data-id="<?php echo $row['id']; ?>" data-name="<?php echo htmlspecialchars($row['name']); ?>">
-                                        <i class="ri-delete-bin-line"></i>
-                                        Delete
-                                    </button>
-                                </div>
-                            </div>
+            <!-- Stats Overview -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon destinations-icon">
+                        <i class="ri-map-pin-line"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3><?php echo $total_destinations; ?></h3>
+                        <p>Total Destinations</p>
+                        <div class="stat-trend">
+                            <span><?php echo $active_destinations; ?> active</span>
                         </div>
-                <?php
-                    }
-                } else {
-                    echo "<p style='color:gray;'>No destinations found.</p>";
-                }
-                ?>
-            </div>
-            <!-- cards secton -->
+                    </div>
+                </div>
 
-            <!-- Pagination -->
-            <div class="pagination">
-                <button class="pagination-btn disabled">
-                    <i class="ri-arrow-left-s-line"></i>
-                </button>
-                <button class="pagination-btn active">1</button>
-                <button class="pagination-btn">2</button>
-                <button class="pagination-btn">3</button>
-                <button class="pagination-btn">
-                    <i class="ri-arrow-right-s-line"></i>
-                </button>
+                <div class="stat-card">
+                    <div class="stat-icon kashmir-icon">
+                        <i class="ri-snowflake-line"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3><?php echo $kashmir_destinations; ?></h3>
+                        <p>Kashmir Destinations</p>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon ladakh-icon">
+                        <i class="ri-sun-line"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3><?php echo $ladakh_destinations; ?></h3>
+                        <p>Ladakh Destinations</p>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon featured-icon">
+                        <i class="ri-star-line"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3><?php echo $featured_destinations; ?></h3>
+                        <p>Featured Destinations</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Destinations Table -->
+            <div class="table-container">
+                <!-- Search -->
+                <div style="margin-bottom: 20px;">
+                    <div style="position: relative;">
+                        <i class="ri-search-line" style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-secondary);"></i>
+                        <input type="text" id="destination-search" placeholder="Search destinations..." style="width: 100%; padding: 12px 16px 12px 48px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--bg-secondary); color: var(--text-primary);" onkeyup="searchDestinations()">
+                    </div>
+                </div>
+
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th width="50">#</th>
+                            <th width="300">Destination Details</th>
+                            <th>Region</th>
+                            <th>Type</th>
+                            <th>Location</th>
+                            <th>Rating</th>
+                            <th>Status</th>
+                            <th width="200">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="destinations-table-body">
+                        <?php 
+                        $counter = 1;
+                        while ($destination = $destinations->fetch_assoc()): 
+                            $seasons = json_decode($destination['best_seasons'], true) ?: [];
+                            $seasonBadges = array_map(function($season) {
+                                $icons = [
+                                    'spring' => '🌼',
+                                    'summer' => '☀️',
+                                    'autumn' => '🍂',
+                                    'winter' => '❄️'
+                                ];
+                                return '<span style="font-size: 0.8rem; margin-right: 2px;">' . ($icons[$season] ?? $season) . '</span>';
+                            }, $seasons);
+                        ?>
+                            <tr class="destination-row" 
+                                data-region="<?php echo $destination['region']; ?>"
+                                data-type="<?php echo $destination['destination_type']; ?>"
+                                data-status="<?php echo $destination['is_active'] ? 'active' : 'inactive'; ?>"
+                                data-featured="<?php echo $destination['is_featured'] ? 'featured' : 'not-featured'; ?>">
+                                <td><?php echo $counter; ?></td>
+                                <td class="destination-name-cell">
+                                    <div style="display: flex; gap: 15px; align-items: flex-start;">
+                                        <div style="width: 80px; height: 80px; border-radius: 12px; overflow: hidden; flex-shrink: 0;">
+                                            <img src="<?php echo !empty($destination['image_path']) ? '../upload/'. $destination['image_path'] : '../../assets/img/bg1.jpg'; ?>" 
+                                                 alt="<?php echo htmlspecialchars($destination['destination_name']); ?>"
+                                                 style="width: 100%; height: 100%; object-fit: cover;"
+                                                 onerror="this.src='../../assets/img/bg1.jpg'">
+                                        </div>
+                                        <div style="flex: 1;">
+                                            <h4 style="margin: 0 0 5px 0;"><?php echo htmlspecialchars($destination['destination_name']); ?></h4>
+                                            <p style="margin: 0 0 8px 0; font-size: 0.9rem; color: var(--text-secondary);">
+                                                <?php echo htmlspecialchars(substr($destination['short_description'], 0, 100)); ?>...
+                                            </p>
+                                            <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                                                <?php if ($destination['badge']): ?>
+                                                    <span class="status-badge" style="background: rgba(37, 99, 235, 0.15); color: var(--primary-color); font-size: 0.7rem; padding: 3px 8px;">
+                                                        <?php echo $destination['badge']; ?>
+                                                    </span>
+                                                <?php endif; ?>
+                                                <div style="display: flex; align-items: center; gap: 5px; font-size: 0.8rem; color: var(--text-secondary);">
+                                                    <?php echo implode('', $seasonBadges); ?>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="region-<?php echo $destination['region']; ?>">
+                                        <?php echo ucfirst($destination['region']); ?>
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="type-<?php echo $destination['destination_type']; ?>" style="font-weight: 600;">
+                                        <?php echo ucfirst($destination['destination_type']); ?>
+                                    </span>
+                                </td>
+                                <td>
+                                    <div style="font-weight: 500;">
+                                        <i class="ri-map-pin-line" style="margin-right: 5px;"></i>
+                                        <?php echo htmlspecialchars($destination['location']); ?>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: 5px;">
+                                        <i class="ri-star-fill" style="color: #f59e0b;"></i>
+                                        <span style="font-weight: 600;"><?php echo number_format($destination['rating'], 1); ?></span>
+                                        <span style="font-size: 0.8rem; color: var(--text-secondary);">
+                                            (<?php echo $destination['reviews_count']; ?>)
+                                        </span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <?php if ($destination['is_active']): ?>
+                                        <span class="status-badge status-active">Active</span>
+                                    <?php else: ?>
+                                        <span class="status-badge status-inactive">Inactive</span>
+                                    <?php endif; ?>
+                                    
+                                    <?php if ($destination['is_featured']): ?>
+                                        <br><span class="status-badge status-featured" style="margin-top: 5px;">Featured</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <div class="table-actions">
+                                        <button class="btn btn-primary btn-sm" onclick="editDestination(<?php echo $destination['id']; ?>)">
+                                            <i class="ri-edit-line"></i> Edit
+                                        </button>
+                                       
+                                        <button class="btn btn-danger btn-sm" onclick="deleteDestination(<?php echo $destination['id']; ?>)">
+                                            <i class="ri-delete-bin-line"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php 
+                        $counter++;
+                        endwhile; 
+                        ?>
+                    </tbody>
+                </table>
+                
+                <?php if ($destinations->num_rows === 0): ?>
+                    <div style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                        <i class="ri-inbox-line" style="font-size: 3rem; margin-bottom: 15px;"></i>
+                        <h3>No destinations found</h3>
+                        <p>Click "Add New Destination" to create your first destination.</p>
+                    </div>
+                <?php endif; ?>
             </div>
         </div>
     </div>
 
-    <!-- Add Destination Modal -->
+    <!-- Add/Edit Destination Modal -->
     <div class="modal" id="destination-modal">
         <div class="modal-content">
-            <div class="modal-header">
-                <h3 class="modal-title">Add New Destination</h3>
-                <button class="modal-close" id="modal-close">
-                    <i class="ri-close-line"></i>
-                </button>
-            </div>
-            <div class="modal-body">
-                <form class="modal-form" method="post" action="../logic/destinationDetails.php" enctype="multipart/form-data">
+            <span class="close-modal" onclick="closeModal()">&times;</span>
+            <h2 id="modal-title">Add New Destination</h2>
+            <form id="destination-form" method="POST" enctype="multipart/form-data">
+                <input type="hidden" id="destination_id" name="destination_id">
+                <input type="hidden" name="add_destination" id="form-action" value="add_destination">
+                
+                <div class="tabs" style="margin-bottom: 20px;">
+                    <div class="tab active" data-tab="basic" onclick="switchFormTab('basic')">Basic Info</div>
+                    <div class="tab" data-tab="details" onclick="switchFormTab('details')">Details</div>
+                    <div class="tab" data-tab="media" onclick="switchFormTab('media')">Media</div>
+                </div>
+                
+                <!-- Basic Info Tab -->
+                <div id="basic-tab" class="tab-content active">
+                    <div class="form-group">
+                        <label for="destination_name">Destination Name *</label>
+                        <input type="text" id="destination_name" name="destination_name" required>
+                    </div>
+
                     <div class="form-row">
                         <div class="form-group">
-                            <input type="hidden" name="destination_id">
-                            <label class="form-label">Destination Name</label>
-                            <input type="text" class="form-input" placeholder="Enter destination name" name="destination_name" required>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Region</label>
-                            <select class="form-select" name="region" required>
+                            <label for="region">Region *</label>
+                            <select id="region" name="region" required>
                                 <option value="">Select Region</option>
                                 <option value="kashmir">Kashmir</option>
                                 <option value="ladakh">Ladakh</option>
                                 <option value="jammu">Jammu</option>
                             </select>
                         </div>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Description</label>
-                        <textarea class="form-textarea" placeholder="Enter destination description" name="destination_description" required></textarea>
-                    </div>
-                    <div class="form-row">
                         <div class="form-group">
-                            <label class="form-label">Category</label>
-                            <select class="form-select" name="category">
-                                <option value="">Select Category</option>
+                            <label for="destination_type">Destination Type *</label>
+                            <select id="destination_type" name="destination_type" required>
+                                <option value="">Select Type</option>
                                 <option value="lake">Lake</option>
-                                <option value="mountain">Mountain</option>
                                 <option value="valley">Valley</option>
-                                <option value="religious">Religious</option>
+                                <option value="mountain">Mountain</option>
+                                <option value="monastery">Monastery</option>
+                                <option value="hill">Hill Station</option>
+                                <option value="desert">Desert</option>
+                                <option value="cultural">Cultural</option>
                                 <option value="adventure">Adventure</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Status</label>
-                            <select class="form-select" name="status">
-                                <option value="active">Active</option>
-                                <option value="inactive">Inactive</option>
-                                <option value="draft">Draft</option>
+                                <option value="scenic">Scenic</option>
                             </select>
                         </div>
                     </div>
+
+                    <div class="form-group">
+                        <label>Best Seasons *</label>
+                        <div class="season-checkboxes">
+                            <label class="season-checkbox">
+                                <input type="checkbox" name="best_seasons[]" value="spring"> Spring
+                            </label>
+                            <label class="season-checkbox">
+                                <input type="checkbox" name="best_seasons[]" value="summer"> Summer
+                            </label>
+                            <label class="season-checkbox">
+                                <input type="checkbox" name="best_seasons[]" value="autumn"> Autumn
+                            </label>
+                            <label class="season-checkbox">
+                                <input type="checkbox" name="best_seasons[]" value="winter"> Winter
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="location">Location *</label>
+                        <input type="text" id="location" name="location" required placeholder="e.g., Srinagar, Baramulla">
+                    </div>
+
                     <div class="form-row">
                         <div class="form-group">
-                            <label class="form-label">Location</label>
-                            <input type="text" class="form-input" placeholder="Enter location" name="location" required>
+                            <label for="rating">Rating (0-5)</label>
+                            <input type="number" id="rating" name="rating" step="0.1" min="0" max="5" value="4.5">
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Rating</label>
-                            <input type="number" name="rating" class="form-input" placeholder="0.0" step="0.1" min="0" max="5" required>
+                            <label for="reviews_count">Reviews Count</label>
+                            <input type="number" id="reviews_count" name="reviews_count" min="0" value="100">
                         </div>
                     </div>
+
                     <div class="form-group">
-                        <label class="form-label">Featured Image</label>
-                        <input type="file" class="form-input" name="image" accept="image/*" required>
+                        <label for="badge">Badge (Optional)</label>
+                        <select id="badge" name="badge">
+                            <option value="">No Badge</option>
+                            <option value="Popular">Popular</option>
+                            <option value="Adventure">Adventure</option>
+                            <option value="Cultural">Cultural</option>
+                            <option value="Scenic">Scenic</option>
+                            <option value="Luxury">Luxury</option>
+                            <option value="Family">Family</option>
+                            <option value="Romantic">Romantic</option>
+                        </select>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" id="modal-cancel">
-                            Cancel
+
+                    <div class="form-group">
+                        <label for="short_description">Short Description *</label>
+                        <textarea id="short_description" name="short_description" rows="3" required placeholder="Brief description for cards and listings..."></textarea>
+                    </div>
+                </div>
+                
+            
+                <!-- Details Tab -->
+                <!-- <div id="details-tab" class="tab-content">
+                    <div class="form-group">
+                        <label for="detailed_description">Detailed Description</label>
+                        <textarea id="detailed_description" name="detailed_description" rows="6" placeholder="Full detailed description..."></textarea>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group" style="flex:1;">
+                            <label>Highlights</label>
+                            <div id="highlights-container"></div>
+                            <button type="button" class="btn btn-sm btn-primary" onclick="addJsonItem('highlight')" style="margin-top:8px;"><i class="ri-add-line"></i> Add Highlight</button>
+                        </div>
+                        <div class="form-group" style="flex:1;">
+                            <label>Activities</label>
+                            <div id="activities-container"></div>
+                            <button type="button" class="btn btn-sm btn-primary" onclick="addJsonItem('activity')" style="margin-top:8px;"><i class="ri-add-line"></i> Add Activity</button>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group" style="flex:1;">
+                            <label>Tips</label>
+                            <div id="tips-container"></div>
+                            <button type="button" class="btn btn-sm btn-primary" onclick="addJsonItem('tip')" style="margin-top:8px;"><i class="ri-add-line"></i> Add Tip</button>
+                        </div>
+                        <div class="form-group" style="flex:1;">
+                            <label>Nearby Attractions</label>
+                            <div id="attractions-container"></div>
+                            <button type="button" class="btn btn-sm btn-primary" onclick="addJsonItem('attraction')" style="margin-top:8px;"><i class="ri-add-line"></i> Add Attraction</button>
+                        </div>
+                    </div>
+                </div> -->
+
+                <!-- Media Tab -->
+                <div id="media-tab" class="tab-content">
+                    <div class="form-group">
+                        <label for="destination_images">Destination Images</label>
+                        <input type="file" id="destination_images" name="destination_images[]" accept="image/*" multiple>
+                        <small style="color: var(--text-secondary);">Select multiple images (first image will be primary)</small>
+                        <div id="images-preview" class="image-preview-grid"></div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="is_featured" name="is_featured" value="1">
+                                <label for="is_featured">Featured Destination</label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="is_active" name="is_active" value="1" checked>
+                                <label for="is_active">Active</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--border-color);">
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">
+                        <i class="ri-save-line"></i> Save Destination
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Manage Images Modal -->
+    <div class="modal" id="images-modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeImagesModal()">&times;</span>
+            <h2>Manage Destination Images</h2>
+            <div id="images-list" style="margin: 20px 0;"></div>
+            <form id="upload-images-form" method="POST" enctype="multipart/form-data" style="margin-top: 20px;">
+                <input type="hidden" id="images_destination_id" name="destination_id">
+                <div class="form-group">
+                    <label>Add More Images</label>
+                    <input type="file" name="destination_images[]" accept="image/*" multiple>
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <i class="ri-upload-line"></i> Upload Images
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentDestinationId = null;
+        
+        // Tab switching
+        function switchFormTab(tabName) {
+            // Remove active from all tabs/contents
+            document.querySelectorAll('#destination-modal .tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('#destination-modal .tab-content').forEach(content => content.classList.remove('active'));
+
+            // Find the tab element by data attribute (more robust than relying on index)
+            const tabEl = Array.from(document.querySelectorAll('#destination-modal .tab')).find(t => t.getAttribute('data-tab') === tabName);
+            if (tabEl) tabEl.classList.add('active');
+
+            const contentEl = document.getElementById(`${tabName}-tab`);
+            if (contentEl) contentEl.classList.add('active');
+        }
+        
+        // Modal functions
+        function openAddDestinationModal() {
+            document.getElementById('modal-title').textContent = 'Add New Destination';
+            document.getElementById('form-action').name = 'add_destination';
+            document.getElementById('form-action').value = 'add_destination';
+            
+            document.getElementById('destination-form').reset();
+            document.getElementById('destination_id').value = '';
+            
+            switchFormTab('basic');
+            
+            // Clear JSON editors (initialize one item in each container)
+            const singularMap = { highlights: 'highlight', activities: 'activity', tips: 'tip', attractions: 'attraction' };
+            ['highlights', 'activities', 'tips', 'attractions'].forEach(plural => {
+                const container = document.getElementById(`${plural}-container`);
+                if (!container) return;
+                const singular = singularMap[plural];
+                container.innerHTML = getJsonItemHTML(singular);
+            });
+            
+            // Clear image preview
+            document.getElementById('images-preview').innerHTML = '';
+            
+            // Uncheck all season checkboxes
+            document.querySelectorAll('input[name="best_seasons[]"]').forEach(cb => {
+                cb.checked = false;
+            });
+            
+            document.getElementById('destination-modal').classList.add('active');
+        }
+        
+        function getJsonItemHTML(type) {
+            switch(type) {
+                case 'highlight':
+                    return `<div class="json-item">
+                        <input type="text" name="highlight_titles[]" placeholder="Highlight title" required>
+                        <textarea name="highlight_descriptions[]" placeholder="Description" rows="2" required></textarea>
+                        <button type="button" class="btn btn-sm btn-danger" onclick="removeJsonItem(this, 'highlight')">
+                            <i class="ri-delete-bin-line"></i>
                         </button>
-                        <input type="submit" class="btn btn-primary" name='submit' value="Save Destination">
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- Delete Confirmation Modal -->
-    <div class="modal" id="delete-modal">
-        <div class="modal-content" style="max-width: 400px;">
-            <div class="modal-header">
-                <h3 class="modal-title">Confirm Delete</h3>
-                <button class="modal-close" id="delete-modal-close">
-                    <i class="ri-close-line"></i>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div style="text-align: center; padding: 20px 0;">
-                    <i class="ri-alert-line" style="font-size: 3rem; color: var(--error-color); margin-bottom: 16px;"></i>
-                    <h3 style="margin-bottom: 8px; color: var(--text-primary);">Are you sure?</h3>
-                    <p style="color: var(--text-secondary);" id="delete-message">This action cannot be undone.</p>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" id="delete-cancel">
-                    Cancel
-                </button>
-                <a href="#" class="btn btn-primary" id="delete-confirm" style="background: var(--error-color);">
-                    <i class="ri-delete-bin-line"></i>
-                    Confirm Delete
-                </a>
-            </div>
-        </div>
-    </div>
-
-    <!-- error message modle -->
-    <?php if (isset($_SESSION['message'])): ?>
-        <div class="modal" id="message-modal" style="display: flex;">
-            <div class="modal-content" style="max-width: 400px;">
-                <div class="modal-header">
-                    <h3 class="modal-title"><?php echo ucfirst($_SESSION['message']['type']); ?></h3>
-                    <button class="modal-close" id="message-modal-close">
-                        <i class="ri-close-line"></i>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <div style="text-align: center; padding: 20px 0;">
-                        <?php if ($_SESSION['message']['type'] === 'success'): ?>
-                            <i class="ri-checkbox-circle-line" style="font-size: 3rem; color: var(--success-color); margin-bottom: 16px;"></i>
-                        <?php else: ?>
-                            <i class="ri-error-warning-line" style="font-size: 3rem; color: var(--error-color); margin-bottom: 16px;"></i>
-                        <?php endif; ?>
-                        <p style="color: var(--text-primary);">
-                            <?php echo htmlspecialchars($_SESSION['message']['text']); ?>
-                        </p>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-primary" id="message-confirm">
-                        OK
-                    </button>
-                </div>
-            </div>
-        </div>
-        <?php unset($_SESSION['message']); ?>
-    <?php endif; ?>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Message modal functionality
-            const messageModal = document.getElementById('message-modal');
-            if (messageModal) {
-                const messageClose = document.getElementById('message-modal-close');
-                const messageConfirm = document.getElementById('message-confirm');
-
-                function closeMessageModal() {
-                    messageModal.style.display = 'none';
-                    document.body.style.overflow = 'auto';
-                }
-
-                if (messageClose) messageClose.addEventListener('click', closeMessageModal);
-                if (messageConfirm) messageConfirm.addEventListener('click', closeMessageModal);
-
-                messageModal.addEventListener('click', function(e) {
-                    if (e.target === messageModal) {
-                        closeMessageModal();
-                    }
-                });
-
-                // Auto close after 5 seconds
-                setTimeout(closeMessageModal, 5000);
+                    </div>`;
+                case 'activity':
+                    return `<div class="json-item">
+                        <input type="text" name="activity_names[]" placeholder="Activity name" required>
+                        <textarea name="activity_descriptions[]" placeholder="Description" rows="2"></textarea>
+                        <select name="activity_difficulties[]">
+                            <option value="easy">Easy</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="hard">Hard</option>
+                        </select>
+                        <input type="text" name="activity_durations[]" placeholder="Duration (e.g., 2 hours)">
+                        <button type="button" class="btn btn-sm btn-danger" onclick="removeJsonItem(this, 'activity')">
+                            <i class="ri-delete-bin-line"></i>
+                        </button>
+                    </div>`;
+                case 'tip':
+                    return `<div class="json-item">
+                        <select name="tip_types[]">
+                            <option value="best_time">Best Time</option>
+                            <option value="what_to_pack">What to Pack</option>
+                            <option value="safety">Safety Tips</option>
+                            <option value="transport">Transport</option>
+                            <option value="food">Food</option>
+                            <option value="accommodation">Accommodation</option>
+                            <option value="general">General Tips</option>
+                        </select>
+                        <input type="text" name="tip_titles[]" placeholder="Tip title">
+                        <textarea name="tip_descriptions[]" placeholder="Tip description" rows="2" required></textarea>
+                        <button type="button" class="btn btn-sm btn-danger" onclick="removeJsonItem(this, 'tip')">
+                            <i class="ri-delete-bin-line"></i>
+                        </button>
+                    </div>`;
+                case 'attraction':
+                    return `<div class="json-item">
+                        <input type="text" name="attraction_names[]" placeholder="Attraction name" required>
+                        <input type="number" name="attraction_distances[]" placeholder="Distance (km)" step="0.1">
+                        <textarea name="attraction_descriptions[]" placeholder="Description" rows="2"></textarea>
+                        <button type="button" class="btn btn-sm btn-danger" onclick="removeJsonItem(this, 'attraction')">
+                            <i class="ri-delete-bin-line"></i>
+                        </button>
+                    </div>`;
             }
+        }
+        
+        function addJsonItem(type) {
+            // Containers use plural names: highlights, activities, tips, attractions
+            const container = document.getElementById(`${type}s-container`);
+            if (!container) return;
+            const html = getJsonItemHTML(type);
+            container.insertAdjacentHTML('beforeend', html);
+            // Scroll the new item into view for better UX
+            const last = container.lastElementChild;
+            if (last) last.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        
+        function removeJsonItem(button, type) {
+            const container = document.getElementById(`${type}s-container`);
+            if (!container) return;
+            if (container.children.length > 1) {
+                button.closest('.json-item').remove();
+            }
+        }
+        
+        // Image Preview
+        document.getElementById('destination_images').addEventListener('change', function(e) {
+            const preview = document.getElementById('images-preview');
+            preview.innerHTML = '';
+            
+            Array.from(e.target.files).forEach((file, index) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = document.createElement('div');
+                    img.className = 'image-preview-item';
+                    img.innerHTML = `
+                        <img src="${e.target.result}" alt="Preview">
+                        <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s;">
+                            <div style="color: white; text-align: center;">Image ${index + 1}</div>
+                        </div>
+                    `;
+                    img.onmouseover = function() {
+                        this.children[1].style.opacity = '1';
+                    };
+                    img.onmouseout = function() {
+                        this.children[1].style.opacity = '0';
+                    };
+                    preview.appendChild(img);
+                }
+                reader.readAsDataURL(file);
+            });
         });
-    </script>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Dark/Light mode toggle
-            const themeToggle = document.getElementById('theme-toggle');
-            const themeIcon = themeToggle ? themeToggle.querySelector('i') : null;
-
-            if (themeToggle) {
-                themeToggle.addEventListener('click', function() {
-                    document.body.classList.toggle('dark-mode');
-
-                    if (document.body.classList.contains('dark-mode')) {
-                        themeIcon.classList.remove('ri-moon-line');
-                        themeIcon.classList.add('ri-sun-line');
-                        localStorage.setItem('theme', 'dark');
-                    } else {
-                        themeIcon.classList.remove('ri-sun-line');
-                        themeIcon.classList.add('ri-moon-line');
-                        localStorage.setItem('theme', 'light');
-                    }
+        // Edit Destination
+        function editDestination(destinationId) {
+            fetch(`../logic/get_destination.php?id=${destinationId}`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('modal-title').textContent = 'Edit Destination';
+                    document.getElementById('form-action').name = 'update_destination';
+                    document.getElementById('form-action').value = 'update_destination';
+                    
+                    document.getElementById('destination_id').value = data.id;
+                    document.getElementById('destination_name').value = data.destination_name;
+                    document.getElementById('region').value = data.region;
+                    document.getElementById('destination_type').value = data.destination_type;
+                    document.getElementById('location').value = data.location;
+                    document.getElementById('short_description').value = data.short_description;
+                    document.getElementById('detailed_description').value = data.detailed_description || '';
+                    document.getElementById('badge').value = data.badge || '';
+                    document.getElementById('rating').value = data.rating || '4.5';
+                    document.getElementById('reviews_count').value = data.reviews_count || '100';
+                    document.getElementById('is_featured').checked = data.is_featured == 1;
+                    document.getElementById('is_active').checked = data.is_active == 1;
+                    
+                    // Set seasons
+                    document.querySelectorAll('input[name="best_seasons[]"]').forEach(cb => {
+                        cb.checked = data.best_seasons?.includes(cb.value) || false;
+                    });
+                    
+                    switchFormTab('basic');
+                    
+                    // Populate JSON fields
+                    populateJsonFields(data);
+                    
+                    // Clear current image preview
+                    document.getElementById('images-preview').innerHTML = '';
+                    // Load existing images into the media preview
+                    loadImagesIntoModalPreview(destinationId);
+                    
+                    document.getElementById('destination-modal').classList.add('active');
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error loading destination details');
                 });
+        }
 
-                if (localStorage.getItem('theme') === 'dark') {
-                    document.body.classList.add('dark-mode');
-                    themeIcon.classList.remove('ri-moon-line');
-                    themeIcon.classList.add('ri-sun-line');
-                }
-            }
-
-            // Modal functionality
-            const modal = document.getElementById('destination-modal');
-            const addBtn = document.getElementById('add-destination-btn');
-            const closeBtn = document.getElementById('modal-close');
-            const cancelBtn = document.getElementById('modal-cancel');
-
-            if (addBtn) {
-                addBtn.addEventListener('click', function() {
-                    if (modal) {
-                        // reset form for add flow
-                        const form = modal.querySelector('form');
-                        if (form) form.reset();
-                        modal.style.display = 'flex';
-                        document.body.style.overflow = 'hidden';
-                        document.querySelector('.modal-title').textContent = 'Add Destination';
-                    }
+        function loadImagesIntoModalPreview(destinationId) {
+            fetch(`../logic/get_destination_images.php?id=${destinationId}`)
+                .then(response => response.json())
+                .then(images => {
+                    const preview = document.getElementById('images-preview');
+                    preview.innerHTML = '';
+                    images.forEach(image => {
+                        const item = document.createElement('div');
+                        item.className = 'image-preview-item';
+                        item.innerHTML = `
+                            <img src="../../upload/${image.image_path}" alt="Destination Image">
+                            <div class="image-overlay" style="opacity:0;">
+                                ${image.is_primary ? '<div style="background: var(--primary-color); padding: 6px 10px; border-radius: 10px; color: white; font-size:0.8rem;">Primary</div>' : '<div style="color:white;">Image</div>'}
+                            </div>
+                        `;
+                        item.onmouseover = function() { this.children[1].style.opacity = '1'; };
+                        item.onmouseout = function() { this.children[1].style.opacity = '0'; };
+                        preview.appendChild(item);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading images:', error);
                 });
             }
-
-            function closeModal() {
-                if (modal) {
-                    modal.style.display = 'none';
-                    document.body.style.overflow = 'auto';
-                }
-            }
-
-            if (closeBtn) closeBtn.addEventListener('click', closeModal);
-            if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
-
-            if (modal) {
-                modal.addEventListener('click', function(e) {
-                    if (e.target === modal) {
-                        closeModal();
-                    }
-                });
-            }
-
-            // Card actions (edit open same modal, you'll populate fields when implementing edit endpoint)
-            const editButtons = document.querySelectorAll('.card-btn-edit');
-            editButtons.forEach(button => {
-                button.addEventListener('click', function() {
-                    if (modal) {
-                        modal.style.display = 'flex';
-                        document.body.style.overflow = 'hidden';
-                        document.querySelector('.modal-title').textContent = 'Edit Destination';
-                        // populate form when you implement edit endpoint / ajax
-                    }
-                });
+        
+        function populateJsonFields(data) {
+            // Clear existing fields (safely)
+            ['highlights', 'activities', 'tips', 'attractions'].forEach(type => {
+                const container = document.getElementById(`${type}-container`);
+                if (container) container.innerHTML = '';
             });
-
-            // Delete stuff (existing)
-            const deleteModal = document.getElementById('delete-modal');
-            const deleteButtons = document.querySelectorAll('.delete-btn');
-            const deleteConfirm = document.getElementById('delete-confirm');
-            const deleteCancel = document.getElementById('delete-cancel');
-            const deleteClose = document.getElementById('delete-modal-close');
-            const deleteMessage = document.getElementById('delete-message');
-
-            let currentDeleteId = null;
-            let currentDeleteCard = null;
-
-            deleteButtons.forEach(button => {
-                button.addEventListener('click', function(e) {
-                    e.preventDefault();
-
-                    const destinationId = this.getAttribute('data-id');
-                    const destinationName = this.getAttribute('data-name');
-                    currentDeleteCard = this.closest('.destination-card');
-                    currentDeleteId = destinationId;
-
-                    if (deleteMessage) {
-                        deleteMessage.textContent = `Are you sure you want to delete "${destinationName}"? This action cannot be undone.`;
-                    }
-                    if (deleteModal) {
-                        deleteModal.style.display = 'flex';
-                        document.body.style.overflow = 'hidden';
-                    }
+            
+            // Populate highlights
+            if (data.highlights && data.highlights.length > 0) {
+                data.highlights.forEach(highlight => {
+                    const html = `
+                        <div class="json-item">
+                            <input type="text" name="highlight_titles[]" value="${highlight.title || ''}" placeholder="Highlight title" required>
+                            <textarea name="highlight_descriptions[]" placeholder="Description" rows="2" required>${highlight.description || ''}</textarea>
+                            <button type="button" class="btn btn-sm btn-danger" onclick="removeJsonItem(this, 'highlight')">
+                                <i class="ri-delete-bin-line"></i>
+                            </button>
+                        </div>
+                    `;
+                    document.getElementById('highlights-container').insertAdjacentHTML('beforeend', html);
                 });
+            } else {
+                document.getElementById('highlights-container').innerHTML = getJsonItemHTML('highlight');
+            }
+            
+            // Populate activities
+            if (data.activities && data.activities.length > 0) {
+                data.activities.forEach(activity => {
+                    const html = `
+                        <div class="json-item">
+                            <input type="text" name="activity_names[]" value="${activity.name || ''}" placeholder="Activity name" required>
+                            <textarea name="activity_descriptions[]" placeholder="Description" rows="2">${activity.description || ''}</textarea>
+                            <select name="activity_difficulties[]">
+                                <option value="easy" ${activity.difficulty === 'easy' ? 'selected' : ''}>Easy</option>
+                                <option value="medium" ${activity.difficulty === 'medium' || !activity.difficulty ? 'selected' : ''}>Medium</option>
+                                <option value="hard" ${activity.difficulty === 'hard' ? 'selected' : ''}>Hard</option>
+                            </select>
+                            <input type="text" name="activity_durations[]" value="${activity.duration || ''}" placeholder="Duration (e.g., 2 hours)">
+                            <button type="button" class="btn btn-sm btn-danger" onclick="removeJsonItem(this, 'activity')">
+                                <i class="ri-delete-bin-line"></i>
+                            </button>
+                        </div>
+                    `;
+                    document.getElementById('activities-container').insertAdjacentHTML('beforeend', html);
+                });
+            } else {
+                document.getElementById('activities-container').innerHTML = getJsonItemHTML('activity');
+            }
+            
+            // Populate tips
+            if (data.tips && data.tips.length > 0) {
+                data.tips.forEach(tip => {
+                    const html = `
+                        <div class="json-item">
+                            <select name="tip_types[]">
+                                <option value="best_time" ${tip.type === 'best_time' ? 'selected' : ''}>Best Time</option>
+                                <option value="what_to_pack" ${tip.type === 'what_to_pack' ? 'selected' : ''}>What to Pack</option>
+                                <option value="safety" ${tip.type === 'safety' ? 'selected' : ''}>Safety Tips</option>
+                                <option value="transport" ${tip.type === 'transport' ? 'selected' : ''}>Transport</option>
+                                <option value="food" ${tip.type === 'food' ? 'selected' : ''}>Food</option>
+                                <option value="accommodation" ${tip.type === 'accommodation' ? 'selected' : ''}>Accommodation</option>
+                                <option value="general" ${tip.type === 'general' ? 'selected' : ''}>General Tips</option>
+                            </select>
+                            <input type="text" name="tip_titles[]" value="${tip.title || ''}" placeholder="Tip title">
+                            <textarea name="tip_descriptions[]" placeholder="Tip description" rows="2" required>${tip.description || ''}</textarea>
+                            <button type="button" class="btn btn-sm btn-danger" onclick="removeJsonItem(this, 'tip')">
+                                <i class="ri-delete-bin-line"></i>
+                            </button>
+                        </div>
+                    `;
+                    document.getElementById('tips-container').insertAdjacentHTML('beforeend', html);
+                });
+            } else {
+                document.getElementById('tips-container').innerHTML = getJsonItemHTML('tip');
+            }
+            
+            // Populate attractions
+            if (data.nearby_attractions && data.nearby_attractions.length > 0) {
+                data.nearby_attractions.forEach(attraction => {
+                    const html = `
+                        <div class="json-item">
+                            <input type="text" name="attraction_names[]" value="${attraction.name || ''}" placeholder="Attraction name" required>
+                            <input type="number" name="attraction_distances[]" value="${attraction.distance || ''}" placeholder="Distance (km)" step="0.1">
+                            <textarea name="attraction_descriptions[]" placeholder="Description" rows="2">${attraction.description || ''}</textarea>
+                            <button type="button" class="btn btn-sm btn-danger" onclick="removeJsonItem(this, 'attraction')">
+                                <i class="ri-delete-bin-line"></i>
+                            </button>
+                        </div>
+                    `;
+                    document.getElementById('attractions-container').insertAdjacentHTML('beforeend', html);
+                });
+            } else {
+                document.getElementById('attractions-container').innerHTML = getJsonItemHTML('attraction');
+            }
+        }
+        
+        // Delete Destination
+        function deleteDestination(destinationId) {
+            if (confirm('Are you sure you want to delete this destination? All related images will also be deleted.')) {
+                window.location.href = `?delete=${destinationId}`;
+            }
+        }
+        
+        // Manage Images
+        function manageDestinationImages(destinationId) {
+            document.getElementById('images_destination_id').value = destinationId;
+            currentDestinationId = destinationId;
+            loadDestinationImages(destinationId);
+            document.getElementById('images-modal').classList.add('active');
+        }
+        
+        function loadDestinationImages(destinationId) {
+            fetch(`../logic/get_destination_images.php?id=${destinationId}`)
+                .then(response => response.json())
+                .then(images => {
+                    let html = '<div class="image-preview-grid">';
+                    images.forEach(image => {
+                        html += `
+                            <div class="image-preview-item">
+                                <img src="../../upload/${image.image_path}" alt="Destination Image">
+                                <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s;">
+                                    <div style="text-align: center;">
+                                        <button class="btn btn-sm btn-primary" onclick="setPrimaryImage(${image.id})" style="margin: 5px; ${image.is_primary ? 'display: none;' : ''}">
+                                            <i class="ri-star-line"></i> Set Primary
+                                        </button>
+                                        <button class="btn btn-sm btn-danger" onclick="deleteImage(${image.id})" style="margin: 5px;">
+                                            <i class="ri-delete-bin-line"></i> Delete
+                                        </button>
+                                        ${image.is_primary ? '<div style="background: var(--primary-color); padding: 5px 10px; border-radius: 10px; font-size: 0.8rem; color: white;">Primary Image</div>' : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                    document.getElementById('images-list').innerHTML = html;
+                    
+                    // Add hover effect
+                    document.querySelectorAll('#images-list .image-preview-item').forEach(item => {
+                        item.onmouseover = function() {
+                            this.children[1].style.opacity = '1';
+                        };
+                        item.onmouseout = function() {
+                            this.children[1].style.opacity = '0';
+                        };
+                    });
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('images-list').innerHTML = '<p>No images found</p>';
+                });
+        }
+        
+        function setPrimaryImage(imageId) {
+            if (confirm('Set this image as primary?')) {
+                window.location.href = `?set_primary=${imageId}`;
+            }
+        } 
+        
+        function deleteImage(imageId) {
+            if (confirm('Delete this image?')) {
+                window.location.href = `?delete_image=${imageId}`;
+            }
+        }
+        
+        // Search and Filter
+        function searchDestinations() {
+            const searchTerm = document.getElementById('destination-search').value.toLowerCase();
+            const rows = document.querySelectorAll('.destination-row');
+            
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(searchTerm) ? '' : 'none';
             });
-
-            function closeDeleteModal() {
-                if (deleteModal) {
-                    deleteModal.style.display = 'none';
-                    document.body.style.overflow = 'auto';
+        }
+        
+        function filterDestinations(filter) {
+            const rows = document.querySelectorAll('.destination-row');
+            
+            rows.forEach(row => {
+                const rowRegion = row.getAttribute('data-region');
+                const rowType = row.getAttribute('data-type');
+                const rowStatus = row.getAttribute('data-status');
+                const rowFeatured = row.getAttribute('data-featured');
+                let show = false;
+                
+                switch(filter) {
+                    case 'active':
+                        show = rowStatus === 'active';
+                        break;
+                    case 'featured':
+                        show = rowFeatured === 'featured';
+                        break;
+                    case 'kashmir':
+                        show = rowRegion === 'kashmir';
+                        break;
+                    case 'ladakh':
+                        show = rowRegion === 'ladakh';
+                        break;
+                    case 'lake':
+                        show = rowType === 'lake';
+                        break;
+                    case 'adventure':
+                        show = rowType === 'adventure';
+                        break;
+                    default:
+                        show = true;
                 }
-                currentDeleteId = null;
-                currentDeleteCard = null;
-            }
-
-            if (deleteCancel) deleteCancel.addEventListener('click', closeDeleteModal);
-            if (deleteClose) deleteClose.addEventListener('click', closeDeleteModal);
-
-            if (deleteConfirm) {
-                deleteConfirm.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    if (!currentDeleteId) return;
-                    window.location.href = `../logic/deleteDestination.php?id=${currentDeleteId}`;
-                });
-            }
-
-            if (deleteModal) {
-                deleteModal.addEventListener('click', function(e) {
-                    if (e.target === deleteModal) {
-                        closeDeleteModal();
-                    }
-                });
-            }
-
-            // FILTER FUNCTIONALITY
-            const filterRegion = document.getElementById('filter-region');
-            const filterCategory = document.getElementById('filter-category');
-            const filterStatus = document.getElementById('filter-status');
-            const filterSearch = document.getElementById('filter-search');
-            const applyFiltersBtn = document.getElementById('apply-filters');
-            const resetFiltersBtn = document.getElementById('reset-filters');
-            const cardsContainer = document.getElementById('destinations-grid');
-
-            function normalize(value) {
-                return (value || '').toString().trim().toLowerCase();
-            }
-
-            function cardMatchesFilters(cardEl, region, category, status, searchTerm) {
-                const cardRegion = normalize(cardEl.dataset.region);
-                const cardCategory = normalize(cardEl.dataset.category);
-                const cardStatus = normalize(cardEl.dataset.status);
-                const cardName = normalize(cardEl.dataset.name);
-                const cardLocation = normalize(cardEl.dataset.location);
-                const cardDescription = normalize(cardEl.querySelector('.card-description') ? cardEl.querySelector('.card-description').textContent : '');
-
-                if (region && region !== cardRegion) return false;
-                if (category && category !== cardCategory) return false;
-                if (status && status !== cardStatus) return false;
-
-                if (searchTerm) {
-                    // match against name, description, location
-                    const term = searchTerm.toLowerCase();
-                    if (!(cardName.includes(term) || cardDescription.includes(term) || cardLocation.includes(term))) {
-                        return false;
-                    }
-                }
-
-                return true;
-            }
-
-            function applyFilters() {
-                const region = normalize(filterRegion ? filterRegion.value : '');
-                const category = normalize(filterCategory ? filterCategory.value : '');
-                const status = normalize(filterStatus ? filterStatus.value : '');
-                const searchTerm = normalize(filterSearch ? filterSearch.value : '');
-
-                const cards = cardsContainer ? cardsContainer.querySelectorAll('.destination-card') : [];
-                cards.forEach(card => {
-                    if (cardMatchesFilters(card, region, category, status, searchTerm)) {
-                        card.style.display = '';
-                    } else {
-                        card.style.display = 'none';
-                    }
-                });
-            }
-
-            // Apply on change / input
-            if (filterRegion) filterRegion.addEventListener('change', applyFilters);
-            if (filterCategory) filterCategory.addEventListener('change', applyFilters);
-            if (filterStatus) filterStatus.addEventListener('change', applyFilters);
-            if (filterSearch) filterSearch.addEventListener('input', function() {
-                // debounce basic
-                clearTimeout(this._filterTimeout);
-                this._filterTimeout = setTimeout(applyFilters, 200);
+                
+                row.style.display = show ? '' : 'none';
             });
-
-            if (applyFiltersBtn) applyFiltersBtn.addEventListener('click', function(e) {
+        }
+        
+        // Close modals
+        function closeModal() {
+            document.getElementById('destination-modal').classList.remove('active');
+        }
+        
+        function closeImagesModal() {
+            document.getElementById('images-modal').classList.remove('active');
+        }
+        
+        // Close modals when clicking outside
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.classList.remove('active');
+                }
+            });
+        });
+        
+        // Form validation
+        document.getElementById('destination-form').addEventListener('submit', function(e) {
+            const requiredFields = ['destination_name', 'region', 'destination_type', 'location', 'short_description'];
+            let isValid = true;
+            
+            requiredFields.forEach(field => {
+                const element = document.getElementById(field);
+                if (!element.value.trim()) {
+                    isValid = false;
+                    element.style.borderColor = 'var(--error-color)';
+                } else {
+                    element.style.borderColor = '';
+                }
+            });
+            
+            // Check at least one season is selected
+            const seasonCheckboxes = document.querySelectorAll('input[name="best_seasons[]"]:checked');
+            if (seasonCheckboxes.length === 0) {
+                isValid = false;
+                alert('Please select at least one best season.');
+            }
+            
+            if (!isValid) {
                 e.preventDefault();
-                applyFilters();
-            });
-
-            if (resetFiltersBtn) resetFiltersBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                if (filterRegion) filterRegion.value = '';
-                if (filterCategory) filterCategory.value = '';
-                if (filterStatus) filterStatus.value = '';
-                if (filterSearch) filterSearch.value = '';
-                applyFilters();
-            });
+                alert('Please fill in all required fields marked with *');
+                return false;
+            }
+            
+            return true;
         });
     </script>
 </body>

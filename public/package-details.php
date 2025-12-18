@@ -1,5 +1,5 @@
 <?php
-require_once '../admin/ includes/connection.php';
+require_once '../admin/includes/connection.php';
 
 if (!isset($_GET['id'])) {
     header('Location: packages.php');
@@ -142,6 +142,42 @@ $conn->query("UPDATE packages SET views = COALESCE(views, 0) + 1 WHERE id = $pac
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+<meta name="googlebot" content="index, follow">
+
+<meta name="language" content="English">
+<meta name="geo.region" content="IN-JK">
+<meta name="geo.placename" content="Kashmir, Srinagar">
+<meta name="distribution" content="global">
+<meta name="rating" content="general">
+<meta name="revisit-after" content="7 days">
+
+<meta name="author" content="Zubi Tours & Holidays">
+<meta name="copyright" content="Zubi Tours & Holidays">
+
+<meta property="og:site_name" content="Zubi Tours & Holidays">
+<meta property="og:locale" content="en_IN">
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@zubitours">
+
+<title>Kashmir Tour Package Itinerary & Cost | Zubi Tours</title>
+
+<meta name="description" content="Get complete details of Kashmir tour package including itinerary, hotel options, sightseeing, cab services and pricing with Zubi Tours & Holidays.">
+
+<meta name="keywords" content="
+Kashmir tour itinerary,
+Kashmir trip cost,
+Kashmir travel plan,
+Kashmir package details,
+Srinagar tour itinerary
+">
+ <!-- --==============Favicon =============-- -->
+<link rel="icon" type="image/png" href="../assets/img/zubilogo.jpg" />
+
 
     <!--=============== REMIXICONS ===============-->
     <link
@@ -245,7 +281,10 @@ $conn->query("UPDATE packages SET views = COALESCE(views, 0) + 1 WHERE id = $pac
         display: grid;
         grid-template-columns: 1fr 400px;
         gap: 60px;
+        display: flex;
+        flex-direction: column;
       }
+      
       
       /* Overview Section */
       .overview-section {
@@ -797,10 +836,7 @@ $conn->query("UPDATE packages SET views = COALESCE(views, 0) + 1 WHERE id = $pac
         transition: all 0.3s ease;
       }
       
-      .similar-button:hover {
-        background: var(--first-color-dark);
-        transform: translateY(-2px);
-      }
+   
       
       /* Message Styles */
       .booking-message {
@@ -838,6 +874,17 @@ $conn->query("UPDATE packages SET views = COALESCE(views, 0) + 1 WHERE id = $pac
           transform: translateX(0);
           opacity: 1;
         }
+      }
+
+
+      textarea{
+        width: 100%;
+        padding: 15px 20px;
+        border: 2px solid #e2e8f0;
+        border-radius: 10px;
+        font-size: 1.1rem;
+        transition: all 0.3s ease;
+        resize: vertical;
       }
       
       .message-close {
@@ -1137,13 +1184,7 @@ $conn->query("UPDATE packages SET views = COALESCE(views, 0) + 1 WHERE id = $pac
   </head>
   <body>
     <!-- Loader -->
-    <div id="loader">
-      <div class="travel-loader">
-        <span class="path"></span>
-        <i class="ri-flight-takeoff-line plane"></i>
-      </div>
-      <h2 class="brand-name">Zubi Tours & Holiday</h2>
-    </div>
+  
 
     <!--==================== HEADER ====================-->
     <?php include '../admin/includes/navbar.php'; ?>
@@ -1162,7 +1203,7 @@ $conn->query("UPDATE packages SET views = COALESCE(views, 0) + 1 WHERE id = $pac
 
     <!-- Package Hero Section -->
     <section class="package-detail-hero">
-      <div class="hero-background" style="background-image: url('../assets/img/<?php echo $package_images[0] ?? 'bg1.jpg'; ?>');"></div>
+      <div class="hero-background" style="background-image: url('../admin/upload/<?php echo $package_images[0] ?? 'bg1.jpg'; ?>');"></div>
       <div class="hero-content">
         <div class="badge-container">
           <?php if ($package['badge']): ?>
@@ -1326,7 +1367,7 @@ $conn->query("UPDATE packages SET views = COALESCE(views, 0) + 1 WHERE id = $pac
             <div class="gallery-grid">
               <?php foreach ($package_images as $index => $image): ?>
                 <div class="gallery-item">
-                  <img src="../assets/img/<?php echo $image; ?>" 
+                  <img src="../admin/upload/<?php echo $image; ?>" 
                        alt="<?php echo htmlspecialchars($package['package_name']); ?> - Image <?php echo $index + 1; ?>"
                        onerror="this.src='../assets/img/bg1.jpg'">
                 </div>
@@ -1364,7 +1405,7 @@ $conn->query("UPDATE packages SET views = COALESCE(views, 0) + 1 WHERE id = $pac
                 $similar_desc = !empty($similar_highlights) ? $similar_highlights[0]['description'] : substr($similar['description'], 0, 100) . '...';
               ?>
                 <div class="similar-card">
-                  <img src="../assets/img/<?php echo $similar['image_path'] ?: 'bg1.jpg'; ?>" 
+                  <img src="../admin/upload/<?php echo $similar['image_path'] ?: 'bg1.jpg'; ?>" 
                        alt="<?php echo htmlspecialchars($similar['package_name']); ?>"
                        onerror="this.src='../assets/img/bg1.jpg'">
                   <div class="similar-content">

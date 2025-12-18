@@ -60,18 +60,27 @@ if (isset($_GET['price']) && $_GET['price'] !== 'all') {
     }
 }
 
-// Get featured packages for hero section (keep this separate from filters)
-$featured_query = $conn->query("SELECT p.*, pi.image_path FROM packages p LEFT JOIN package_images pi ON p.id = pi.package_id AND pi.is_primary = 1 WHERE p.is_active = 1 AND p.is_featured = 1 ORDER BY p.created_at DESC LIMIT 3");
-$featured_packages = $featured_query->fetch_all(MYSQLI_ASSOC);
-
-// Collect featured IDs to exclude only those from the main listing
-$featured_ids = array_column($featured_packages, 'id');
-
-// Only show active packages; exclude the specific featured IDs from the main listing
+// Only show active and featured packages first
 $whereConditions[] = "p.is_active = 1";
-if (!empty($featured_ids)) {
-    $ids = implode(',', array_map('intval', $featured_ids));
-    $whereConditions[] = "p.id NOT IN ($ids)";
+
+// Optional check-in date and travelers filter (server-side availability)
+$checkin = trim($_GET['checkin'] ?? '');
+$travelers = isset($_GET['travelers']) ? max(0, intval($_GET['travelers'])) : 0;
+
+if ($checkin !== '' && $travelers > 0) {
+    // Ensure package has enough capacity considering existing bookings overlapping the requested window
+    $whereConditions[] = "(p.max_people - (
+        SELECT COALESCE(SUM(pb.number_of_adults + pb.number_of_children), 0)
+        FROM package_bookings pb
+        WHERE pb.package_id = p.id
+          AND pb.booking_status NOT IN ('cancelled', 'refunded')
+          AND (pb.checkin_date < DATE_ADD(?, INTERVAL p.duration_days DAY) AND pb.checkout_date > ?)
+    )) >= ?";
+    // bind checkin for DATE_ADD and overlap check, then the travelers count
+    $params[] = $checkin;
+    $params[] = $checkin;
+    $params[] = $travelers;
+    $types .= 'ssi';
 }
 
 // Build WHERE clause
@@ -117,6 +126,17 @@ if (!empty($params)) {
 $stmt->execute();
 $packages = $stmt->get_result();
 
+// Get featured packages for hero section
+$featured_query = $conn->query("
+    SELECT p.*, pi.image_path 
+    FROM packages p 
+    LEFT JOIN package_images pi ON p.id = pi.package_id AND pi.is_primary = 1 
+    WHERE p.is_active = 1 AND p.is_featured = 1 
+    ORDER BY p.created_at DESC 
+    LIMIT 3
+");
+$featured_packages = $featured_query->fetch_all(MYSQLI_ASSOC);
+
 // Get testimonials
 $testimonials_query = $conn->query("
     SELECT * FROM testimonials 
@@ -136,6 +156,46 @@ $package_types = $types_query->fetch_all(MYSQLI_ASSOC);
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+<meta name="googlebot" content="index, follow">
+
+<meta name="language" content="English">
+<meta name="geo.region" content="IN-JK">
+<meta name="geo.placename" content="Kashmir, Srinagar">
+<meta name="distribution" content="global">
+<meta name="rating" content="general">
+<meta name="revisit-after" content="7 days">
+
+<meta name="author" content="Zubi Tours & Holidays">
+<meta name="copyright" content="Zubi Tours & Holidays">
+
+<meta property="og:site_name" content="Zubi Tours & Holidays">
+<meta property="og:locale" content="en_IN">
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@zubitours">
+
+<!-- --==============Favicon =============-- -->
+<link rel="icon" type="image/png" href="../assets/img/zubilogo.jpg" />
+
+<title>Kashmir Tour Packages | Honeymoon, Family & Group Tours</title>
+
+<meta name="description" content="Choose from the best Kashmir tour packages including honeymoon, family, group and adventure tours. Affordable prices with expert local guides.">
+
+<meta name="keywords" content="
+Kashmir tour packages,
+Kashmir honeymoon packages,
+Kashmir family tour packages,
+cheap Kashmir tour packages,
+luxury Kashmir tours,
+group tour Kashmir,
+custom Kashmir tour
+">
+
+
 
     <!--=============== REMIXICONS ===============-->
     <link
@@ -147,8 +207,7 @@ $package_types = $types_query->fetch_all(MYSQLI_ASSOC);
     <!--=============== CSS ===============-->
     <link rel="stylesheet" href="../assets/css/styles.css" />
 
-    <title>Tour Packages - Zubi Tours & Holidays</title>
-    
+ 
     <style>
         /* Enhanced Styles */
         .no-results {
@@ -525,14 +584,8 @@ $package_types = $types_query->fetch_all(MYSQLI_ASSOC);
   </head>
   <body>
 
-    <!-- Loader -->
-    <div id="loader">
-      <div class="travel-loader">
-        <span class="path"></span>
-        <i class="ri-flight-takeoff-line plane"></i>
-      </div>
-      <h2 class="brand-name">Zubi Tours & Holiday</h2>
-    </div>
+  
+  
 
     <!--==================== HEADER ====================-->
     <?php include '../admin/includes/navbar.php'; ?>
@@ -541,13 +594,16 @@ $package_types = $types_query->fetch_all(MYSQLI_ASSOC);
     <section class="modern-hero">
       <div class="hero-background">
         <div class="hero-content">
-         <h1>Our Packages</h1>
-        
+          <h1>  OUR PACKAGES</h1>
+          <p>Experience breathtaking landscapes, rich culture, and unforgettable adventures with our curated tour packages</p>
+          
+         
         </div>
       </div>
     </section>
 
-    
+    <!-- Featured Packages -->
+  
 
     <!-- Search Box -->
     <div class="search-container">
@@ -558,7 +614,7 @@ $package_types = $types_query->fetch_all(MYSQLI_ASSOC);
                class="search-box" 
                placeholder="Search packages by name, destination, or activity..."
                value="<?php echo htmlspecialchars($search_term); ?>"
-               onkeyup="this.form.submit()">
+               >
       </form>
     </div>
 
@@ -636,7 +692,7 @@ $package_types = $types_query->fetch_all(MYSQLI_ASSOC);
                data-type="<?php echo $package['package_type']; ?>" 
                data-price="<?php echo getPriceRange($package['price_per_person']); ?>">
             <div class="card-image">
-              <img loading="lazy" src="../assets/img/<?php echo $package['image_path'] ?: 'bg1.jpg'; ?>" 
+              <img loading="lazy" src="../admin/upload/<?php echo $package['image_path'] ?: 'bg1.jpg'; ?>" 
                    alt="<?php echo htmlspecialchars($package['package_name']); ?>"
                    onerror="this.src='../assets/img/bg1.jpg'">
               <?php foreach ($badges as $badge): ?>
@@ -708,7 +764,7 @@ $package_types = $types_query->fetch_all(MYSQLI_ASSOC);
           <i class="ri-search-line" style="font-size: 3rem; margin-bottom: 20px; color: var(--text-color-light);"></i>
           <h3>No packages found</h3>
           <p>Try adjusting your filters or check back later for new packages.</p>
-         
+          <a href="./packages.php" class="card-button" style="margin-top: 20px; display: inline-block;">View All Packages</a>
         </div>
       <?php endif; ?>
     </section>
@@ -787,7 +843,7 @@ $package_types = $types_query->fetch_all(MYSQLI_ASSOC);
                 <div class="author-avatar">
                   <img loading="lazy" src="../assets/img/<?php echo $testimonial['avatar_path'] ?: 'default-avatar.jpg'; ?>" 
                        alt="<?php echo htmlspecialchars($testimonial['author_name']); ?>"
-                       onerror="this.src='../assets/img/default-avatar.jpg'">
+                       onerror="this.src='../assets/img/bg1.jpg'">
                 </div>
                 <div class="author-details">
                   <h4><?php echo htmlspecialchars($testimonial['author_name']); ?></h4>
@@ -858,7 +914,7 @@ $package_types = $types_query->fetch_all(MYSQLI_ASSOC);
             </div>
             <div class="testimonial-author">
               <div class="author-avatar">
-                <img loading="lazy" src="../assets/img/default-avatar.jpg" alt="Amit & Sunita">
+                <img loading="lazy" src="../assets/img/bg1.jpg" alt="Amit & Sunita">
               </div>
               <div class="author-details">
                 <h4>Amit & Sunita</h4>
@@ -890,59 +946,8 @@ $package_types = $types_query->fetch_all(MYSQLI_ASSOC);
       </div>
     </section>
 
-    <!-- FOOTER -->
-    <footer class="footer">
-      <div class="footer-container">
-        <div class="footer-col">
-          <h3>Zubi Tours & Holidays</h3>
-          <p>Creating unforgettable experiences in the paradise of Kashmir and the majestic landscapes of Ladakh.</p>
-          <div class="social-links">
-            <a href="#"><i class="ri-facebook-fill"></i></a>
-            <a href="#"><i class="ri-instagram-line"></i></a>
-            <a href="#"><i class="ri-twitter-fill"></i></a>
-            <a href="#"><i class="ri-youtube-fill"></i></a>
-            <a href="#"><i class="ri-whatsapp-line"></i></a>
-          </div>
-        </div>
-        
-        <div class="footer-col">
-          <h4>Quick Links</h4>
-          <ul>
-            <li><a href="../index.php">Home</a></li>
-            <li><a href="./about.php">About Us</a></li>
-            <li><a href="./destinations.php">Destinations</a></li>
-            <li><a href="./packages.php">Packages</a></li>
-            <li><a href="./gallery.php">Gallery</a></li>
-          </ul>
-        </div>
-        
-        <div class="footer-col">
-          <h4>Services</h4>
-          <ul>
-            <li><a href="./packages.php">Tour Packages</a></li>
-            <li><a href="./car-rentals.php">Car Rentals</a></li>
-            <li><a href="#">Hotel Booking</a></li>
-            <li><a href="#">Adventure Activities</a></li>
-            <li><a href="#">Pilgrimage Tours</a></li>
-          </ul>
-        </div>
-        
-        <div class="footer-col">
-          <h4>Contact Info</h4>
-          <div class="contact-info">
-            <p><i class="ri-map-pin-line"></i> Srinagar, Jammu & Kashmir</p>
-            <p><i class="ri-phone-line"></i> +91 7006296814</p>
-            <p><i class="ri-mail-line"></i> info@zubitours.com</p>
-            <p><i class="ri-time-line"></i> Mon-Sat: 9AM - 6PM</p>
-          </div>
-        </div>
-      </div>
-      
-      <div class="footer-bottom">
-        <p>&copy; <span id="getYear"></span> Zubi Tours & Holidays. All rights reserved.</p>
-        <p> Powered By <a href="https://irfanmanzoor.in">EXORA</a></p>
-      </div>
-    </footer>
+     <!-- FOOTER -->
+<?php include '../admin/includes/footer.php'; ?>
 
     <!-- Linking Swiper script -->
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>

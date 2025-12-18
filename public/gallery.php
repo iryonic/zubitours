@@ -1,638 +1,903 @@
 <?php
+// Start session and database connection
 session_start();
-require_once '../admin/includes/connection.php'; // Database connection
+require_once '../admin/includes/connection.php'; 
 
-// Fetch all active gallery images
-$sql = "SELECT * FROM gallery WHERE is_active = 1 ORDER BY display_order ASC, created_at DESC";
-$result = mysqli_query($conn, $sql);
-$galleryItems = [];
+// Fetch gallery images from database
+$gallery_query = "SELECT * FROM gallery WHERE is_active = 1 ORDER BY display_order ASC, created_at DESC";
+$gallery_result = $conn->query($gallery_query);
 
-if ($result && mysqli_num_rows($result) > 0) {
-  while ($row = mysqli_fetch_assoc($result)) {
-    $galleryItems[] = $row;
-  }
-}
+// Fetch all categories for filtering
+$categories_query = "SELECT DISTINCT categories FROM gallery WHERE is_active = 1";
+$categories_result = $conn->query($categories_query);
+$all_categories = [];
 
-// Get all unique categories for filter buttons
-$categories = [];
-foreach ($galleryItems as $item) {
-  $itemCategories = explode(' ', $item['categories']);
-  foreach ($itemCategories as $cat) {
-    if (trim($cat) && !in_array($cat, $categories)) {
-      $categories[] = trim($cat);
+// Extract unique categories from the space-separated categories field
+while ($row = $categories_result->fetch_assoc()) {
+    $cats = explode(' ', $row['categories']);
+    foreach ($cats as $cat) {
+        if ($cat && !in_array($cat, $all_categories)) {
+            $all_categories[] = $cat;
+        }
     }
-  }
 }
-sort($categories); // Sort categories alphabetically
+sort($all_categories);
+
+// Handle filtering
+$active_filter = isset($_GET['filter']) ? $_GET['filter'] : 'all';
+$filtered_gallery = [];
+
+if ($active_filter !== 'all') {
+    // Filter gallery items by category
+    while ($item = $gallery_result->fetch_assoc()) {
+        $item_categories = explode(' ', $item['categories']);
+        if (in_array($active_filter, $item_categories)) {
+            $filtered_gallery[] = $item;
+        }
+    }
+} else {
+    // Reset pointer to beginning for all items
+    $gallery_result->data_seek(0);
+    while ($item = $gallery_result->fetch_assoc()) {
+        $filtered_gallery[] = $item;
+    }
+}
+
+// Get total counts
+$total_count = count($filtered_gallery);
+$filtered_count = ($active_filter !== 'all') ? $total_count : null;
 ?>
 <!DOCTYPE html>
 <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Zubi tours & Holiday - Gallery</title>
 
-  <!--=============== REMIXICONS ===============-->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/3.5.0/remixicon.css" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+    <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <!-- Masonry layout CSS -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.css" />
+<meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+<meta name="googlebot" content="index, follow">
 
-  <!--=============== CSS ===============-->
-  <link rel="stylesheet" href="../assets/css/styles.css" />
+<meta name="language" content="English">
+<meta name="geo.region" content="IN-JK">
+<meta name="geo.placename" content="Kashmir, Srinagar">
+<meta name="distribution" content="global">
+<meta name="rating" content="general">
+<meta name="revisit-after" content="7 days">
 
-  <style>
+<meta name="author" content="Zubi Tours & Holidays">
+<meta name="copyright" content="Zubi Tours & Holidays">
+
+<meta property="og:site_name" content="Zubi Tours & Holidays">
+<meta property="og:locale" content="en_IN">
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@zubitours">
+
+    <title>Kashmir Tour Gallery | Travel Photos by Zubi Tours</title>
+
+<meta name="description" content="Browse beautiful travel photos of Kashmir tours including Srinagar, Gulmarg, Pahalgam and Sonamarg captured by Zubi Tours & Holidays.">
+
+<meta name="keywords" content="
+Kashmir travel photos,
+Kashmir tour gallery,
+Srinagar images,
+Gulmarg photos,
+Pahalgam pictures
+">
+
+
+    <!--=============== REMIXICONS ===============-->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/3.5.0/remixicon.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+
+    <!--=============== CSS ===============-->
+    <link rel="stylesheet" href="../assets/css/styles.css" />
+    <!-- --==============Favicon =============-- -->
+<link rel="icon" type="image/png" href="../assets/img/zubilogo.jpg" />
+
+
+    <title>Zubi tours & Holiday - Gallery</title>
     
-    /* Additional styles for dynamic gallery */
-    .no-images {
-      text-align: center;
-      padding: 60px 20px;
-      background: #f8fafc;
-      border-radius: 12px;
-      margin: 30px;
-    }
-
-    .no-images i {
-      font-size: 4rem;
-      color: #64748b;
-      margin-bottom: 20px;
-      opacity: 0.5;
-    }
-
-    .no-images h3 {
-      color: #475569;
-      margin-bottom: 10px;
-    }
-
-    .no-images p {
-      color: #64748b;
-      max-width: 400px;
-      margin: 0 auto;
-    }
-
-    .loading-spinner {
-      display: none;
-      text-align: center;
-      padding: 40px;
-    }
-
-    .spinner {
-      width: 40px;
-      height: 40px;
-      border: 4px solid #f3f3f3;
-      border-top: 4px solid #3498db;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin: 0 auto 20px;
-    }
-
-    @keyframes spin {
-      0% {
-        transform: rotate(0deg);
-      }
-
-      100% {
-        transform: rotate(360deg);
-      }
-    }
-
-    .category-count {
-      display: inline-block;
-      background: rgba(37, 99, 235, 0.1);
-      color: #2563eb;
-      padding: 2px 8px;
-      border-radius: 12px;
-      font-size: 0.8rem;
-      margin-left: 8px;
-      font-weight: 600;
-    }
-
-    .image-loader {
-      width: 100%;
-      height: 250px;
-      background: #f3f4f6;
-      border-radius: 8px;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .image-loader::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: -100%;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
-      animation: loading 1.5s infinite;
-    }
-
-    @keyframes loading {
-      0% {
-        left: -100%;
-      }
-
-      100% {
-        left: 100%;
-      }
-    }
-
-    .image-stats {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      background: rgba(0, 0, 0, 0.7);
-      color: white;
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-size: 0.8rem;
-      z-index: 2;
-      display: none;
-    }
-
-    .masonry-item:hover .image-stats {
-      display: block;
-    }
-
-    .admin-edit-btn {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      background: rgba(37, 99, 235, 0.9);
-      color: white;
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-size: 0.8rem;
-      text-decoration: none;
-      z-index: 2;
-      display: none;
-    }
-
-    .masonry-item:hover .admin-edit-btn {
-      display: block;
-    }
-
-    <?php if (isset($_SESSION['admin_id'])): ?>.admin-edit-btn {
-      display: block;
-    }
-
-    <?php endif; ?>
-  </style>
-</head>
-
-<body>
-  <!-- Loader -->
-  <div id="loader">
-    <div class="travel-loader">
-      <span class="path"></span>
-      <i class="ri-flight-takeoff-line plane"></i>
-    </div>
-    <h2 class="brand-name">Zubi Tours & Holiday</h2>
-  </div>
-
-  <!--==================== HEADER ====================-->
-  <?php include '../admin/includes/navbar.php'; ?>
-
-  <!-- Hero Section -->
-  <section class="gallery-hero">
-    <div class="section-header">
-      <h2>Our Gallery</h2>
-      <p>Showcasing the beauty of Kashmir and Ladakh</p>
-      <p style="margin-top: 10px; font-size: 0.9rem; color: #64748b;">
-        <i class="ri-image-line"></i> <?php echo count($galleryItems); ?> Photos Available
-      </p>
-    </div>
-
-    <div class="gallery-filters">
-      <button class="filter-btn active" data-filter="all">
-        All Photos <span class="category-count"><?php echo count($galleryItems); ?></span>
-      </button>
-
-      <?php foreach ($categories as $category):
-        // Count items in this category
-        $count = 0;
-        foreach ($galleryItems as $item) {
-          if (strpos($item['categories'], $category) !== false) {
-            $count++;
-          }
+    <style>
+        /* Gallery specific styles */
+        .gallery-hero {
+            position: relative;
+            min-height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.8) 100%);
+            color: white;
+            margin-bottom: 60px;
+            overflow: hidden;
         }
-        if ($count > 0): ?>
-          <button class="filter-btn" data-filter="<?php echo htmlspecialchars($category); ?>">
-            <?php echo ucfirst($category); ?> <span class="category-count"><?php echo $count; ?></span>
-          </button>
-      <?php endif;
-      endforeach; ?>
-    </div>
-  </section>
-
-  <!-- Masonry Gallery -->
-  <section class="masonry-gallery-section">
-    <?php if (empty($galleryItems)): ?>
-      <div class="no-images">
-        <i class="ri-image-line"></i>
-        <h3>No Gallery Images Found</h3>
-        <p>Our photo gallery is currently being updated. Please check back soon!</p>
-      </div>
-    <?php else: ?>
-      <div class="masonry-grid" id="masonryGrid">
-        <?php foreach ($galleryItems as $index => $item):
-          $itemCategories = explode(' ', $item['categories']);
-          $categoryClass = implode(' ', $itemCategories);
-        ?>
-          <div class="masonry-item" data-category="<?php echo $categoryClass; ?>" data-id="<?php echo $item['id']; ?>">
-            <?php if (isset($_SESSION['admin_id'])): ?>
-              <a href="../admin/pages/manage-gallery.php" class="admin-edit-btn" target="_blank">
-                <i class="ri-edit-line"></i> Edit
-              </a>
-            <?php endif; ?>
-
-            <span class="image-stats">
-              <i class="ri-eye-line"></i> #<?php echo $item['display_order']; ?>
-            </span>
-
-            <!-- In the gallery loop section -->
-            <a href="../admin/uploads/gallery/<?php echo htmlspecialchars($item['image_path']); ?>"
-              data-fancybox="gallery"
-              data-caption="<strong><?php echo htmlspecialchars($item['title']); ?></strong><br><?php echo htmlspecialchars($item['description']); ?>">
-              <img loading="lazy"
-                src="../admin/uploads/gallery/<?php echo htmlspecialchars(basename($item['image_path'])); ?>"
-                alt="<?php echo htmlspecialchars($item['title']); ?>"
-                onerror="this.src='https://images.unsplash.com/photo-1552733407-5d5c46c3bb3b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80'">
-              <!-- ... rest of code ... -->
-            </a>
-            <div class="image-overlay">
-              <h3><?php echo htmlspecialchars($item['title']); ?></h3>
-              <?php if ($item['description']): ?>
-                <p><?php echo htmlspecialchars(substr($item['description'], 0, 100)); ?><?php echo strlen($item['description']) > 100 ? '...' : ''; ?></p>
-              <?php endif; ?>
-              <div style="margin-top: 8px; font-size: 0.8rem;">
-                <?php foreach ($itemCategories as $cat):
-                  if (trim($cat)): ?>
-                    <span style="background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 4px; margin-right: 4px;">
-                      <?php echo ucfirst(trim($cat)); ?>
-                    </span>
-                <?php endif;
-                endforeach; ?>
-              </div>
-            </div>
-            </a>
-          </div>
-        <?php endforeach; ?>
-      </div>
-    <?php endif; ?>
-
-    <!-- Loading Spinner -->
-    <div class="loading-spinner" id="loadingSpinner">
-      <div class="spinner"></div>
-      <p>Loading more images...</p>
-    </div>
-  </section>
-
-  <!-- CTA Section -->
-  <section class="gallery-cta">
-    <h2>Experience the Beauty Yourself</h2>
-    <p>Let us help you create unforgettable memories in the paradise of Kashmir and the majestic landscapes of Ladakh</p>
-    <a href="./packages.php" class="cta-button">Explore Our Packages</a>
-  </section>
-
-  <!-- FOOTER -->
-  <footer class="footer">
-    <div class="footer-container">
-      <div class="footer-col">
-        <h3>Zubi Tours & Holidays</h3>
-        <p>Creating unforgettable experiences in the paradise of Kashmir and the majestic landscapes of Ladakh.</p>
-        <div class="social-links">
-          <a href="#"><i class="ri-facebook-fill"></i></a>
-          <a href="#"><i class="ri-instagram-line"></i></a>
-          <a href="#"><i class="ri-twitter-fill"></i></a>
-          <a href="#"><i class="ri-youtube-fill"></i></a>
-        </div>
-      </div>
-
-      <div class="footer-col">
-        <h4>Quick Links</h4>
-        <ul>
-          <li><a href="../index.php">Home</a></li>
-          <li><a href="./about.php">About Us</a></li>
-          <li><a href="./destinations.php">Destinations</a></li>
-          <li><a href="./packages.php">Packages</a></li>
-          <li><a href="./gallery.php">Gallery</a></li>
-        </ul>
-      </div>
-
-      <div class="footer-col">
-        <h4>Services</h4>
-        <ul>
-          <li><a href="./packages.php">Tour Packages</a></li>
-          <li><a href="./car-rentals.php">Car Rentals</a></li>
-          <li><a href="#">Hotel Booking</a></li>
-          <li><a href="#">Adventure Activities</a></li>
-          <li><a href="#">Pilgrimage Tours</a></li>
-        </ul>
-      </div>
-
-      <div class="footer-col">
-        <h4>Contact Info</h4>
-        <div class="contact-info">
-          <p><i class="ri-map-pin-line"></i> Srinagar, Jammu & Kashmir</p>
-          <p><i class="ri-phone-line"></i> +91 7006296814</p>
-          <p><i class="ri-mail-line"></i> info@zubitours.com</p>
-          <p><i class="ri-time-line"></i> Mon-Sat: 9AM - 6PM</p>
-        </div>
-      </div>
-    </div>
-
-    <div class="footer-bottom">
-      <p>&copy; <span id="getYear"></span> Zubi Tours & Holidays. All rights reserved.</p>
-      <p> Powered By <a href="https://irfanmanzoor.in">EXORA</a></p>
-    </div>
-  </footer>
-
-  <!-- Linking Swiper script -->
-  <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
-
-  <!-- jQuery and Fancybox for gallery -->
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js"></script>
-
-  <!-- Masonry Layout -->
-  <script src="https://unpkg.com/masonry-layout@4/dist/masonry.pkgd.min.js"></script>
-  <script src="https://unpkg.com/imagesloaded@4/imagesloaded.pkgd.min.js"></script>
-
-  <!--=============== MAIN JS ===============-->
-  <script src="../assets/js/main.js"></script>
-
-  <script>
-    // Wait for page to load
-    document.addEventListener('DOMContentLoaded', function() {
-      // Initialize masonry layout
-      var $grid = $('#masonryGrid');
-      if ($grid.length) {
-        // Use imagesLoaded to wait for all images
-        $grid.imagesLoaded(function() {
-          $grid.masonry({
-            itemSelector: '.masonry-item',
-            columnWidth: '.masonry-item',
-            percentPosition: true,
-            transitionDuration: '0.3s'
-          });
-
-          // Animate items on load
-          $('.masonry-item').each(function(index) {
-            var $item = $(this);
-            setTimeout(function() {
-              $item.css({
-                opacity: 1,
-                transform: 'translateY(0)'
-              });
-            }, index * 100);
-          });
-        });
-      }
-
-      // Filter functionality
-      const filterButtons = document.querySelectorAll('.filter-btn');
-      const galleryItems = document.querySelectorAll('.masonry-item');
-
-      filterButtons.forEach(button => {
-        button.addEventListener('click', function() {
-          // Remove active class from all buttons
-          filterButtons.forEach(btn => btn.classList.remove('active'));
-
-          // Add active class to clicked button
-          this.classList.add('active');
-
-          const filterValue = this.getAttribute('data-filter');
-
-          // Show loading spinner
-          document.getElementById('loadingSpinner').style.display = 'block';
-
-          // Small delay for smooth animation
-          setTimeout(() => {
-            galleryItems.forEach(item => {
-              if (filterValue === 'all') {
-                item.style.display = 'block';
-              } else {
-                const categories = item.getAttribute('data-category').split(' ');
-                if (categories.includes(filterValue)) {
-                  item.style.display = 'block';
-                } else {
-                  item.style.display = 'none';
-                }
-              }
-            });
-
-            // Re-layout masonry after filtering
-            if ($grid.length) {
-              $grid.masonry('layout');
+        
+        .gallery-hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('https://images.unsplash.com/photo-1593693399902-89354c5b43b1?auto=format&fit=crop&w=1920') center/cover;
+            opacity: 0.3;
+            z-index: -1;
+        }
+        
+        .hero-content {
+            max-width: 800px;
+            padding: 0 20px;
+            z-index: 1;
+        }
+        
+        .hero-content h1 {
+            font-size: 3.5rem;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .hero-content p {
+            font-size: 1.2rem;
+            color: #cbd5e1;
+            margin-bottom: 30px;
+        }
+        
+        /* Category Filters */
+        .gallery-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: center;
+            margin-bottom: 40px;
+            padding: 0 20px;
+        }
+        
+        .filter-btn {
+            padding: 12px 24px;
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 50px;
+            color: #475569;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .filter-btn:hover {
+            border-color: #2563eb;
+            color: #2563eb;
+            transform: translateY(-2px);
+        }
+        
+        .filter-btn.active {
+            background: #2563eb;
+            border-color: #2563eb;
+            color: white;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+        
+        .filter-btn i {
+            font-size: 1.1rem;
+        }
+        
+        /* Gallery Grid */
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 30px;
+            padding: 0 20px;
+            margin-bottom: 60px;
+        }
+        
+        .gallery-card {
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .gallery-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+        
+        .gallery-image {
+            width: 100%;
+            height: 250px;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+        
+        .gallery-card:hover .gallery-image {
+            transform: scale(1.05);
+        }
+        
+        .gallery-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+            color: white;
+            padding: 30px 20px 20px;
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+        }
+        
+        .gallery-card:hover .gallery-overlay {
+            transform: translateY(0);
+        }
+        
+        .gallery-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: white;
+        }
+        
+        .gallery-description {
+            font-size: 0.9rem;
+            color: #cbd5e1;
+            margin-bottom: 12px;
+            line-height: 1.5;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        .gallery-categories {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 10px;
+        }
+        
+        .category-tag {
+            background: rgba(37, 99, 235, 0.9);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        /* Image counter */
+        .image-counter {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding: 0 20px;
+        }
+        
+        .counter-badge {
+            background: #f1f5f9;
+            padding: 8px 16px;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            color: #475569;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .counter-badge i {
+            color: #2563eb;
+        }
+        
+        /* Lightbox Modal */
+        .lightbox-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .lightbox-content {
+            max-width: 90%;
+            max-height: 90vh;
+            position: relative;
+        }
+        
+        .lightbox-image {
+            max-width: 100%;
+            max-height: 70vh;
+            object-fit: contain;
+            border-radius: 12px;
+        }
+        
+        .lightbox-info {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 20px;
+            color: white;
+        }
+        
+        .lightbox-info h3 {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            color: white;
+        }
+        
+        .lightbox-info p {
+            color: #cbd5e1;
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+        
+        .lightbox-close {
+            position: absolute;
+            top: -50px;
+            right: 0;
+            color: white;
+            font-size: 2.5rem;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.1);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+        
+        .lightbox-close:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: rotate(90deg);
+        }
+        
+        .lightbox-nav {
+            position: absolute;
+            top: 50%;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 20px;
+            transform: translateY(-50%);
+        }
+        
+        .nav-btn {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.5rem;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        
+        .nav-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+        
+        .no-images {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 60px 20px;
+            color: #64748b;
+        }
+        
+        .no-images i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            display: block;
+            opacity: 0.5;
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .hero-content h1 {
+                font-size: 2.5rem;
             }
-
-            // Hide loading spinner
-            document.getElementById('loadingSpinner').style.display = 'none';
-
-            // Update URL hash without reloading
-            history.replaceState(null, null, '#filter-' + filterValue);
-          }, 300);
-        });
-      });
-
-      // Check URL hash for filter on page load
-      if (window.location.hash) {
-        const filter = window.location.hash.replace('#filter-', '');
-        const button = document.querySelector(`[data-filter="${filter}"]`);
-        if (button) {
-          button.click();
-        }
-      }
-
-      // Initialize fancybox with custom settings
-      $('[data-fancybox="gallery"]').fancybox({
-        buttons: [
-          "slideShow",
-          "thumbs",
-          "zoom",
-          "fullScreen",
-          "share",
-          "close"
-        ],
-        loop: true,
-        protect: true,
-        animationEffect: "zoom",
-        transitionEffect: "circular",
-        transitionDuration: 800,
-        clickContent: "zoom",
-        clickSlide: "close",
-        caption: function(instance, item) {
-          return $(this).data('caption');
-        },
-        afterLoad: function(instance, current) {
-          // Add image info to caption
-          var imageId = current.opts.$orig.closest('.masonry-item').data('id');
-          console.log('Viewing image ID:', imageId);
-
-          // You could track image views here with AJAX
-          
-          $.ajax({
-              url: 'track-view.php',
-              method: 'POST',
-              data: { image_id: imageId },
-              error: function() {
-                  console.log('View tracking failed');
-              }
-          });
-          
-        }
-      });
-
-      // Lazy loading for images
-      const lazyImages = document.querySelectorAll('img[loading="lazy"]');
-      const imageObserver = new IntersectionObserver((entries, observer) => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            const img = entry.target;
-            img.src = img.dataset.src || img.src;
-            img.classList.add('loaded');
-            observer.unobserve(img);
-          }
-        });
-      }, {
-        rootMargin: '50px'
-      });
-
-      lazyImages.forEach(img => imageObserver.observe(img));
-
-      // Infinite scroll (optional feature)
-      let isLoading = false;
-      let page = 1;
-      const totalImages = <?php echo count($galleryItems); ?>;
-
-      window.addEventListener('scroll', function() {
-        // Only implement if you have pagination in the future
-        
-        if (isLoading || totalImages <= page * 12) return;
-        
-        const scrollPosition = window.innerHeight + window.scrollY;
-        const pageHeight = document.documentElement.scrollHeight - 500;
-        
-        if (scrollPosition >= pageHeight) {
-            loadMoreImages();
+            
+            .gallery-grid {
+                grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+                gap: 20px;
+            }
+            
+            .gallery-filters {
+                justify-content: flex-start;
+                overflow-x: auto;
+                padding-bottom: 10px;
+            }
+            
+            .filter-btn {
+                white-space: nowrap;
+                flex-shrink: 0;
+            }
+            
+            .lightbox-content {
+                max-width: 95%;
+            }
+            
+            .nav-btn {
+                width: 40px;
+                height: 40px;
+                font-size: 1.2rem;
+            }
         }
         
-      });
-
-      function loadMoreImages() {
-        isLoading = true;
-        document.getElementById('loadingSpinner').style.display = 'block';
-
-        // Simulate AJAX call for more images
-        setTimeout(() => {
-          // In real implementation, fetch more images from server
-          // $.ajax({
-          //     url: 'load-more-gallery.php',
-          //     method: 'GET',
-          //     data: { page: page + 1 },
-          //     success: function(data) {
-          //         // Append new images
-          //         // Update masonry
-          //         page++;
-          //     },
-          //     complete: function() {
-          //         isLoading = false;
-          //         document.getElementById('loadingSpinner').style.display = 'none';
-          //     }
-          // });
-
-          isLoading = false;
-          document.getElementById('loadingSpinner').style.display = 'none';
-        }, 1000);
-      }
-
-      // Update year in footer
-      document.getElementById('getYear').textContent = new Date().getFullYear();
-
-      // Add smooth scroll for anchor links
-      document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-        anchor.addEventListener('click', function(e) {
-          e.preventDefault();
-          const targetId = this.getAttribute('href');
-          if (targetId === '#') return;
-
-          const targetElement = document.querySelector(targetId);
-          if (targetElement) {
-            window.scrollTo({
-              top: targetElement.offsetTop - 100,
-              behavior: 'smooth'
-            });
-          }
-        });
-      });
-
-      // Image error handler
-      document.querySelectorAll('.masonry-item img').forEach(img => {
-        img.addEventListener('error', function() {
-          this.src = 'https://images.unsplash.com/photo-1552733407-5d5c46c3bb3b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80';
-        });
-      });
-
-      // Add keyboard navigation for fancybox
-      document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-          $.fancybox.close();
+        @media (max-width: 480px) {
+            .gallery-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .hero-content h1 {
+                font-size: 2rem;
+            }
+            
+            .hero-content p {
+                font-size: 1rem;
+            }
         }
-      });
+        
+        /* Loading animation for images */
+        .image-loading {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+        
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        
+        /* Floating action button */
+        .floating-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #2563eb;
+            color: white;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 8px 25px rgba(37, 99, 235, 0.4);
+            z-index: 100;
+            transition: all 0.3s ease;
+        }
+        
+        .floating-btn:hover {
+            background: #1d4ed8;
+            transform: scale(1.1) rotate(90deg);
+        }
+        
+        /* Scroll to top button */
+        .scroll-top {
+            position: fixed;
+            bottom: 100px;
+            right: 30px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #2563eb;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            z-index: 99;
+            transition: all 0.3s ease;
+            opacity: 0;
+            visibility: hidden;
+        }
+        
+        .scroll-top.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .scroll-top:hover {
+            background: #2563eb;
+            color: white;
+            transform: translateY(-5px);
+        }
+    </style>
+  </head>
+  <body>
+    <!-- Loader -->
+    <div id="loader">
+      <div class="travel-loader">
+        <span class="path"></span>
+        <i class="ri-flight-takeoff-line plane"></i>
+      </div>
+      <h2 class="brand-name">Zubi Tours & Holiday</h2>
+    </div>
+    
+    <!--==================== HEADER ====================-->
+    <?php include '../admin/includes/navbar.php'; ?>
 
-      // Share functionality for fancybox
-      $.fancybox.defaults.btnTpl.share = '<button data-fancybox-share class="fancybox-button fancybox-button--share" title="Share">' +
-        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/></svg>' +
-        '</button>';
+    <!-- Hero Section -->
+    <section class="gallery-hero">
+        <div class="hero-content">
+            <h1>Explore Our Gallery</h1>
+            <p>Discover the breathtaking beauty of Kashmir and Ladakh through our curated collection of images</p>
+            <div class="counter-badge">
+                <i class="ri-image-line"></i>
+                <?php if ($filtered_count): ?>
+                    Showing <?php echo $filtered_count; ?> of <?php echo $total_count; ?> images in "<?php echo ucfirst($active_filter); ?>"
+                <?php else: ?>
+                    <?php echo $total_count; ?> Stunning Images
+                <?php endif; ?>
+            </div>
+        </div>
+    </section>
 
-      // Handle share button click
-      $(document).on('click', '[data-fancybox-share]', function() {
-        var current = $.fancybox.getInstance().current;
-        var imageUrl = current.opts.$orig[0].href;
-        var title = current.opts.$orig.data('caption') || document.title;
+    <!-- Category Filters -->
+    <div class="gallery-filters">
+        <button class="filter-btn <?php echo ($active_filter === 'all') ? 'active' : ''; ?>" 
+                onclick="filterGallery('all')">
+            <i class="ri-grid-fill"></i>
+            All Images
+        </button>
+        
+        <?php foreach ($all_categories as $category): ?>
+            <button class="filter-btn <?php echo ($active_filter === $category) ? 'active' : ''; ?>" 
+                    onclick="filterGallery('<?php echo $category; ?>')">
+                <i class="ri-price-tag-3-line"></i>
+                <?php echo ucfirst($category); ?>
+            </button>
+        <?php endforeach; ?>
+    </div>
 
-        // Create share modal
-        var shareHtml = `
-                    <div class="share-modal" style="background: white; padding: 20px; border-radius: 10px; max-width: 400px;">
-                        <h3 style="margin-bottom: 15px;">Share this image</h3>
-                        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                            <a href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(imageUrl)}" 
-                               target="_blank" 
-                               style="background: #1877f2; color: white; padding: 10px 15px; border-radius: 5px; text-decoration: none;">
-                                <i class="ri-facebook-fill"></i> Facebook
-                            </a>
-                            <a href="https://twitter.com/intent/tweet?url=${encodeURIComponent(imageUrl)}&text=${encodeURIComponent(title)}" 
-                               target="_blank" 
-                               style="background: #1da1f2; color: white; padding: 10px 15px; border-radius: 5px; text-decoration: none;">
-                                <i class="ri-twitter-fill"></i> Twitter
-                            </a>
-                        </div>
-                        <div style="margin-top: 15px;">
-                            <input type="text" value="${imageUrl}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" readonly>
-                            <button onclick="navigator.clipboard.writeText('${imageUrl}')" style="margin-top: 10px; padding: 8px 15px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                                Copy Link
-                            </button>
+    <!-- Image Counter -->
+    <div class="image-counter">
+        <div class="counter-badge">
+            <i class="ri-image-line"></i>
+            <?php echo $total_count; ?> images
+        </div>
+        <div class="counter-badge">
+            <i class="ri-filter-line"></i>
+            Filter: <?php echo ($active_filter === 'all') ? 'All Categories' : ucfirst($active_filter); ?>
+        </div>
+    </div>
+
+    <!-- Gallery Grid -->
+    <div class="gallery-grid" id="gallery-container">
+        <?php if (count($filtered_gallery) > 0): ?>
+            <?php foreach ($filtered_gallery as $index => $item): 
+                $image_path = !empty($item['image_path']) ? '../' . $item['image_path'] : '../assets/img/bg2.jpg';
+                $categories = explode(' ', $item['categories']);
+            ?>
+                <div class="gallery-card" 
+                     data-index="<?php echo $index; ?>"
+                     onclick="openLightbox(<?php echo $index; ?>)">
+                    <img src="../admin<?php echo $image_path; ?>" 
+                         alt="<?php echo htmlspecialchars($item['title']); ?>"
+                         class="gallery-image image-loading"
+                         onload="this.classList.remove('image-loading')"
+                         onerror="this.src='../assets/img/bg2.jpg'; this.classList.remove('image-loading')">
+                    
+                    <div class="gallery-overlay">
+                        <h3 class="gallery-title"><?php echo htmlspecialchars($item['title']); ?></h3>
+                        <?php if ($item['description']): ?>
+                            <p class="gallery-description"><?php echo htmlspecialchars(substr($item['description'], 0, 100)); ?></p>
+                        <?php endif; ?>
+                        
+                        <div class="gallery-categories">
+                            <?php foreach ($categories as $cat): 
+                                if ($cat): ?>
+                                    <span class="category-tag"><?php echo ucfirst($cat); ?></span>
+                                <?php endif; 
+                            endforeach; ?>
                         </div>
                     </div>
-                `;
+                </div>
+            <?php endforeach; ?>
+        <?php else: ?>
+            <div class="no-images">
+                <i class="ri-image-line"></i>
+                <h3>No Images Found</h3>
+                <p>No images available in the "<?php echo ucfirst($active_filter); ?>" category.</p>
+                <button class="filter-btn active" onclick="filterGallery('all')" style="margin-top: 20px;">
+                    <i class="ri-grid-fill"></i> View All Images
+                </button>
+            </div>
+        <?php endif; ?>
+    </div>
 
-        $.fancybox.open({
-          src: shareHtml,
-          type: 'html'
+    <!-- Lightbox Modal -->
+    <div class="lightbox-modal" id="lightbox-modal">
+        <div class="lightbox-content">
+            <span class="lightbox-close" onclick="closeLightbox()">&times;</span>
+            
+            <div class="lightbox-nav">
+                <button class="nav-btn prev-btn" onclick="changeImage(-1)">
+                    <i class="ri-arrow-left-line"></i>
+                </button>
+                <button class="nav-btn next-btn" onclick="changeImage(1)">
+                    <i class="ri-arrow-right-line"></i>
+                </button>
+            </div>
+            
+            <img id="lightbox-img" class="lightbox-image" src="" alt="">
+            
+            <div class="lightbox-info">
+                <h3 id="lightbox-title"></h3>
+                <p id="lightbox-description"></p>
+                <div id="lightbox-categories" class="gallery-categories"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Action Button -->
+    <div class="floating-btn" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
+        <i class="ri-arrow-up-line"></i>
+    </div>
+
+
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-col">
+                <h3>Zubi Tours & Holidays</h3>
+                <p>Creating unforgettable experiences in the paradise of Kashmir and the majestic landscapes of Ladakh.</p>
+                <div class="social-links">
+                    <a href="#"><i class="ri-facebook-fill"></i></a>
+                    <a href="#"><i class="ri-instagram-line"></i></a>
+                    <a href="#"><i class="ri-twitter-fill"></i></a>
+                    <a href="#"><i class="ri-youtube-fill"></i></a>
+                </div>
+            </div>
+            
+            <div class="footer-col">
+                <h4>Quick Links</h4>
+                <ul>
+                    <li><a href="../index.php">Home</a></li>
+                    <li><a href="/public/about.php">About Us</a></li>
+                    <li><a href="/public/destinations.php">Destinations</a></li>
+                    <li><a href="/public/packages.php">Packages</a></li>
+                    <li><a href="/public/gallery.php">Gallery</a></li>
+                </ul>
+            </div>
+            
+            <div class="footer-col">
+                <h4>Services</h4>
+                <ul>
+                    <li><a href="/public/packages.php">Tour Packages</a></li>
+                    <li><a href="/public/car-rentals.php">Car Rentals</a></li>
+                    <li><a href="#">Hotel Booking</a></li>
+                    <li><a href="#">Adventure Activities</a></li>
+                    <li><a href="#">Pilgrimage Tours</a></li>
+                </ul>
+            </div>
+            
+            <div class="footer-col">
+                <h4>Contact Info</h4>
+                <div class="contact-info">
+                    <p><i class="ri-map-pin-line"></i> Srinagar, Jammu & Kashmir</p>
+                    <p><i class="ri-phone-line"></i> +91 7006296814</p>
+                    <p><i class="ri-mail-line"></i> info@zubitours.com</p>
+                    <p><i class="ri-time-line"></i> Mon-Sat: 9AM - 6PM</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer-bottom">
+            <p>&copy; <span id="getYear"></span> Zubi Tours & Holidays. All rights reserved.</p>
+            <p> Powered By <a href="https://irfanmanzoor.in">KRYON</a></p>
+        </div>
+    </footer>
+
+    <!-- Linking Swiper script -->
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+    <!--=============== MAIN JS ===============-->
+    <script src="../assets/js/main.js"></script>
+    
+    <script>
+        // Gallery data from PHP
+        const galleryItems = <?php echo json_encode($filtered_gallery); ?>;
+        let currentImageIndex = 0;
+        
+        // Filter gallery function
+        function filterGallery(category) {
+            window.location.href = `gallery.php?filter=${category}`;
+        }
+        
+        // Lightbox functionality
+        function openLightbox(index) {
+            currentImageIndex = index;
+            updateLightbox();
+            document.getElementById('lightbox-modal').style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+            
+            // Add keyboard navigation
+            document.addEventListener('keydown', handleKeyboardNavigation);
+        }
+        
+        function closeLightbox() {
+            document.getElementById('lightbox-modal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+            document.removeEventListener('keydown', handleKeyboardNavigation);
+        }
+        
+        function changeImage(direction) {
+            currentImageIndex += direction;
+            
+            // Loop around
+            if (currentImageIndex < 0) {
+                currentImageIndex = galleryItems.length - 1;
+            } else if (currentImageIndex >= galleryItems.length) {
+                currentImageIndex = 0;
+            }
+            
+            updateLightbox();
+        }
+        
+        function updateLightbox() {
+            const item = galleryItems[currentImageIndex];
+            if (!item) return;
+            
+            const imagePath = item.image_path ? <?php '../admin' ?>+ item.image_path : '../assets/img/bg2.jpg';
+            
+            document.getElementById('lightbox-img').src = imagePath;
+            document.getElementById('lightbox-img').alt = item.title;
+            document.getElementById('lightbox-title').textContent = item.title;
+            document.getElementById('lightbox-description').textContent = item.description || '';
+            
+            // Update categories
+            const categoriesContainer = document.getElementById('lightbox-categories');
+            categoriesContainer.innerHTML = '';
+            
+            if (item.categories) {
+                const categories = item.categories.split(' ');
+                categories.forEach(cat => {
+                    if (cat.trim()) {
+                        const tag = document.createElement('span');
+                        tag.className = 'category-tag';
+                        tag.textContent = cat.charAt(0).toUpperCase() + cat.slice(1);
+                        categoriesContainer.appendChild(tag);
+                    }
+                });
+            }
+        }
+        
+        function handleKeyboardNavigation(e) {
+            switch(e.key) {
+                case 'Escape':
+                    closeLightbox();
+                    break;
+                case 'ArrowLeft':
+                    changeImage(-1);
+                    break;
+                case 'ArrowRight':
+                    changeImage(1);
+                    break;
+            }
+        }
+        
+        // Close lightbox when clicking outside
+        document.getElementById('lightbox-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeLightbox();
+            }
         });
-      });
-    });
-
-    // Handle loader
-    window.addEventListener('load', function() {
-      setTimeout(function() {
-        document.getElementById('loader').classList.add('hidden');
-      }, 1000);
-    });
-  </script>
-</body>
-
+        
+        // Scroll to top functionality
+        function scrollToTop() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+        
+        // Show/hide scroll to top button
+        window.addEventListener('scroll', function() {
+            const scrollTopBtn = document.getElementById('scrollTop');
+            if (window.scrollY > 300) {
+                scrollTopBtn.classList.add('visible');
+            } else {
+                scrollTopBtn.classList.remove('visible');
+            }
+        });
+        
+        // Lazy loading images
+        const imageObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const img = entry.target;
+                    img.src = img.dataset.src;
+                    img.classList.remove('image-loading');
+                    observer.unobserve(img);
+                }
+            });
+        }, {
+            rootMargin: '50px'
+        });
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set current year in footer
+            document.getElementById('getYear').textContent = new Date().getFullYear();
+            
+            // Auto-hide loader
+            setTimeout(() => {
+                const loader = document.getElementById('loader');
+                if (loader) {
+                    loader.style.opacity = '0';
+                    setTimeout(() => {
+                        loader.style.display = 'none';
+                    }, 300);
+                }
+            }, 1000);
+            
+            // Observe images for lazy loading
+            document.querySelectorAll('.gallery-image[data-src]').forEach(img => {
+                imageObserver.observe(img);
+            });
+            
+            // Add active state to current filter
+            const currentFilter = '<?php echo $active_filter; ?>';
+            const filterBtns = document.querySelectorAll('.filter-btn');
+            filterBtns.forEach(btn => {
+                if (btn.textContent.includes(currentFilter) || (currentFilter === 'all' && btn.textContent.includes('All Images'))) {
+                    btn.classList.add('active');
+                }
+            });
+        });
+        
+        // Image error handling
+        document.querySelectorAll('.gallery-image').forEach(img => {
+            img.addEventListener('error', function() {
+                this.src = '../assets/img/bg2.jpg';
+                this.classList.remove('image-loading');
+            });
+        });
+        
+        // Add CSS for smooth transitions
+        const style = document.createElement('style');
+        style.textContent = `
+            .gallery-image {
+                transition: transform 0.5s ease, opacity 0.3s ease;
+            }
+            .gallery-card {
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+  </body>
 </html>
