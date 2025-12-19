@@ -7,9 +7,9 @@
           the majestic landscapes of Ladakh.
         </p>
         <div class="social-links">
-          <a href="./package-details.html"><i class="ri-facebook-fill"></i></a>
+          <a href="https://www.facebook.com/dartoursandtravels?mibextid=ZbWKwL"><i class="ri-facebook-fill"></i></a>
           <a href="https://www.instagram.com/zubi_tours_n_holidays_kashmir?igsh=OXhwMG04MWZtdnp6"><i class="ri-instagram-line"></i></a>
-          <a href="./package-details.html"><i class="ri-twitter-fill"></i></a>
+          <a href="https://x.com/TravelsZubi?t=Atj8gU4GAK00qI-TJkrjrg&s=08"><i class="ri-twitter-fill"></i></a>
           <a href="./package-details.html"><i class="ri-youtube-fill"></i></a>
         </div>
       </div>

@@ -1,5 +1,6 @@
 <?php
 session_start();
+require_once '../includes/connection.php';
 
 // Redirect to login if not authenticated
 if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
@@ -7,22 +8,16 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
     exit();
 }
 
-// Database configuration
-$host = 'localhost';
-$dbname = 'travel_db';
-$username = 'root';
-$password = '';
+
 
 $errors = [];
 $success = '';
 
 try {
-    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $username, $password);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    
+   
     // Get current admin info
     $admin_id = $_SESSION['admin_id'];
-    $stmt = $pdo->prepare("SELECT * FROM admins WHERE id = :id");
+    $stmt = $conn->prepare("SELECT * FROM admins WHERE id = :id");
     $stmt->execute(['id' => $admin_id]);
     $admin = $stmt->fetch(PDO::FETCH_ASSOC);
     
@@ -60,7 +55,7 @@ try {
         if (empty($errors)) {
             $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
             
-            $stmt = $pdo->prepare("UPDATE admins SET password = :password WHERE id = :id");
+            $stmt = $conn->prepare("UPDATE admins SET password = :password WHERE id = :id");
             $stmt->execute([
                 'password' => $hashed_password,
                 'id' => $admin_id

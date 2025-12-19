@@ -1,19 +1,18 @@
 <?php
 session_start();
+if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
+    header('Location: ../index.php');
+    exit();
+}
 
-// Database configuration
-$host = 'localhost';
-$dbname = 'travel_db';
-$username = 'root';
-$password = '';
+require_once '../includes/connection.php';
 
 $errors = [];
 $success = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
-        $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $username, $password);
-        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+       
         
         // Get form data
         $name = trim($_POST['name']);
@@ -51,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Check if username or email already exists
         if (empty($errors)) {
-            $stmt = $pdo->prepare("SELECT id FROM admins WHERE email = :email OR username = :username");
+            $stmt = $conn->prepare("SELECT id FROM admins WHERE email = :email OR username = :username");
             $stmt->execute(['email' => $email, 'username' => $username_input]);
             
             if ($stmt->rowCount() > 0) {
@@ -63,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (empty($errors)) {
             $hashed_password = password_hash($password_input, PASSWORD_DEFAULT);
             
-            $stmt = $pdo->prepare("
+            $stmt = $conn->prepare("
                 INSERT INTO admins (name, email, username, password) 
                 VALUES (:name, :email, :username, :password)
             ");
@@ -77,11 +76,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             $success = "Admin registered successfully! You can now login.";
         }
-        
-    } catch(PDOException $e) {
-        $errors[] = "Database error: " . $e->getMessage();
+
+    } catch (PDOException $e) {
+        $errors[] = "Database error: " . $e->getMessage();  
     }
 }
+        
+    
+
 ?>
 
 <!DOCTYPE html>
@@ -89,7 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register Admin - TravelEase</title>
+    <title>Register Admin - Zubi</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * {

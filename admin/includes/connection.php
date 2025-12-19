@@ -3,20 +3,25 @@
 // local ENVIRONMENT  setup 
 
 
-$servername = "localhost";
-$usename = "root";
-$password = "";
-$dbname = "travel_db";
+
+$host = 'localhost';
+$dbname = 'travel_db';
+$username = 'root';
+$password = '';
 
 
 // Production ENVIRONMENT  setup 
 
 
-// $servername = "localhost";
-// $usename = "u255290550_zubitours";
-// $password = "Zubi@1234#";
-// $dbname = "u255290550_zubitours";
+
+
+// $host = 'localhost';
+// $dbname = 'u255290550_zubitours';
+// $username = 'u255290550_zubitours';
+// $password = 'Zubi@1234#';
 
 
 
-$conn = mysqli_connect($servername, $usename, $password, $dbname) or die("Connection failed: " . mysqli_connect_error());
+
+
+ $conn = mysqli_connect($host, $username, $password, $dbname);

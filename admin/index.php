@@ -1,27 +1,25 @@
 <?php
 session_start();
 
+require_once './includes/connection.php';
+
 // Redirect already-logged-in admin to dashboard
 if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true) {
     header('Location: adminpannel.php');
     exit();
 }
 
-// Database configuration
-$host = 'localhost';
-$dbname = 'travel_db';
-$username = 'root';
-$password = '';
+
+
+
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
-        $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $username, $password);
-        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        
+      
         $user = $_POST['username'];
         $pass = $_POST['password'];
         
-        $stmt = $pdo->prepare("SELECT * FROM admins WHERE username = :username");
+        $stmt = $conn->prepare("SELECT * FROM admins WHERE username = :username");
         $stmt->execute(['username' => $user]);
         $admin = $stmt->fetch(PDO::FETCH_ASSOC);
         
