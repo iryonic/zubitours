@@ -8,18 +8,24 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
     exit();
 }
 
-
-
 $errors = [];
 $success = '';
 
+// Get current admin info
+$admin_id = $_SESSION['admin_id'];
+$admin = null;
+
 try {
-   
-    // Get current admin info
-    $admin_id = $_SESSION['admin_id'];
-    $stmt = $conn->prepare("SELECT * FROM admins WHERE id = :id");
-    $stmt->execute(['id' => $admin_id]);
-    $admin = $stmt->fetch(PDO::FETCH_ASSOC);
+    // Use MySQLi prepared statement
+    if ($stmt = $conn->prepare("SELECT * FROM admins WHERE id = ?")) {
+        $stmt->bind_param("i", $admin_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $admin = $result->fetch_assoc();
+        $stmt->close();
+    } else {
+        throw new Exception("Database prepare failed: " . $conn->error);
+    }
     
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $current_password = $_POST['current_password'];
@@ -55,20 +61,24 @@ try {
         if (empty($errors)) {
             $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
             
-            $stmt = $conn->prepare("UPDATE admins SET password = :password WHERE id = :id");
-            $stmt->execute([
-                'password' => $hashed_password,
-                'id' => $admin_id
-            ]);
-            
-            $success = "Password updated successfully!";
-            
-            // Clear form
-            $_POST = [];
+            if ($updateStmt = $conn->prepare("UPDATE admins SET password = ? WHERE id = ?")) {
+                $updateStmt->bind_param("si", $hashed_password, $admin_id);
+                if ($updateStmt->execute()) {
+                    $success = "Password updated successfully!";
+                    
+                    // Clear form
+                    $_POST = [];
+                } else {
+                    $errors[] = "Database error: " . $updateStmt->error;
+                }
+                $updateStmt->close();
+            } else {
+                $errors[] = "Database error: " . $conn->error;
+            }
         }
     }
     
-} catch(PDOException $e) {
+} catch(Exception $e) {
     $errors[] = "Database error: " . $e->getMessage();
 }
 ?>

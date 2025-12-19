@@ -110,7 +110,7 @@ Pahalgam pictures
             align-items: center;
             justify-content: center;
             text-align: center;
-            background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.8) 100%);
+            background: linear-gradient(135deg, rgba(34, 44, 67, 0.9) 0%, rgba(190, 161, 89, 0.8) 100%);
             color: white;
             margin-bottom: 60px;
             overflow: hidden;
@@ -123,7 +123,7 @@ Pahalgam pictures
             left: 0;
             right: 0;
             bottom: 0;
-            background: url('https://images.unsplash.com/photo-1593693399902-89354c5b43b1?auto=format&fit=crop&w=1920') center/cover;
+            background: url('../assets/img/bg1.jpg') center/cover;
             opacity: 0.3;
             z-index: -1;
         }
@@ -149,14 +149,7 @@ Pahalgam pictures
         }
         
         /* Category Filters */
-        .gallery-filters {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            justify-content: center;
-            margin-bottom: 40px;
-            padding: 0 20px;
-        }
+       
         
         .filter-btn {
             padding: 12px 24px;
@@ -173,9 +166,9 @@ Pahalgam pictures
         }
         
         .filter-btn:hover {
-            border-color: #2563eb;
+            border-color: #060e218d;
             color: #2563eb;
-            transform: translateY(-2px);
+           
         }
         
         .filter-btn.active {
@@ -284,6 +277,8 @@ Pahalgam pictures
         }
         
         .counter-badge {
+            margin: 0 auto;
+            max-width: 300px;
             background: #f1f5f9;
             padding: 8px 16px;
             border-radius: 50px;
@@ -291,6 +286,7 @@ Pahalgam pictures
             color: #475569;
             display: flex;
             align-items: center;
+            
             gap: 8px;
         }
         
@@ -482,7 +478,7 @@ Pahalgam pictures
             position: fixed;
             bottom: 30px;
             right: 30px;
-            background: #2563eb;
+            background: #ebb625ff;
             color: white;
             width: 60px;
             height: 60px;
@@ -498,7 +494,7 @@ Pahalgam pictures
         }
         
         .floating-btn:hover {
-            background: #1d4ed8;
+            background: #d8931dff;
             transform: scale(1.1) rotate(90deg);
         }
         
@@ -508,7 +504,7 @@ Pahalgam pictures
             bottom: 100px;
             right: 30px;
             background: rgba(255, 255, 255, 0.9);
-            color: #2563eb;
+            color: #eba225ff;
             width: 50px;
             height: 50px;
             border-radius: 50%;
@@ -817,13 +813,7 @@ Pahalgam pictures
         });
         
         // Scroll to top functionality
-        function scrollToTop() {
-            window.scrollTo({
-                top: 0,
-                behavior: 'smooth'
-            });
-        }
-        
+       
         // Show/hide scroll to top button
         window.addEventListener('scroll', function() {
             const scrollTopBtn = document.getElementById('scrollTop');

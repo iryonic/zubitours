@@ -51,9 +51,13 @@
 
             <div class="menu-section">
                 <div class="menu-label">Settings</div>
-                <a href="../pages/admin-setting.php" class="menu-item">
+                <a href="./register.php" class="menu-item">
                     <i class="ri-settings-3-line"></i>
-                    <span>Settings</span>
+                    <span>Register Admin</span>
+                </a>
+                  <a href="./change-password.php" class="menu-item">
+                    <i class="ri-settings-3-line"></i>
+                    <span>Change Password</span>
                 </a>
                 <a href="../logout.php" class="menu-item">
                     <i class="ri-logout-box-line"></i>

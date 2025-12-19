@@ -2370,6 +2370,7 @@ input:focus {
 }
 
 .section-header p {
+  padding: 10px;
   font-size: 1.1rem;
   color: var(--text-color);
   max-width: 600px;
@@ -2536,6 +2537,7 @@ input:focus {
 
 .section-header p {
   font-size: 1.1rem;
+  padding: 10px;
   color: var(--text-color);
   max-width: 600px;
   margin: 0 auto;

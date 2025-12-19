@@ -626,51 +626,7 @@ custom Kashmir tour
       <?php endif; ?>
     </div>
 
-    <!-- Enhanced Filters -->
-    <div class="enhanced-filters">
-      <form method="GET" action="" id="filter-form">
-        <input type="hidden" name="search" value="<?php echo htmlspecialchars($search_term); ?>">
-        
-        <div class="filter-group">
-          <label for="duration">Package Duration</label>
-          <select id="duration" name="duration" class="filter-select" onchange="this.form.submit()">
-            <option value="all" <?php echo (!isset($_GET['duration']) || $_GET['duration'] == 'all') ? 'selected' : ''; ?>>Any Duration</option>
-            <option value="3-5" <?php echo (isset($_GET['duration']) && $_GET['duration'] == '3-5') ? 'selected' : ''; ?>>3-5 Days</option>
-            <option value="6-8" <?php echo (isset($_GET['duration']) && $_GET['duration'] == '6-8') ? 'selected' : ''; ?>>6-8 Days</option>
-            <option value="9-12" <?php echo (isset($_GET['duration']) && $_GET['duration'] == '9-12') ? 'selected' : ''; ?>>9-12 Days</option>
-            <option value="12+" <?php echo (isset($_GET['duration']) && $_GET['duration'] == '12+') ? 'selected' : ''; ?>>12+ Days</option>
-          </select>
-        </div>
-        
-        <div class="filter-group">
-          <label for="type">Package Type</label>
-          <select id="type" name="type" class="filter-select" onchange="this.form.submit()">
-            <option value="all" <?php echo (!isset($_GET['type']) || $_GET['type'] == 'all') ? 'selected' : ''; ?>>All Types</option>
-            <?php foreach ($package_types as $type): ?>
-              <option value="<?php echo $type['package_type']; ?>" 
-                <?php echo (isset($_GET['type']) && $_GET['type'] == $type['package_type']) ? 'selected' : ''; ?>>
-                <?php echo ucfirst($type['package_type']); ?>
-              </option>
-            <?php endforeach; ?>
-          </select>
-        </div>
-        
-        <div class="filter-group">
-          <label for="price">Price Range</label>
-          <select id="price" name="price" class="filter-select" onchange="this.form.submit()">
-            <option value="all" <?php echo (!isset($_GET['price']) || $_GET['price'] == 'all') ? 'selected' : ''; ?>>Any Price</option>
-            <option value="budget" <?php echo (isset($_GET['price']) && $_GET['price'] == 'budget') ? 'selected' : ''; ?>>Budget (Under ₹20,000)</option>
-            <option value="mid-range" <?php echo (isset($_GET['price']) && $_GET['price'] == 'mid-range') ? 'selected' : ''; ?>>Mid-Range (₹20,000-₹40,000)</option>
-            <option value="premium" <?php echo (isset($_GET['price']) && $_GET['price'] == 'premium') ? 'selected' : ''; ?>>Premium (₹40,000+)</option>
-          </select>
-        </div>
-        
-        <button type="button" class="filter-btn" id="clearFilters">
-          <i class="ri-refresh-line"></i> Clear Filters
-        </button>
-      </form>
-    </div>
-
+  
     <!-- Enhanced Packages Grid -->
     <section class="enhanced-grid" id="packages-grid">
       <?php if ($packages->num_rows > 0): ?>
@@ -841,9 +797,9 @@ custom Kashmir tour
               </div>
               <div class="testimonial-author">
                 <div class="author-avatar">
-                  <img loading="lazy" src="../assets/img/<?php echo $testimonial['avatar_path'] ?: 'default-avatar.jpg'; ?>" 
+                  <img loading="lazy" src="../assets/img/<?php echo $testimonial['avatar_path'] ?: '../assets/img/avatar.svg'; ?>" 
                        alt="<?php echo htmlspecialchars($testimonial['author_name']); ?>"
-                       onerror="this.src='../assets/img/bg1.jpg'">
+                       onerror="this.src='../assets/img/avatar.svg'">
                 </div>
                 <div class="author-details">
                   <h4><?php echo htmlspecialchars($testimonial['author_name']); ?></h4>
@@ -868,7 +824,7 @@ custom Kashmir tour
             </div>
             <div class="testimonial-author">
               <div class="author-avatar">
-                <img loading="lazy" src="../assets/img/default-avatar.jpg" alt="Rajesh Kumar">
+                <img loading="lazy" src="../assets/img/avatar.svg" alt="Rajesh Kumar">
               </div>
               <div class="author-details">
                 <h4>Rajesh Kumar</h4>
@@ -891,7 +847,7 @@ custom Kashmir tour
             </div>
             <div class="testimonial-author">
               <div class="author-avatar">
-                <img loading="lazy" src="../assets/img/default-avatar.jpg" alt="Priya Singh">
+                <img loading="lazy" src="../assets/img/female.svg" alt="Priya Singh">
               </div>
               <div class="author-details">
                 <h4>Priya Singh</h4>
@@ -914,7 +870,7 @@ custom Kashmir tour
             </div>
             <div class="testimonial-author">
               <div class="author-avatar">
-                <img loading="lazy" src="../assets/img/bg1.jpg" alt="Amit & Sunita">
+                <img loading="lazy" src="../assets/img/avatar.svg" alt="Amit & Sunita">
               </div>
               <div class="author-details">
                 <h4>Amit & Sunita</h4>

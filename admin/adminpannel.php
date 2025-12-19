@@ -772,9 +772,13 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
 
             <div class="menu-section">
                 <div class="menu-label">Settings</div>
-                <a href="#" class="menu-item">
+                  <a href="../admin/pages/register.php" class="menu-item">
                     <i class="ri-settings-3-line"></i>
-                    <span>Settings</span>
+                    <span>Register Admin</span>
+                </a>
+                  <a href="../admin/pages/change-password.php" class="menu-item">
+                    <i class="ri-settings-3-line"></i>
+                    <span>Change Password</span>
                 </a>
                 <a href="./logout.php" class="menu-item">
                     <i class="ri-logout-box-line"></i>
@@ -894,7 +898,7 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
             <!-- Quick Actions -->
             <h3 style="margin-bottom: 20px; font-size: 1.3rem; font-weight: 700;">Quick Actions</h3>
             <div class="quick-actions">
-                <a href="add_package.php" class="quick-action">
+                <a href="../admin/pages/manage-packages.php" class="quick-action">
                     <div class="quick-action-icon">
                         <i class="fas fa-plus"></i>
                     </div>
@@ -902,15 +906,15 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
                     <p>Create new travel package</p>
                 </a>
                 
-               <a href="add_package.php" class="quick-action">
+               <a href="../admin/pages/manage-destinations.php" class="quick-action">
                     <div class="quick-action-icon">
                         <i class="fas fa-plus"></i>
                     </div>
                     <h4>Add Destinations</h4>
                     <p>Create new travel package</p>
                 </a>
-                
-               <a href="add_package.php" class="quick-action">
+
+               <a href="../admin/pages/manage-gallery.php" class="quick-action">
                     <div class="quick-action-icon">
                         <i class="fas fa-plus"></i>
                     </div>
@@ -918,20 +922,20 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
                     <p>post another gallery Image </p>
                 </a>
 
-                 <a href="add_package.php" class="quick-action">
+                 <a href="../admin/pages/manage-car-rentals.php" class="quick-action">
                     <div class="quick-action-icon">
                         <i class="fas fa-plus"></i>
                     </div>
                     <h4>Add Car</h4>
                     <p>Add new car to your Car rentals</p>
                 </a>
-                
-                <a href="settings.php" class="quick-action">
+
+                <a href="../admin/pages/Change-password.php" class="quick-action">
                     <div class="quick-action-icon">
                         <i class="fas fa-cogs"></i>
                     </div>
-                    <h4>Settings</h4>
-                    <p>Configure system settings</p>
+                    <h4>Change Password</h4>
+                    <p>Configure system Authentication settings</p>
                 </a>
             </div>
         </div>

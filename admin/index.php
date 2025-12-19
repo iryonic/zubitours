@@ -15,28 +15,32 @@ if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
-      
-        $user = $_POST['username'];
-        $pass = $_POST['password'];
-        
-        $stmt = $conn->prepare("SELECT * FROM admins WHERE username = :username");
-        $stmt->execute(['username' => $user]);
-        $admin = $stmt->fetch(PDO::FETCH_ASSOC);
-        
+        $user = trim($_POST['username'] ?? '');
+        $pass = $_POST['password'] ?? '';
+
+        // Use mysqli prepared statement (mysqli connection is defined in includes/connection.php)
+        if ($stmt = $conn->prepare("SELECT id, name, username, password FROM admins WHERE username = ?")) {
+            $stmt->bind_param("s", $user);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $admin = $result ? $result->fetch_assoc() : null;
+        } else {
+            throw new Exception("Database prepare failed: " . $conn->error);
+        }
+
         if ($admin && password_verify($pass, $admin['password'])) {
             $_SESSION['admin_id'] = $admin['id'];
             $_SESSION['admin_name'] = $admin['name'];
             $_SESSION['admin_logged_in'] = true;
-            
+
             header('Location: adminpannel.php');
             exit();
         } else {
             $error = "Invalid username or password!";
         }
-    } catch(PDOException $e) {
+    } catch(Exception $e) {
         $error = "Database error: " . $e->getMessage();
     }
-
 
     //if admin  is alreday logged in, redirect to admin panel
     

@@ -50,11 +50,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Check if username or email already exists
         if (empty($errors)) {
-            $stmt = $conn->prepare("SELECT id FROM admins WHERE email = :email OR username = :username");
-            $stmt->execute(['email' => $email, 'username' => $username_input]);
-            
-            if ($stmt->rowCount() > 0) {
-                $errors[] = "Username or email already exists";
+            if ($checkStmt = $conn->prepare("SELECT id FROM admins WHERE email = ? OR username = ?")) {
+                $checkStmt->bind_param("ss", $email, $username_input);
+                $checkStmt->execute();
+                $checkResult = $checkStmt->get_result();
+                if ($checkResult && $checkResult->num_rows > 0) {
+                    $errors[] = "Username or email already exists";
+                }
+            } else {
+                $errors[] = "Database error: " . $conn->error;
             }
         }
         
@@ -62,23 +66,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (empty($errors)) {
             $hashed_password = password_hash($password_input, PASSWORD_DEFAULT);
             
-            $stmt = $conn->prepare("
-                INSERT INTO admins (name, email, username, password) 
-                VALUES (:name, :email, :username, :password)
-            ");
-            
-            $stmt->execute([
-                'name' => $name,
-                'email' => $email,
-                'username' => $username_input,
-                'password' => $hashed_password
-            ]);
-            
-            $success = "Admin registered successfully! You can now login.";
+            if ($insertStmt = $conn->prepare("INSERT INTO admins (name, email, username, password) VALUES (?, ?, ?, ?)") ) {
+                $insertStmt->bind_param("ssss", $name, $email, $username_input, $hashed_password);
+                if ($insertStmt->execute()) {
+                    $success = "Admin registered successfully! You can now login.";
+                } else {
+                    $errors[] = "Database error: " . $insertStmt->error;
+                }
+            } else {
+                $errors[] = "Database error: " . $conn->error;
+            }
         }
 
-    } catch (PDOException $e) {
-        $errors[] = "Database error: " . $e->getMessage();  
+    } catch (Exception $e) {
+        $errors[] = "Database error: " . $e->getMessage();
     }
 }
         
