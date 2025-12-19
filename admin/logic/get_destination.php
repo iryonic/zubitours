@@ -23,13 +23,6 @@ if (isset($_GET['id'])) {
         
         // Decode JSON fields
         $destination['best_seasons'] = json_decode($destination['best_seasons'], true) ?: [];
-        $destination['highlights'] = json_decode($destination['highlights'] ?? '[]', true) ?: [];
-        $destination['activities'] = json_decode($destination['activities'] ?? '[]', true) ?: [];
-        $destination['tips'] = json_decode($destination['tips'] ?? '[]', true) ?: [];
-        $destination['nearby_attractions'] = json_decode($destination['nearby_attractions'] ?? '[]', true) ?: [];
-        
-        // Set default values for missing fields
-        $destination['detailed_description'] = $destination['detailed_description'] ?? '';
         
         echo json_encode($destination);
     } else {

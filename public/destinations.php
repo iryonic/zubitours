@@ -1,3 +1,4 @@
+
 <?php
 require_once '../admin/includes/connection.php';
 
@@ -589,6 +590,7 @@ places to visit in Kashmir
     }
 
     .card-badges {
+        opacity: .9;
         position: absolute;
         top: 25px;
         right: 25px;
@@ -1149,7 +1151,7 @@ places to visit in Kashmir
             <h1>Discover Paradise</h1>
             <p>Explore the breathtaking destinations of Kashmir and Ladakh, where every view is a postcard and every moment is magical.</p>
             
-            <
+            
         </div>
     </section>
 
@@ -1275,6 +1277,36 @@ places to visit in Kashmir
                         'ladakh' => '#f59e0b',
                         'jammu' => '#8b5cf6'
                     ];
+                    
+                    // FIXED: Get the correct image path
+                    $image_path = '';
+                    if (!empty($destination['image_path'])) {
+                        // Check common upload directories
+                        $possible_paths = [
+                            '../uploads/' . $destination['image_path'],
+                            '../upload/' . $destination['image_path'],
+                            '../admin/uploads/' . $destination['image_path'],
+                            '../admin/upload/' . $destination['image_path'],
+                            $destination['image_path'] // Try as-is
+                        ];
+                        
+                        foreach ($possible_paths as $path) {
+                            if (file_exists($path)) {
+                                $image_path = $path;
+                                break;
+                            }
+                        }
+                        
+                        // If still no path found, use the path as stored in DB
+                        if (empty($image_path)) {
+                            $image_path = $destination['image_path'];
+                        }
+                    }
+                    
+                    // If no image found, use fallback
+                    if (empty($image_path) || !file_exists($image_path)) {
+                        $image_path = '../assets/img/bg2.jpg';
+                    }
             ?>
             <div class="destination-card" 
                  data-region="<?php echo $destination['region']; ?>"
@@ -1286,7 +1318,8 @@ places to visit in Kashmir
                  style="animation-delay: <?php echo $counter * 0.1; ?>s;">
                 
                 <div class="card-media">
-                    <img src="<?php echo !empty($destination['image_path']) ? '../upload/'.$destination['image_path'] : '../assets/img/bg2.jpg'; ?>" 
+                    <!-- FIXED: Correct image source -->
+                    <img src="<?php echo $image_path; ?>" 
                          alt="<?php echo htmlspecialchars($destination['destination_name']); ?>"
                          loading="lazy" decoding="async"
                          onerror="this.src='../assets/img/bg3.jpg'">

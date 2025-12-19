@@ -2,15 +2,16 @@
 session_start();
 require_once '../includes/connection.php';
 
-
 // Redirect to login if not authenticated
 if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
     header('Location: ../index.php');
     exit();
 }
+
 // Handle CRUD operations
 $message = '';
 $message_type = '';
+
 // Flash messages (Post/Redirect/Get) — show once then clear
 if (isset($_SESSION['flash_message'])) {
     $message = $_SESSION['flash_message'];
@@ -26,76 +27,14 @@ if (isset($_POST['add_destination'])) {
     $best_seasons = json_encode($_POST['best_seasons'] ?? []);
     $location = $_POST['location'];
     $short_description = $_POST['short_description'];
- 
     $badge = $_POST['badge'];
     $rating = $_POST['rating'];
     $reviews_count = $_POST['reviews_count'];
     $is_featured = isset($_POST['is_featured']) ? 1 : 0;
     $is_active = isset($_POST['is_active']) ? 1 : 0;
     
-  
-    
-    // Handle activities
-    $activities = [];
-    if (isset($_POST['activity_names']) && isset($_POST['activity_descriptions'])) {
-        $names = $_POST['activity_names'];
-        $descriptions = $_POST['activity_descriptions'];
-        $difficulties = $_POST['activity_difficulties'] ?? [];
-        $durations = $_POST['activity_durations'] ?? [];
-        
-        for ($i = 0; $i < count($names); $i++) {
-            if (!empty(trim($names[$i]))) {
-                $activities[] = [
-                    'name' => $names[$i],
-                    'description' => $descriptions[$i] ?? '',
-                    'difficulty' => $difficulties[$i] ?? 'medium',
-                    'duration' => $durations[$i] ?? ''
-                ];
-            }
-        }
-    }
-    $activities_json = json_encode($activities);
-    
-    // Handle tips
-    $tips = [];
-    if (isset($_POST['tip_types']) && isset($_POST['tip_descriptions'])) {
-        $types = $_POST['tip_types'];
-        $tipTitles = $_POST['tip_titles'] ?? [];
-        $descriptions = $_POST['tip_descriptions'];
-        
-        for ($i = 0; $i < count($types); $i++) {
-            if (!empty(trim($descriptions[$i]))) {
-                $tips[] = [
-                    'type' => $types[$i],
-                    'title' => $tipTitles[$i] ?? '',
-                    'description' => $descriptions[$i]
-                ];
-            }
-        }
-    }
-    $tips_json = json_encode($tips);
-    
-    // Handle nearby attractions
-    $attractions = [];
-    if (isset($_POST['attraction_names']) && isset($_POST['attraction_distances'])) {
-        $names = $_POST['attraction_names'];
-        $distances = $_POST['attraction_distances'];
-        $attractionDescriptions = $_POST['attraction_descriptions'] ?? [];
-        
-        for ($i = 0; $i < count($names); $i++) {
-            if (!empty(trim($names[$i]))) {
-                $attractions[] = [
-                    'name' => $names[$i],
-                    'distance' => $distances[$i] ?? 0,
-                    'description' => $attractionDescriptions[$i] ?? ''
-                ];
-            }
-        }
-    }
-    $attractions_json = json_encode($attractions);
-    
-    $stmt = $conn->prepare("INSERT INTO destinations (destination_name, region, destination_type, best_seasons, location, short_description,  badge, rating, reviews_count, is_featured, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-    $stmt->bind_param("sssssssdsii", $destination_name, $region, $destination_type, $best_seasons, $location, $short_description,   $badge, $rating, $reviews_count, $is_featured, $is_active);
+    $stmt = $conn->prepare("INSERT INTO destinations (destination_name, region, destination_type, best_seasons, location, short_description, badge, rating, reviews_count, is_featured, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    $stmt->bind_param("sssssssdsii", $destination_name, $region, $destination_type, $best_seasons, $location, $short_description, $badge, $rating, $reviews_count, $is_featured, $is_active);
     
     if ($stmt->execute()) {
         $destination_id = $conn->insert_id;
@@ -144,90 +83,14 @@ if (isset($_POST['update_destination'])) {
     $best_seasons = json_encode($_POST['best_seasons'] ?? []);
     $location = $_POST['location'];
     $short_description = $_POST['short_description'];
-    $detailed_description = $_POST['detailed_description'];
     $badge = $_POST['badge'];
     $rating = $_POST['rating'];
     $reviews_count = $_POST['reviews_count'];
     $is_featured = isset($_POST['is_featured']) ? 1 : 0;
     $is_active = isset($_POST['is_active']) ? 1 : 0;
     
-    // Handle highlights
-    $highlights = [];
-    if (isset($_POST['highlight_titles']) && isset($_POST['highlight_descriptions'])) {
-        $titles = $_POST['highlight_titles'];
-        $descriptions = $_POST['highlight_descriptions'];
-        for ($i = 0; $i < count($titles); $i++) {
-            if (!empty(trim($titles[$i])) && !empty(trim($descriptions[$i]))) {
-                $highlights[] = [
-                    'title' => $titles[$i],
-                    'description' => $descriptions[$i]
-                ];
-            }
-        }
-    }
-    $highlights_json = json_encode($highlights);
-    
-    // Handle activities
-    $activities = [];
-    if (isset($_POST['activity_names']) && isset($_POST['activity_descriptions'])) {
-        $names = $_POST['activity_names'];
-        $descriptions = $_POST['activity_descriptions'];
-        $difficulties = $_POST['activity_difficulties'] ?? [];
-        $durations = $_POST['activity_durations'] ?? [];
-        
-        for ($i = 0; $i < count($names); $i++) {
-            if (!empty(trim($names[$i]))) {
-                $activities[] = [
-                    'name' => $names[$i],
-                    'description' => $descriptions[$i] ?? '',
-                    'difficulty' => $difficulties[$i] ?? 'medium',
-                    'duration' => $durations[$i] ?? ''
-                ];
-            }
-        }
-    }
-    $activities_json = json_encode($activities);
-    
-    // Handle tips
-    $tips = [];
-    if (isset($_POST['tip_types']) && isset($_POST['tip_descriptions'])) {
-        $types = $_POST['tip_types'];
-        $tipTitles = $_POST['tip_titles'] ?? [];
-        $descriptions = $_POST['tip_descriptions'];
-        
-        for ($i = 0; $i < count($types); $i++) {
-            if (!empty(trim($descriptions[$i]))) {
-                $tips[] = [
-                    'type' => $types[$i],
-                    'title' => $tipTitles[$i] ?? '',
-                    'description' => $descriptions[$i]
-                ];
-            }
-        }
-    }
-    $tips_json = json_encode($tips);
-    
-    // Handle nearby attractions
-    $attractions = [];
-    if (isset($_POST['attraction_names']) && isset($_POST['attraction_distances'])) {
-        $names = $_POST['attraction_names'];
-        $distances = $_POST['attraction_distances'];
-        $attractionDescriptions = $_POST['attraction_descriptions'] ?? [];
-        
-        for ($i = 0; $i < count($names); $i++) {
-            if (!empty(trim($names[$i]))) {
-                $attractions[] = [
-                    'name' => $names[$i],
-                    'distance' => $distances[$i] ?? 0,
-                    'description' => $attractionDescriptions[$i] ?? ''
-                ];
-            }
-        }
-    }
-    $attractions_json = json_encode($attractions);
-    
-    $stmt = $conn->prepare("UPDATE destinations SET destination_name = ?, region = ?, destination_type = ?, best_seasons = ?, location = ?, short_description = ?, detailed_description = ?, highlights = ?, activities = ?, tips = ?, nearby_attractions = ?, badge = ?, rating = ?, reviews_count = ?, is_featured = ?, is_active = ? WHERE id = ?");
-    $stmt->bind_param("ssssssssssssdsiii", $destination_name, $region, $destination_type, $best_seasons, $location, $short_description, $detailed_description, $highlights_json, $activities_json, $tips_json, $attractions_json, $badge, $rating, $reviews_count, $is_featured, $is_active, $id);
+    $stmt = $conn->prepare("UPDATE destinations SET destination_name = ?, region = ?, destination_type = ?, best_seasons = ?, location = ?, short_description = ?, badge = ?, rating = ?, reviews_count = ?, is_featured = ?, is_active = ? WHERE id = ?");
+    $stmt->bind_param("sssssssdsiii", $destination_name, $region, $destination_type, $best_seasons, $location, $short_description, $badge, $rating, $reviews_count, $is_featured, $is_active, $id);
     
     if ($stmt->execute()) {
         $destination_id = $id;
@@ -402,7 +265,7 @@ if (isset($_POST['bulk_action'])) {
                 // Delete images first
                 $images = $conn->query("SELECT image_path FROM destination_images WHERE destination_id IN ($ids)");
                 while ($image = $images->fetch_assoc()) {
-                    $file_path = '../../upload/' . $image['image_path'];
+                    $file_path = '../upload/' . $image['image_path'];
                     if (file_exists($file_path)) {
                         unlink($file_path);
                     }
@@ -443,6 +306,437 @@ $ladakh_destinations = $conn->query("SELECT COUNT(*) as count FROM destinations 
     <title>Manage Destinations - Zubi Tours Admin</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/3.5.0/remixicon.css">
      <link rel="stylesheet" href="../assets/admin.css">
+     <style>
+        .image-preview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .image-preview-item {
+            position: relative;
+            width: 100%;
+            height: 100px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 2px solid var(--border-color);
+        }
+        
+        .image-preview-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .image-preview-item:hover .image-overlay {
+            opacity: 1;
+        }
+        
+        .image-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .tab.active {
+            background: var(--primary-color);
+            color: white;
+        }
+        
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 8px;
+            margin-right: 5px;
+            display: inline-block;
+            background: var(--bg-secondary);
+        }
+        
+        .tabs {
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .season-checkboxes {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+        
+        .season-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .season-checkbox input[type="checkbox"] {
+            width: auto;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .form-group {
+            flex: 1;
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: var(--bg-primary);
+            padding: 30px;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        
+        .close-modal {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 28px;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+        
+        .close-modal:hover {
+            color: var(--text-primary);
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+        
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+        
+        .btn-danger {
+            background: var(--error-color);
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+        
+        .btn-warning {
+            background: var(--warning-color);
+            color: white;
+        }
+        
+        .btn-warning:hover {
+            background: #d97706;
+        }
+        
+        .table-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .status-active {
+            background: rgba(34, 197, 94, 0.15);
+            color: #16a34a;
+        }
+        
+        .status-inactive {
+            background: rgba(239, 68, 68, 0.15);
+            color: #dc2626;
+        }
+        
+        .status-featured {
+            background: rgba(245, 158, 11, 0.15);
+            color: #d97706;
+        }
+        
+        .message {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        .message.success {
+            background: rgba(34, 197, 94, 0.15);
+            color: #16a34a;
+            border-left: 4px solid #16a34a;
+        }
+        
+        .message.error {
+            background: rgba(239, 68, 68, 0.15);
+            color: #dc2626;
+            border-left: 4px solid #dc2626;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateY(-10px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        .quick-actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .quick-action-btn {
+            padding: 10px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+        
+        .quick-action-btn:hover {
+            border-color: var(--primary-color);
+            background: rgba(59, 130, 246, 0.05);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: var(--bg-secondary);
+            padding: 20px;
+            border-radius: 12px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            border: 1px solid var(--border-color);
+        }
+        
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+        }
+        
+        .destinations-icon {
+            background: rgba(59, 130, 246, 0.15);
+            color: var(--primary-color);
+        }
+        
+        .kashmir-icon {
+            background: rgba(147, 51, 234, 0.15);
+            color: #9333ea;
+        }
+        
+        .ladakh-icon {
+            background: rgba(249, 115, 22, 0.15);
+            color: #f97316;
+        }
+        
+        .featured-icon {
+            background: rgba(245, 158, 11, 0.15);
+            color: #f59e0b;
+        }
+        
+        .stat-info h3 {
+            font-size: 24px;
+            margin: 0 0 5px 0;
+            color: var(--text-primary);
+        }
+        
+        .stat-info p {
+            margin: 0 0 5px 0;
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+        
+        .stat-trend {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        
+        .section-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin: 0;
+        }
+        
+        .table-container {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid var(--border-color);
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .data-table thead {
+            background: var(--bg-primary);
+        }
+        
+        .data-table th {
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-primary);
+            border-bottom: 2px solid var(--border-color);
+        }
+        
+        .data-table td {
+            padding: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .data-table tr:hover {
+            background: rgba(59, 130, 246, 0.02);
+        }
+        
+        .region-kashmir {
+            color: #9333ea;
+        }
+        
+        .region-ladakh {
+            color: #f97316;
+        }
+        
+        .region-jammu {
+            color: #10b981;
+        }
+     </style>
 </head>
 <body>
     <!-- Sidebar -->
@@ -648,7 +942,9 @@ $ladakh_destinations = $conn->query("SELECT COUNT(*) as count FROM destinations 
                                         <button class="btn btn-primary btn-sm" onclick="editDestination(<?php echo $destination['id']; ?>)">
                                             <i class="ri-edit-line"></i> Edit
                                         </button>
-                                       
+                                        <button class="btn btn-warning btn-sm" onclick="manageDestinationImages(<?php echo $destination['id']; ?>)">
+                                            <i class="ri-image-line"></i> Images
+                                        </button>
                                         <button class="btn btn-danger btn-sm" onclick="deleteDestination(<?php echo $destination['id']; ?>)">
                                             <i class="ri-delete-bin-line"></i>
                                         </button>
@@ -680,11 +976,10 @@ $ladakh_destinations = $conn->query("SELECT COUNT(*) as count FROM destinations 
             <h2 id="modal-title">Add New Destination</h2>
             <form id="destination-form" method="POST" enctype="multipart/form-data">
                 <input type="hidden" id="destination_id" name="destination_id">
-                <input type="hidden" name="add_destination" id="form-action" value="add_destination">
+                <input type="hidden" id="form_action" name="form_action" value="add_destination">
                 
                 <div class="tabs" style="margin-bottom: 20px;">
                     <div class="tab active" data-tab="basic" onclick="switchFormTab('basic')">Basic Info</div>
-                    <div class="tab" data-tab="details" onclick="switchFormTab('details')">Details</div>
                     <div class="tab" data-tab="media" onclick="switchFormTab('media')">Media</div>
                 </div>
                 
@@ -776,41 +1071,6 @@ $ladakh_destinations = $conn->query("SELECT COUNT(*) as count FROM destinations 
                     </div>
                 </div>
                 
-            
-                <!-- Details Tab -->
-                <!-- <div id="details-tab" class="tab-content">
-                    <div class="form-group">
-                        <label for="detailed_description">Detailed Description</label>
-                        <textarea id="detailed_description" name="detailed_description" rows="6" placeholder="Full detailed description..."></textarea>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group" style="flex:1;">
-                            <label>Highlights</label>
-                            <div id="highlights-container"></div>
-                            <button type="button" class="btn btn-sm btn-primary" onclick="addJsonItem('highlight')" style="margin-top:8px;"><i class="ri-add-line"></i> Add Highlight</button>
-                        </div>
-                        <div class="form-group" style="flex:1;">
-                            <label>Activities</label>
-                            <div id="activities-container"></div>
-                            <button type="button" class="btn btn-sm btn-primary" onclick="addJsonItem('activity')" style="margin-top:8px;"><i class="ri-add-line"></i> Add Activity</button>
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group" style="flex:1;">
-                            <label>Tips</label>
-                            <div id="tips-container"></div>
-                            <button type="button" class="btn btn-sm btn-primary" onclick="addJsonItem('tip')" style="margin-top:8px;"><i class="ri-add-line"></i> Add Tip</button>
-                        </div>
-                        <div class="form-group" style="flex:1;">
-                            <label>Nearby Attractions</label>
-                            <div id="attractions-container"></div>
-                            <button type="button" class="btn btn-sm btn-primary" onclick="addJsonItem('attraction')" style="margin-top:8px;"><i class="ri-add-line"></i> Add Attraction</button>
-                        </div>
-                    </div>
-                </div> -->
-
                 <!-- Media Tab -->
                 <div id="media-tab" class="tab-content">
                     <div class="form-group">
@@ -885,22 +1145,13 @@ $ladakh_destinations = $conn->query("SELECT COUNT(*) as count FROM destinations 
         // Modal functions
         function openAddDestinationModal() {
             document.getElementById('modal-title').textContent = 'Add New Destination';
-            document.getElementById('form-action').name = 'add_destination';
-            document.getElementById('form-action').value = 'add_destination';
+            document.getElementById('form_action').name = 'add_destination';
+            document.getElementById('form_action').value = 'add_destination';
             
             document.getElementById('destination-form').reset();
             document.getElementById('destination_id').value = '';
             
             switchFormTab('basic');
-            
-            // Clear JSON editors (initialize one item in each container)
-            const singularMap = { highlights: 'highlight', activities: 'activity', tips: 'tip', attractions: 'attraction' };
-            ['highlights', 'activities', 'tips', 'attractions'].forEach(plural => {
-                const container = document.getElementById(`${plural}-container`);
-                if (!container) return;
-                const singular = singularMap[plural];
-                container.innerHTML = getJsonItemHTML(singular);
-            });
             
             // Clear image preview
             document.getElementById('images-preview').innerHTML = '';
@@ -910,79 +1161,11 @@ $ladakh_destinations = $conn->query("SELECT COUNT(*) as count FROM destinations 
                 cb.checked = false;
             });
             
+            // Uncheck featured and active checkboxes
+            document.getElementById('is_featured').checked = false;
+            document.getElementById('is_active').checked = true;
+            
             document.getElementById('destination-modal').classList.add('active');
-        }
-        
-        function getJsonItemHTML(type) {
-            switch(type) {
-                case 'highlight':
-                    return `<div class="json-item">
-                        <input type="text" name="highlight_titles[]" placeholder="Highlight title" required>
-                        <textarea name="highlight_descriptions[]" placeholder="Description" rows="2" required></textarea>
-                        <button type="button" class="btn btn-sm btn-danger" onclick="removeJsonItem(this, 'highlight')">
-                            <i class="ri-delete-bin-line"></i>
-                        </button>
-                    </div>`;
-                case 'activity':
-                    return `<div class="json-item">
-                        <input type="text" name="activity_names[]" placeholder="Activity name" required>
-                        <textarea name="activity_descriptions[]" placeholder="Description" rows="2"></textarea>
-                        <select name="activity_difficulties[]">
-                            <option value="easy">Easy</option>
-                            <option value="medium" selected>Medium</option>
-                            <option value="hard">Hard</option>
-                        </select>
-                        <input type="text" name="activity_durations[]" placeholder="Duration (e.g., 2 hours)">
-                        <button type="button" class="btn btn-sm btn-danger" onclick="removeJsonItem(this, 'activity')">
-                            <i class="ri-delete-bin-line"></i>
-                        </button>
-                    </div>`;
-                case 'tip':
-                    return `<div class="json-item">
-                        <select name="tip_types[]">
-                            <option value="best_time">Best Time</option>
-                            <option value="what_to_pack">What to Pack</option>
-                            <option value="safety">Safety Tips</option>
-                            <option value="transport">Transport</option>
-                            <option value="food">Food</option>
-                            <option value="accommodation">Accommodation</option>
-                            <option value="general">General Tips</option>
-                        </select>
-                        <input type="text" name="tip_titles[]" placeholder="Tip title">
-                        <textarea name="tip_descriptions[]" placeholder="Tip description" rows="2" required></textarea>
-                        <button type="button" class="btn btn-sm btn-danger" onclick="removeJsonItem(this, 'tip')">
-                            <i class="ri-delete-bin-line"></i>
-                        </button>
-                    </div>`;
-                case 'attraction':
-                    return `<div class="json-item">
-                        <input type="text" name="attraction_names[]" placeholder="Attraction name" required>
-                        <input type="number" name="attraction_distances[]" placeholder="Distance (km)" step="0.1">
-                        <textarea name="attraction_descriptions[]" placeholder="Description" rows="2"></textarea>
-                        <button type="button" class="btn btn-sm btn-danger" onclick="removeJsonItem(this, 'attraction')">
-                            <i class="ri-delete-bin-line"></i>
-                        </button>
-                    </div>`;
-            }
-        }
-        
-        function addJsonItem(type) {
-            // Containers use plural names: highlights, activities, tips, attractions
-            const container = document.getElementById(`${type}s-container`);
-            if (!container) return;
-            const html = getJsonItemHTML(type);
-            container.insertAdjacentHTML('beforeend', html);
-            // Scroll the new item into view for better UX
-            const last = container.lastElementChild;
-            if (last) last.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-        
-        function removeJsonItem(button, type) {
-            const container = document.getElementById(`${type}s-container`);
-            if (!container) return;
-            if (container.children.length > 1) {
-                button.closest('.json-item').remove();
-            }
         }
         
         // Image Preview
@@ -1018,9 +1201,14 @@ $ladakh_destinations = $conn->query("SELECT COUNT(*) as count FROM destinations 
             fetch(`../logic/get_destination.php?id=${destinationId}`)
                 .then(response => response.json())
                 .then(data => {
+                    if (data.error) {
+                        alert(data.error);
+                        return;
+                    }
+                    
                     document.getElementById('modal-title').textContent = 'Edit Destination';
-                    document.getElementById('form-action').name = 'update_destination';
-                    document.getElementById('form-action').value = 'update_destination';
+                    document.getElementById('form_action').name = 'update_destination';
+                    document.getElementById('form_action').value = 'update_destination';
                     
                     document.getElementById('destination_id').value = data.id;
                     document.getElementById('destination_name').value = data.destination_name;
@@ -1028,7 +1216,6 @@ $ladakh_destinations = $conn->query("SELECT COUNT(*) as count FROM destinations 
                     document.getElementById('destination_type').value = data.destination_type;
                     document.getElementById('location').value = data.location;
                     document.getElementById('short_description').value = data.short_description;
-                    document.getElementById('detailed_description').value = data.detailed_description || '';
                     document.getElementById('badge').value = data.badge || '';
                     document.getElementById('rating').value = data.rating || '4.5';
                     document.getElementById('reviews_count').value = data.reviews_count || '100';
@@ -1042,13 +1229,8 @@ $ladakh_destinations = $conn->query("SELECT COUNT(*) as count FROM destinations 
                     
                     switchFormTab('basic');
                     
-                    // Populate JSON fields
-                    populateJsonFields(data);
-                    
                     // Clear current image preview
                     document.getElementById('images-preview').innerHTML = '';
-                    // Load existing images into the media preview
-                    loadImagesIntoModalPreview(destinationId);
                     
                     document.getElementById('destination-modal').classList.add('active');
                 })
@@ -1056,127 +1238,6 @@ $ladakh_destinations = $conn->query("SELECT COUNT(*) as count FROM destinations 
                     console.error('Error:', error);
                     alert('Error loading destination details');
                 });
-        }
-
-        function loadImagesIntoModalPreview(destinationId) {
-            fetch(`../logic/get_destination_images.php?id=${destinationId}`)
-                .then(response => response.json())
-                .then(images => {
-                    const preview = document.getElementById('images-preview');
-                    preview.innerHTML = '';
-                    images.forEach(image => {
-                        const item = document.createElement('div');
-                        item.className = 'image-preview-item';
-                        item.innerHTML = `
-                            <img src="../../upload/${image.image_path}" alt="Destination Image">
-                            <div class="image-overlay" style="opacity:0;">
-                                ${image.is_primary ? '<div style="background: var(--primary-color); padding: 6px 10px; border-radius: 10px; color: white; font-size:0.8rem;">Primary</div>' : '<div style="color:white;">Image</div>'}
-                            </div>
-                        `;
-                        item.onmouseover = function() { this.children[1].style.opacity = '1'; };
-                        item.onmouseout = function() { this.children[1].style.opacity = '0'; };
-                        preview.appendChild(item);
-                    });
-                })
-                .catch(error => {
-                    console.error('Error loading images:', error);
-                });
-            }
-        
-        function populateJsonFields(data) {
-            // Clear existing fields (safely)
-            ['highlights', 'activities', 'tips', 'attractions'].forEach(type => {
-                const container = document.getElementById(`${type}-container`);
-                if (container) container.innerHTML = '';
-            });
-            
-            // Populate highlights
-            if (data.highlights && data.highlights.length > 0) {
-                data.highlights.forEach(highlight => {
-                    const html = `
-                        <div class="json-item">
-                            <input type="text" name="highlight_titles[]" value="${highlight.title || ''}" placeholder="Highlight title" required>
-                            <textarea name="highlight_descriptions[]" placeholder="Description" rows="2" required>${highlight.description || ''}</textarea>
-                            <button type="button" class="btn btn-sm btn-danger" onclick="removeJsonItem(this, 'highlight')">
-                                <i class="ri-delete-bin-line"></i>
-                            </button>
-                        </div>
-                    `;
-                    document.getElementById('highlights-container').insertAdjacentHTML('beforeend', html);
-                });
-            } else {
-                document.getElementById('highlights-container').innerHTML = getJsonItemHTML('highlight');
-            }
-            
-            // Populate activities
-            if (data.activities && data.activities.length > 0) {
-                data.activities.forEach(activity => {
-                    const html = `
-                        <div class="json-item">
-                            <input type="text" name="activity_names[]" value="${activity.name || ''}" placeholder="Activity name" required>
-                            <textarea name="activity_descriptions[]" placeholder="Description" rows="2">${activity.description || ''}</textarea>
-                            <select name="activity_difficulties[]">
-                                <option value="easy" ${activity.difficulty === 'easy' ? 'selected' : ''}>Easy</option>
-                                <option value="medium" ${activity.difficulty === 'medium' || !activity.difficulty ? 'selected' : ''}>Medium</option>
-                                <option value="hard" ${activity.difficulty === 'hard' ? 'selected' : ''}>Hard</option>
-                            </select>
-                            <input type="text" name="activity_durations[]" value="${activity.duration || ''}" placeholder="Duration (e.g., 2 hours)">
-                            <button type="button" class="btn btn-sm btn-danger" onclick="removeJsonItem(this, 'activity')">
-                                <i class="ri-delete-bin-line"></i>
-                            </button>
-                        </div>
-                    `;
-                    document.getElementById('activities-container').insertAdjacentHTML('beforeend', html);
-                });
-            } else {
-                document.getElementById('activities-container').innerHTML = getJsonItemHTML('activity');
-            }
-            
-            // Populate tips
-            if (data.tips && data.tips.length > 0) {
-                data.tips.forEach(tip => {
-                    const html = `
-                        <div class="json-item">
-                            <select name="tip_types[]">
-                                <option value="best_time" ${tip.type === 'best_time' ? 'selected' : ''}>Best Time</option>
-                                <option value="what_to_pack" ${tip.type === 'what_to_pack' ? 'selected' : ''}>What to Pack</option>
-                                <option value="safety" ${tip.type === 'safety' ? 'selected' : ''}>Safety Tips</option>
-                                <option value="transport" ${tip.type === 'transport' ? 'selected' : ''}>Transport</option>
-                                <option value="food" ${tip.type === 'food' ? 'selected' : ''}>Food</option>
-                                <option value="accommodation" ${tip.type === 'accommodation' ? 'selected' : ''}>Accommodation</option>
-                                <option value="general" ${tip.type === 'general' ? 'selected' : ''}>General Tips</option>
-                            </select>
-                            <input type="text" name="tip_titles[]" value="${tip.title || ''}" placeholder="Tip title">
-                            <textarea name="tip_descriptions[]" placeholder="Tip description" rows="2" required>${tip.description || ''}</textarea>
-                            <button type="button" class="btn btn-sm btn-danger" onclick="removeJsonItem(this, 'tip')">
-                                <i class="ri-delete-bin-line"></i>
-                            </button>
-                        </div>
-                    `;
-                    document.getElementById('tips-container').insertAdjacentHTML('beforeend', html);
-                });
-            } else {
-                document.getElementById('tips-container').innerHTML = getJsonItemHTML('tip');
-            }
-            
-            // Populate attractions
-            if (data.nearby_attractions && data.nearby_attractions.length > 0) {
-                data.nearby_attractions.forEach(attraction => {
-                    const html = `
-                        <div class="json-item">
-                            <input type="text" name="attraction_names[]" value="${attraction.name || ''}" placeholder="Attraction name" required>
-                            <input type="number" name="attraction_distances[]" value="${attraction.distance || ''}" placeholder="Distance (km)" step="0.1">
-                            <textarea name="attraction_descriptions[]" placeholder="Description" rows="2">${attraction.description || ''}</textarea>
-                            <button type="button" class="btn btn-sm btn-danger" onclick="removeJsonItem(this, 'attraction')">
-                                <i class="ri-delete-bin-line"></i>
-                            </button>
-                        </div>
-                    `;
-                    document.getElementById('attractions-container').insertAdjacentHTML('beforeend', html);
-                });
-            } else {
-                document.getElementById('attractions-container').innerHTML = getJsonItemHTML('attraction');
-            }
         }
         
         // Delete Destination
@@ -1202,7 +1263,7 @@ $ladakh_destinations = $conn->query("SELECT COUNT(*) as count FROM destinations 
                     images.forEach(image => {
                         html += `
                             <div class="image-preview-item">
-                                <img src="../../upload/${image.image_path}" alt="Destination Image">
+                                <img src="../upload/${image.image_path}" alt="Destination Image">
                                 <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s;">
                                     <div style="text-align: center;">
                                         <button class="btn btn-sm btn-primary" onclick="setPrimaryImage(${image.id})" style="margin: 5px; ${image.is_primary ? 'display: none;' : ''}">

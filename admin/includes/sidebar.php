@@ -52,7 +52,7 @@
             <div class="menu-section">
                 <div class="menu-label">Settings</div>
                 <a href="./register.php" class="menu-item">
-                    <i class="ri-settings-3-line"></i>
+                   <i class="ri-user-add-line"></i>
                     <span>Register Admin</span>
                 </a>
                   <a href="./change-password.php" class="menu-item">
