@@ -767,7 +767,7 @@ Pahalgam pictures
             const item = galleryItems[currentImageIndex];
             if (!item) return;
             
-            const imagePath = item.image_path ? <?php '../admin' ?>+ item.image_path : '../assets/img/bg2.jpg';
+           const imagePath = item.image_path ? '<?php echo "../admin/"; ?>' + item.image_path : '../assets/img/bg2.jpg';
             
             document.getElementById('lightbox-img').src = imagePath;
             document.getElementById('lightbox-img').alt = item.title;
