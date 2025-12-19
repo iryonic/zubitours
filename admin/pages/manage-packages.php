@@ -290,30 +290,69 @@ if (isset($_POST['update_package'])) {
 
 // Delete package
 if (isset($_GET['delete'])) {
-    $id = $_GET['delete'];
+    $id = intval($_GET['delete']);
     
-    // Delete related images first
-    $images = $conn->query("SELECT image_path FROM package_images WHERE package_id = $id");
-    while ($image = $images->fetch_assoc()) {
-        $file_path = '../upload/packages/' . $image['image_path'];
-        if (file_exists($file_path)) {
-            unlink($file_path);
+    try {
+        // Start transaction
+        $conn->begin_transaction();
+        
+        // 1. First delete all related bookings
+        $stmt = $conn->prepare("DELETE FROM package_bookings WHERE package_id = ?");
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        
+        // 2. Get images to delete files
+        $stmt = $conn->prepare("SELECT image_path FROM package_images WHERE package_id = ?");
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        // Delete image files
+        while ($image = $result->fetch_assoc()) {
+            $file_path = '../upload/' . $image['image_path'];
+            if (file_exists($file_path)) {
+                unlink($file_path);
+            }
         }
+        
+        // 3. Delete image records
+        $stmt = $conn->prepare("DELETE FROM package_images WHERE package_id = ?");
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        
+        // 4. Get package name for testimonials
+        $stmt = $conn->prepare("SELECT package_name FROM packages WHERE id = ?");
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        $package = $stmt->get_result()->fetch_assoc();
+        
+        // 5. Delete testimonials
+        if ($package) {
+            $stmt = $conn->prepare("DELETE FROM testimonials WHERE package_name = ?");
+            $stmt->bind_param("s", $package['package_name']);
+            $stmt->execute();
+        }
+        
+        // 6. Finally delete the package
+        $stmt = $conn->prepare("DELETE FROM packages WHERE id = ?");
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        
+        // Commit transaction
+        $conn->commit();
+        
+        $_SESSION['message'] = "Package deleted successfully!";
+        $_SESSION['message_type'] = "success";
+        
+    } catch (Exception $e) {
+        // Rollback on error
+        $conn->rollback();
+        $_SESSION['message'] = "Error deleting package: " . $e->getMessage();
+        $_SESSION['message_type'] = "error";
     }
     
-    // Delete image records
-    $conn->query("DELETE FROM package_images WHERE package_id = $id");
-    
-    // Delete testimonials for this package
-    $conn->query("DELETE FROM testimonials WHERE package_name IN (SELECT package_name FROM packages WHERE id = $id)");
-    
-    if ($conn->query("DELETE FROM packages WHERE id = $id")) {
-        $message = "Package deleted successfully!";
-        $message_type = "success";
-    } else {
-        $message = "Error deleting package: " . $conn->error;
-        $message_type = "error";
-    }
+    header("Location: manage-packages.php");
+    exit();
 }
 
 // Delete image
