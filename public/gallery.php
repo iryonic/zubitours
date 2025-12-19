@@ -23,8 +23,8 @@ while ($row = $categories_result->fetch_assoc()) {
 }
 sort($all_categories);
 
-// Handle filtering
-$active_filter = isset($_GET['filter']) ? $_GET['filter'] : 'all';
+// Handle filtering - FIXED: Sanitize input
+$active_filter = isset($_GET['filter']) ? mysqli_real_escape_string($conn, $_GET['filter']) : 'all';
 $filtered_gallery = [];
 
 if ($active_filter !== 'all') {
@@ -52,53 +52,32 @@ $filtered_count = ($active_filter !== 'all') ? $total_count : null;
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-
     <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
-<meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
-<meta name="googlebot" content="index, follow">
-
-<meta name="language" content="English">
-<meta name="geo.region" content="IN-JK">
-<meta name="geo.placename" content="Kashmir, Srinagar">
-<meta name="distribution" content="global">
-<meta name="rating" content="general">
-<meta name="revisit-after" content="7 days">
-
-<meta name="author" content="Zubi Tours & Holidays">
-<meta name="copyright" content="Zubi Tours & Holidays">
-
-<meta property="og:site_name" content="Zubi Tours & Holidays">
-<meta property="og:locale" content="en_IN">
-
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:site" content="@zubitours">
-
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+    <meta name="googlebot" content="index, follow">
+    <meta name="language" content="English">
+    <meta name="geo.region" content="IN-JK">
+    <meta name="geo.placename" content="Kashmir, Srinagar">
+    <meta name="distribution" content="global">
+    <meta name="rating" content="general">
+    <meta name="revisit-after" content="7 days">
+    <meta name="author" content="Zubi Tours & Holidays">
+    <meta name="copyright" content="Zubi Tours & Holidays">
+    <meta property="og:site_name" content="Zubi Tours & Holidays">
+    <meta property="og:locale" content="en_IN">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@zubitours">
     <title>Kashmir Tour Gallery | Travel Photos by Zubi Tours</title>
-
-<meta name="description" content="Browse beautiful travel photos of Kashmir tours including Srinagar, Gulmarg, Pahalgam and Sonamarg captured by Zubi Tours & Holidays.">
-
-<meta name="keywords" content="
-Kashmir travel photos,
-Kashmir tour gallery,
-Srinagar images,
-Gulmarg photos,
-Pahalgam pictures
-">
-
-
+    <meta name="description" content="Browse beautiful travel photos of Kashmir tours including Srinagar, Gulmarg, Pahalgam and Sonamarg captured by Zubi Tours & Holidays.">
+    <meta name="keywords" content="Kashmir travel photos, Kashmir tour gallery, Srinagar images, Gulmarg photos, Pahalgam pictures">
     <!--=============== REMIXICONS ===============-->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/3.5.0/remixicon.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
-
     <!--=============== CSS ===============-->
     <link rel="stylesheet" href="../assets/css/styles.css" />
     <!-- --==============Favicon =============-- -->
-<link rel="icon" type="image/png" href="../assets/img/zubilogo.jpg" />
-
-
+    <link rel="icon" type="image/png" href="../assets/img/zubilogo.jpg" />
     <title>Zubi tours & Holiday - Gallery</title>
     
     <style>
@@ -148,8 +127,15 @@ Pahalgam pictures
             margin-bottom: 30px;
         }
         
-        /* Category Filters */
-       
+        /* Category Filters - FIXED: Added missing styles */
+        .gallery-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 40px;
+            padding: 0 20px;
+        }
         
         .filter-btn {
             padding: 12px 24px;
@@ -168,7 +154,6 @@ Pahalgam pictures
         .filter-btn:hover {
             border-color: #060e218d;
             color: #2563eb;
-           
         }
         
         .filter-btn.active {
@@ -286,7 +271,6 @@ Pahalgam pictures
             color: #475569;
             display: flex;
             align-items: center;
-            
             gap: 8px;
         }
         
@@ -497,39 +481,6 @@ Pahalgam pictures
             background: #d8931dff;
             transform: scale(1.1) rotate(90deg);
         }
-        
-        /* Scroll to top button */
-        .scroll-top {
-            position: fixed;
-            bottom: 100px;
-            right: 30px;
-            background: rgba(255, 255, 255, 0.9);
-            color: #eba225ff;
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-            z-index: 99;
-            transition: all 0.3s ease;
-            opacity: 0;
-            visibility: hidden;
-        }
-        
-        .scroll-top.visible {
-            opacity: 1;
-            visibility: visible;
-        }
-        
-        .scroll-top:hover {
-            background: #2563eb;
-            color: white;
-            transform: translateY(-5px);
-        }
     </style>
   </head>
   <body>
@@ -553,7 +504,7 @@ Pahalgam pictures
             <div class="counter-badge">
                 <i class="ri-image-line"></i>
                 <?php if ($filtered_count): ?>
-                    Showing <?php echo $filtered_count; ?> of <?php echo $total_count; ?> images in "<?php echo ucfirst($active_filter); ?>"
+                    Showing <?php echo $filtered_count; ?> of <?php echo $total_count; ?> images in "<?php echo htmlspecialchars(ucfirst($active_filter)); ?>"
                 <?php else: ?>
                     <?php echo $total_count; ?> Stunning Images
                 <?php endif; ?>
@@ -571,9 +522,9 @@ Pahalgam pictures
         
         <?php foreach ($all_categories as $category): ?>
             <button class="filter-btn <?php echo ($active_filter === $category) ? 'active' : ''; ?>" 
-                    onclick="filterGallery('<?php echo $category; ?>')">
+                    onclick="filterGallery('<?php echo htmlspecialchars($category); ?>')">
                 <i class="ri-price-tag-3-line"></i>
-                <?php echo ucfirst($category); ?>
+                <?php echo htmlspecialchars(ucfirst($category)); ?>
             </button>
         <?php endforeach; ?>
     </div>
@@ -586,7 +537,7 @@ Pahalgam pictures
         </div>
         <div class="counter-badge">
             <i class="ri-filter-line"></i>
-            Filter: <?php echo ($active_filter === 'all') ? 'All Categories' : ucfirst($active_filter); ?>
+            Filter: <?php echo ($active_filter === 'all') ? 'All Categories' : htmlspecialchars(ucfirst($active_filter)); ?>
         </div>
     </div>
 
@@ -594,13 +545,15 @@ Pahalgam pictures
     <div class="gallery-grid" id="gallery-container">
         <?php if (count($filtered_gallery) > 0): ?>
             <?php foreach ($filtered_gallery as $index => $item): 
-                $image_path = !empty($item['image_path']) ? '../' . $item['image_path'] : '../assets/img/bg2.jpg';
+                // FIXED: Correct image path - remove duplicate ../admin
+                $image_path = !empty($item['image_path']) ? '../admin/' . $item['image_path'] : '../assets/img/bg2.jpg';
                 $categories = explode(' ', $item['categories']);
             ?>
                 <div class="gallery-card" 
                      data-index="<?php echo $index; ?>"
                      onclick="openLightbox(<?php echo $index; ?>)">
-                    <img src="../admin<?php echo $image_path; ?>" 
+                    <!-- FIXED: Remove duplicate ../admin from src -->
+                    <img src="<?php echo htmlspecialchars($image_path); ?>" 
                          alt="<?php echo htmlspecialchars($item['title']); ?>"
                          class="gallery-image image-loading"
                          onload="this.classList.remove('image-loading')"
@@ -609,13 +562,13 @@ Pahalgam pictures
                     <div class="gallery-overlay">
                         <h3 class="gallery-title"><?php echo htmlspecialchars($item['title']); ?></h3>
                         <?php if ($item['description']): ?>
-                            <p class="gallery-description"><?php echo htmlspecialchars(substr($item['description'], 0, 100)); ?></p>
+                            <p class="gallery-description"><?php echo htmlspecialchars(substr($item['description'], 0, 100)); ?>...</p>
                         <?php endif; ?>
                         
                         <div class="gallery-categories">
                             <?php foreach ($categories as $cat): 
                                 if ($cat): ?>
-                                    <span class="category-tag"><?php echo ucfirst($cat); ?></span>
+                                    <span class="category-tag"><?php echo htmlspecialchars(ucfirst($cat)); ?></span>
                                 <?php endif; 
                             endforeach; ?>
                         </div>
@@ -626,7 +579,7 @@ Pahalgam pictures
             <div class="no-images">
                 <i class="ri-image-line"></i>
                 <h3>No Images Found</h3>
-                <p>No images available in the "<?php echo ucfirst($active_filter); ?>" category.</p>
+                <p>No images available in the "<?php echo htmlspecialchars(ucfirst($active_filter)); ?>" category.</p>
                 <button class="filter-btn active" onclick="filterGallery('all')" style="margin-top: 20px;">
                     <i class="ri-grid-fill"></i> View All Images
                 </button>
@@ -662,8 +615,6 @@ Pahalgam pictures
     <div class="floating-btn" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
         <i class="ri-arrow-up-line"></i>
     </div>
-
-
 
     <!-- FOOTER -->
     <footer class="footer">
@@ -730,12 +681,12 @@ Pahalgam pictures
         
         // Filter gallery function
         function filterGallery(category) {
-            window.location.href = `gallery.php?filter=${category}`;
+            window.location.href = `gallery.php?filter=${encodeURIComponent(category)}`;
         }
         
         // Lightbox functionality
         function openLightbox(index) {
-            currentImageIndex = index;
+            currentImageIndex = parseInt(index);
             updateLightbox();
             document.getElementById('lightbox-modal').style.display = 'flex';
             document.body.style.overflow = 'hidden';
@@ -767,11 +718,12 @@ Pahalgam pictures
             const item = galleryItems[currentImageIndex];
             if (!item) return;
             
-           const imagePath = item.image_path ? '<?php echo "../admin/"; ?>' + item.image_path : '../assets/img/bg2.jpg';
+            // FIXED: Correct image path construction
+            const imagePath = item.image_path ? '../admin/' + item.image_path : '../assets/img/bg2.jpg';
             
             document.getElementById('lightbox-img').src = imagePath;
-            document.getElementById('lightbox-img').alt = item.title;
-            document.getElementById('lightbox-title').textContent = item.title;
+            document.getElementById('lightbox-img').alt = item.title || '';
+            document.getElementById('lightbox-title').textContent = item.title || '';
             document.getElementById('lightbox-description').textContent = item.description || '';
             
             // Update categories
@@ -812,32 +764,6 @@ Pahalgam pictures
             }
         });
         
-        // Scroll to top functionality
-       
-        // Show/hide scroll to top button
-        window.addEventListener('scroll', function() {
-            const scrollTopBtn = document.getElementById('scrollTop');
-            if (window.scrollY > 300) {
-                scrollTopBtn.classList.add('visible');
-            } else {
-                scrollTopBtn.classList.remove('visible');
-            }
-        });
-        
-        // Lazy loading images
-        const imageObserver = new IntersectionObserver((entries, observer) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    const img = entry.target;
-                    img.src = img.dataset.src;
-                    img.classList.remove('image-loading');
-                    observer.unobserve(img);
-                }
-            });
-        }, {
-            rootMargin: '50px'
-        });
-        
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
             // Set current year in footer
@@ -854,40 +780,14 @@ Pahalgam pictures
                 }
             }, 1000);
             
-            // Observe images for lazy loading
-            document.querySelectorAll('.gallery-image[data-src]').forEach(img => {
-                imageObserver.observe(img);
-            });
-            
-            // Add active state to current filter
-            const currentFilter = '<?php echo $active_filter; ?>';
-            const filterBtns = document.querySelectorAll('.filter-btn');
-            filterBtns.forEach(btn => {
-                if (btn.textContent.includes(currentFilter) || (currentFilter === 'all' && btn.textContent.includes('All Images'))) {
-                    btn.classList.add('active');
-                }
+            // Image error handling
+            document.querySelectorAll('.gallery-image').forEach(img => {
+                img.addEventListener('error', function() {
+                    this.src = '../assets/img/bg2.jpg';
+                    this.classList.remove('image-loading');
+                });
             });
         });
-        
-        // Image error handling
-        document.querySelectorAll('.gallery-image').forEach(img => {
-            img.addEventListener('error', function() {
-                this.src = '../assets/img/bg2.jpg';
-                this.classList.remove('image-loading');
-            });
-        });
-        
-        // Add CSS for smooth transitions
-        const style = document.createElement('style');
-        style.textContent = `
-            .gallery-image {
-                transition: transform 0.5s ease, opacity 0.3s ease;
-            }
-            .gallery-card {
-                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            }
-        `;
-        document.head.appendChild(style);
     </script>
   </body>
 </html>
