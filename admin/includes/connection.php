@@ -17,8 +17,9 @@
 
 $host = 'localhost';
 $dbname = 'u255290550_zubitours';
-$username = 'u255290550_zubitours';
 $password = 'Zubi@1234#';
+$username = 'u255290550_zubitours';
+
 
 
 
