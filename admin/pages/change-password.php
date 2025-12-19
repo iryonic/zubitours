@@ -366,7 +366,7 @@ try {
             </form>
             
             <div class="back-link">
-                <a href="adminpannel.php">← Back to Dashboard</a>
+                <a href="../adminpannel.php">← Back to Dashboard</a>
             </div>
         </div>
     </div>
