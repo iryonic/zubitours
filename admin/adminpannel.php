@@ -1,83 +1,117 @@
-   <?php
-  
-  session_start();
+<?php
+session_start();
+require_once './includes/connection.php';
 
-// Redirect to login if not authenticated
+// Redirect to login if NOT authenticated
 if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
-    header('Location: index.php');
+    header('Location: ../index.php');
     exit();
 }
 
-   $host = 'localhost';
-    $dbname = 'travel_db';
-    $username = 'root'; // Change as per your configuration
-    $password = ''; // Change as per your configuration
+try {
+    // Fetch dashboard statistics
+    $stats = [];
+    $recent_bookings = [];
+    $new_messages_count = 0;
+    $pending_bookings_count = 0;
     
-    try {
-        $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $username, $password);
-        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        
-        // Fetch dashboard statistics
-        $stats = [];
-        
-        // Total Users (assuming from package_bookings table)
-        $stmt = $pdo->query("SELECT COUNT(DISTINCT customer_email) as total_users FROM package_bookings");
-        $stats['total_users'] = $stmt->fetch(PDO::FETCH_ASSOC)['total_users'];
-        
-        // Total Bookings
-        $stmt = $pdo->query("SELECT COUNT(*) as total_bookings FROM package_bookings");
-        $stats['total_bookings'] = $stmt->fetch(PDO::FETCH_ASSOC)['total_bookings'];
-        
-        // Total Revenue
-        $stmt = $pdo->query("SELECT SUM(total_amount) as total_revenue FROM package_bookings WHERE payment_status = 'paid'");
-        $revenue = $stmt->fetch(PDO::FETCH_ASSOC)['total_revenue'];
-        $stats['total_revenue'] = $revenue ? $revenue : 0;
-        
-        // Total Packages
-        $stmt = $pdo->query("SELECT COUNT(*) as total_packages FROM packages WHERE is_active = 1");
-        $stats['total_packages'] = $stmt->fetch(PDO::FETCH_ASSOC)['total_packages'];
-        
-        // Fetch recent package bookings
-        $stmt = $pdo->query("
-            SELECT pb.*, p.package_name 
-            FROM package_bookings pb 
-            LEFT JOIN packages p ON pb.package_id = p.id 
-            ORDER BY pb.booked_at DESC 
-            LIMIT 5
-        ");
-        $recent_bookings = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
-        // Fetch recent car bookings
-        $stmt = $pdo->query("
-            SELECT cb.*, cr.car_name 
-            FROM car_bookings cb 
-            LEFT JOIN car_rentals cr ON cb.car_id = cr.id 
-            ORDER BY cb.booking_date DESC 
-            LIMIT 5
-        ");
-        $recent_car_bookings = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
-        // Fetch recent contact messages
-        $stmt = $pdo->query("
-            SELECT * FROM contact_messages 
-            WHERE status = 'new' 
-            ORDER BY created_at DESC 
-            LIMIT 10
-        ");
-        $recent_messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
-        // Count new messages for badge
-        $stmt = $pdo->query("SELECT COUNT(*) as new_messages FROM contact_messages WHERE status = 'new'");
-        $new_messages_count = $stmt->fetch(PDO::FETCH_ASSOC)['new_messages'];
-        
-        // Count pending package bookings for badge
-        $stmt = $pdo->query("SELECT COUNT(*) as pending_bookings FROM package_bookings WHERE booking_status = 'pending'");
-        $pending_bookings_count = $stmt->fetch(PDO::FETCH_ASSOC)['pending_bookings'];
-        
-    } catch(PDOException $e) {
-        die("Database connection failed: " . $e->getMessage());
+    // Total Users (assuming from package_bookings table)
+    if ($stmt = $conn->prepare("SELECT COUNT(DISTINCT customer_email) as total_users FROM package_bookings")) {
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $row = $result->fetch_assoc();
+        $stats['total_users'] = $row['total_users'] ?? 0;
+        $stmt->close();
     }
-    ?>
+    
+    // Total Bookings
+    if ($stmt = $conn->prepare("SELECT COUNT(*) as total_bookings FROM package_bookings")) {
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $row = $result->fetch_assoc();
+        $stats['total_bookings'] = $row['total_bookings'] ?? 0;
+        $stmt->close();
+    }
+    
+    // Total Revenue
+    if ($stmt = $conn->prepare("SELECT SUM(total_amount) as total_revenue FROM package_bookings WHERE payment_status = 'paid'")) {
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $row = $result->fetch_assoc();
+        $stats['total_revenue'] = $row['total_revenue'] ? $row['total_revenue'] : 0;
+        $stmt->close();
+    }
+    
+    // Total Packages
+    if ($stmt = $conn->prepare("SELECT COUNT(*) as total_packages FROM packages WHERE is_active = 1")) {
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $row = $result->fetch_assoc();
+        $stats['total_packages'] = $row['total_packages'] ?? 0;
+        $stmt->close();
+    }
+    
+    // Fetch recent package bookings
+    if ($stmt = $conn->prepare("SELECT pb.*, p.package_name FROM package_bookings pb LEFT JOIN packages p ON pb.package_id = p.id ORDER BY pb.booked_at DESC LIMIT 5")) {
+        $stmt->execute();
+        $result = $stmt->get_result();
+        while ($row = $result->fetch_assoc()) {
+            $recent_bookings[] = $row;
+        }
+        $stmt->close();
+    }
+    
+    // Fetch recent car bookings (if table exists)
+    $recent_car_bookings = [];
+    // Uncomment if car_bookings table exists
+    /*
+    if ($stmt = $conn->prepare("SELECT cb.*, cr.car_name FROM car_bookings cb LEFT JOIN car_rentals cr ON cb.car_id = cr.id ORDER BY cb.booking_date DESC LIMIT 5")) {
+        $stmt->execute();
+        $result = $stmt->get_result();
+        while ($row = $result->fetch_assoc()) {
+            $recent_car_bookings[] = $row;
+        }
+        $stmt->close();
+    }
+    */
+    
+    // Fetch recent contact messages
+    $recent_messages = [];
+    if ($stmt = $conn->prepare("SELECT * FROM contact_messages WHERE status = 'new' ORDER BY created_at DESC LIMIT 10")) {
+        $stmt->execute();
+        $result = $stmt->get_result();
+        while ($row = $result->fetch_assoc()) {
+            $recent_messages[] = $row;
+        }
+        $stmt->close();
+    }
+    
+    // Count new messages for badge
+    if ($stmt = $conn->prepare("SELECT COUNT(*) as new_messages FROM contact_messages WHERE status = 'new'")) {
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $row = $result->fetch_assoc();
+        $new_messages_count = $row['new_messages'] ?? 0;
+        $stmt->close();
+    }
+    
+    // Count pending package bookings for badge
+    if ($stmt = $conn->prepare("SELECT COUNT(*) as pending_bookings FROM package_bookings WHERE booking_status = 'pending'")) {
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $row = $result->fetch_assoc();
+        $pending_bookings_count = $row['pending_bookings'] ?? 0;
+        $stmt->close();
+    }
+    
+} catch(Exception $e) {
+    die("Database connection failed: " . $e->getMessage());
+}
+
+// Get admin name from session
+$admin_name = $_SESSION['admin_name'] ?? 'Admin';
+$first_letter = strtoupper(substr($admin_name, 0, 1));
+?>
 
 <!DOCTYPE html>
 <html lang="en">
