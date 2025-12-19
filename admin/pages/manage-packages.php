@@ -829,7 +829,7 @@ $revenue = $conn->query("SELECT SUM(total_amount) as total FROM package_bookings
                     
                     while ($image = $all_images->fetch_assoc()): ?>
                         <div class="image-preview-item">
-                            <img src="../../assets/img/<?php echo $image['image_path']; ?>" 
+                            <img src="../upload/<?php echo $image['image_path']; ?>" 
                                  alt="<?php echo htmlspecialchars($image['package_name']); ?>"
                                  onerror="this.src='../../assets/img/bg1.jpg'">
                             <div class="image-overlay">
