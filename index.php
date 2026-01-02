@@ -1274,7 +1274,7 @@ Kashmir tour company
       <i class="ri-phone-fill" ></i> 
     </a>
 
-    <a href="https://wa.me/6006696105?text=" class="instant-cta-btn cta-right" target="_blank">
+    <a href="https://wa.link/76iska" class="instant-cta-btn cta-right" target="_blank">
       <i class="ri-whatsapp-fill" style="color: green;" ></i> 
     </a>
 
@@ -1292,7 +1292,7 @@ Kashmir tour company
           <a href="https://www.facebook.com/dartoursandtravels?mibextid=ZbWKwL"><i class="ri-facebook-fill"></i></a>
           <a href="https://www.instagram.com/zubi_tours_n_holidays_kashmir?igsh=OXhwMG04MWZtdnp6"><i class="ri-instagram-line"></i></a>
           <a href="https://x.com/TravelsZubi?t=Atj8gU4GAK00qI-TJkrjrg&s=08"><i class="ri-twitter-fill"></i></a>
-          <a href="https://wa.me/6006696105?text="><i class="ri-whatsapp-fill"></i></a>
+          <a href="https://wa.link/76iska"><i class="ri-whatsapp-fill"></i></a>
         </div>
       </div>
 
