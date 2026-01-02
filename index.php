@@ -547,6 +547,77 @@ Kashmir tour company
         border-radius: 15px;
       }
     }
+
+    .instant-cta{
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 100vw;
+      margin: 0 auto;
+   
+      color: white;
+      padding: 10px ;
+      border-radius: 30px;
+     
+      font-weight: 700;
+      text-decoration: none;
+      transition: all 0.3s ease;
+      z-index: 1000;
+      display: flex;
+      justify-content: space-between;
+    }
+    .instant-cta-btn{
+     background: var(--first-color);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 50%;
+      font-weight: 600;
+      font-size: 1.8rem;
+      border: none;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-align: center;
+      text-decoration: none;
+       animation: bounce 2s ease-in infinite;
+        /* animation: rotate360 2s linear infinite; */
+
+    }
+    .cta-left{
+      margin-right: auto;
+      margin-left: 30px;
+    }
+    .cta-right{
+      margin-left: auto;
+      margin-right: -20px;
+    
+    }
+    @media (max-width: 768px) {
+      .cta-left{
+        margin-left: 20px;
+      }
+     
+     
+    }
+
+  @keyframes bounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-30px);
+  }
+  60% {
+    transform: translateY(-15px);
+  }
+}
+
+
+
+
+
+
+
+     
   </style>
 </head>
 
@@ -1197,6 +1268,18 @@ Kashmir tour company
     </div>
   </section>
 
+  <!-- INSTANT CTA  -->
+  <div class="instant-cta">
+    <a href="tel:+916006696105" class="instant-cta-btn cta-left" target="_blank">
+      <i class="ri-phone-fill" ></i> 
+    </a>
+
+    <a href="https://wa.me/6006696105?text=" class="instant-cta-btn cta-right" target="_blank">
+      <i class="ri-whatsapp-fill" style="color: green;" ></i> 
+    </a>
+
+  </div>
+
   <footer class="footer">
     <div class="footer-container">
       <div class="footer-col">
@@ -1209,7 +1292,7 @@ Kashmir tour company
           <a href="https://www.facebook.com/dartoursandtravels?mibextid=ZbWKwL"><i class="ri-facebook-fill"></i></a>
           <a href="https://www.instagram.com/zubi_tours_n_holidays_kashmir?igsh=OXhwMG04MWZtdnp6"><i class="ri-instagram-line"></i></a>
           <a href="https://x.com/TravelsZubi?t=Atj8gU4GAK00qI-TJkrjrg&s=08"><i class="ri-twitter-fill"></i></a>
-          <a href="./package-details.html"><i class="ri-youtube-fill"></i></a>
+          <a href="https://wa.me/6006696105?text="><i class="ri-whatsapp-fill"></i></a>
         </div>
       </div>
 
@@ -1238,8 +1321,8 @@ Kashmir tour company
         <h4>Contact Info</h4>
         <div class="contact-info">
           <p><i class="ri-map-pin-line"></i> R-13 Wichka Complex Naqashpora Barbar Shah- Bab-demb Rd, Srinagar, 190001.</p>
-          <p><i class="ri-phone-line"></i> +91 7006296814</p>
-          <p><i class="ri-mail-line"></i> info@zubitours.com</p>
+          <a href="tel:+917006296814" style="color: rgba(255, 255, 255, 0.8);"><i class="ri-phone-line"></i> +91 7006296814</a> <br />
+          <a href="mailto:info@zubitours.com" style="color: rgba(255, 255, 255, 0.8);"><i class="ri-mail-line"></i> info@zubitours.com</a>
           <p><i class="ri-time-line"></i> Mon-Sat: 9AM - 6PM</p>
         </div>
       </div>

@@ -39,8 +39,8 @@
         <h4>Contact Info</h4>
         <div class="contact-info">
           <p><i class="ri-map-pin-line"></i> R-13 Wichka Complex Naqashpora Barbar Shah- Bab-demb Rd, Srinagar, 190001.</p>
-          <p><i class="ri-phone-line"></i> +91 7006296814</p>
-          <p><i class="ri-mail-line"></i> info@zubitours.com</p>
+           <a href="tel:+917006296814" style="color: rgba(255, 255, 255, 0.8);"><i class="ri-phone-line"></i> +91 7006296814</a> <br />
+          <a href="mailto:info@zubitours.com" style="color: rgba(255, 255, 255, 0.8);"><i class="ri-mail-line"></i> info@zubitours.com</a>
           <p><i class="ri-time-line"></i> Mon-Sat: 9AM - 6PM</p>
         </div>
       </div>

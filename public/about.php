@@ -173,11 +173,11 @@ best tour planner Kashmir
 
       <div class="team-member">
         <div class="member-image">
-          <img loading="lazy" src="../assets/img/bg1.jpg" alt="Team Member">
+          <img loading="lazy" src="../assets/img/iry.png" alt="Team Member">
         </div>
         <h3>Irfan Manzoor</h3>
-        <p class="role">Co-Founder</p>
-        <p>Irfan's extensive knowledge of the region's history and culture enhances every tour.</p>
+        <p class="role">Developer</p>
+        <p>Irfan handles all our tech needs, from website development to online bookings.</p>
       </div>
     </div>
   </section>
@@ -228,8 +228,8 @@ best tour planner Kashmir
       <h2>Ready to Explore with Us?</h2>
       <p>Join thousands of satisfied travelers who have experienced the magic of Kashmir and Ladakh with Zubi Tours</p>
       <div class="cta-buttons">
-        <a href="./packages.html" class="cta-btn primary">View Packages</a>
-        <a href="./contact.html" class="cta-btn secondary">Contact Us</a>
+        <a href="./packages.php" class="cta-btn primary">View Packages</a>
+        <a href="./contact.php" class="cta-btn secondary">Contact Us</a>
       </div>
     </div>
   </section>

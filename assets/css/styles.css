@@ -1490,12 +1490,19 @@ input:focus {
   padding-left: 5px;
 }
 
-.contact-info p {
+.contact-info p , .contact-info  a{
   display: flex;
   align-items: center;
   gap: 10px;
   margin-bottom: 15px;
 }
+.contact-info  a{
+  color: rgba(255, 255, 255, 0.8);
+  text-decoration: none;
+  transition: color 0.1s ease;
+
+}
+
 .social-links {
   display: flex;
   gap: 15px;
