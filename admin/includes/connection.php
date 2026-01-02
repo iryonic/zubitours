@@ -4,10 +4,10 @@
 
 
 
-$host = 'localhost';
-$dbname = 'travel_db';
-$username = 'root';
-$password = '';
+// $host = 'localhost';
+// $dbname = 'travel_db';
+// $username = 'root';
+// $password = '';
 
 
 // Production ENVIRONMENT  setup 
@@ -15,10 +15,10 @@ $password = '';
 
 
 
-// $host = 'localhost';
-// $dbname = 'u255290550_zubitours';
-// $password = 'Zubi@1234#';
-// $username = 'u255290550_zubitours';
+$host = 'localhost';
+$dbname = 'u255290550_zubitours';
+$password = 'Zubi@1234#';
+$username = 'u255290550_zubitours';
 
 
 
