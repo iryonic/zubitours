@@ -611,25 +611,347 @@ Kashmir tour company
   }
 }
 
+* Ultra Minimalistic Style */
+.callback-widget-mini {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 9999;
+}
 
+/* Floating Buttons */
+.callback-mini-btn, .whatsapp-mini-btn, .call-mini-btn {
+    position: fixed;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+    font-size: 1.3rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+    z-index: 10000;
+}
 
+.callback-mini-btn {
+    bottom: 20px;
+    right: 20px;
+    background: radial-gradient(ellipse, #f9de73, #e8862a);
+    color: white;
+    animation: gentle-pulse 3s ease-in-out infinite;
+}
 
+.whatsapp-mini-btn {
+    bottom: 85px;
+    right: 20px;
+    background: #25D366;
+    color: white;
+    text-decoration: none;
+}
 
+.call-mini-btn {
+    bottom: 150px;
+    right: 20px;
+    background: #2563eb;
+    color: white;
+    text-decoration: none;
+}
 
+.callback-mini-btn:hover {
+    transform: scale(1.1) rotate(5deg);
+    box-shadow: 0 10px 25px rgba(249, 222, 115, 0.3);
+}
+
+.whatsapp-mini-btn:hover, .call-mini-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+@keyframes gentle-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+/* Overlay */
+.callback-overlay-mini {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(3px);
+    z-index: 9998;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.callback-overlay-mini.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Compact Modal */
+.callback-modal-mini {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.95);
+    width: 90%;
+    max-width: 380px;
+    background: white;
+    border-radius: 16px;
+    overflow: hidden;
+    z-index: 9999;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+.callback-modal-mini.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.modal-content-mini {
+    padding: 0;
+}
+
+.modal-close-mini {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: none;
+    border: none;
+    color: #94a3b8;
+    font-size: 1.5rem;
+    cursor: pointer;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    transition: color 0.3s;
+}
+
+.modal-close-mini:hover {
+    color: #1e293b;
+}
+
+/* Header */
+.modal-header-mini {
+    background: radial-gradient(ellipse, #f9de73, #e8862a);
+    color: white;
+    padding: 25px 20px;
+    text-align: center;
+    position: relative;
+}
+
+.modal-header-mini i {
+    font-size: 2rem;
+    margin-bottom: 10px;
+    display: block;
+    opacity: 0.9;
+}
+
+.modal-header-mini h4 {
+    margin: 0 0 5px 0;
+    font-size: 1.3rem;
+    font-weight: 700;
+}
+
+.modal-header-mini p {
+    margin: 0;
+    opacity: 0.9;
+    font-size: 0.9rem;
+}
+
+/* Body */
+.modal-body-mini {
+    padding: 25px 20px;
+}
+
+.form-group-mini {
+    margin-bottom: 15px;
+}
+
+.form-group-mini input {
+    width: 100%;
+    padding: 14px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    transition: all 0.3s;
+    background: #f8fafc;
+    box-sizing: border-box;
+}
+
+.form-group-mini input:focus {
+    outline: none;
+    border-color: #f9de73;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(249, 222, 115, 0.1);
+}
+
+.form-group-mini input::placeholder {
+    color: #94a3b8;
+}
+
+.submit-btn-mini {
+    width: 100%;
+    padding: 15px;
+    background: radial-gradient(ellipse, #f9de73, #e8862a);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.3s;
+    margin-top: 10px;
+}
+
+.submit-btn-mini:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 15px rgba(249, 222, 115, 0.3);
+}
+
+.submit-btn-mini:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+/* Success Message */
+.success-message-mini {
+    text-align: center;
+    padding: 20px 0;
+    animation: fadeIn 0.3s ease;
+}
+
+.success-message-mini i {
+    font-size: 2.5rem;
+    color: #10b981;
+    margin-bottom: 10px;
+    display: block;
+}
+
+.success-message-mini p {
+    margin: 0;
+    color: #1e293b;
+    font-weight: 500;
+}
+
+/* Direct CTA */
+.direct-cta-mini {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    border-top: 1px solid #f1f5f9;
+    padding-top: 20px;
+}
+
+.cta-mini {
+    flex: 1;
+    padding: 12px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.3s;
+}
+
+.call-mini {
+    background: #2563eb;
+    color: white;
+}
+
+.whatsapp-mini {
+    background: #25D366;
+    color: white;
+}
+
+.cta-mini:hover {
+    opacity: 0.9;
+    transform: translateY(-2px);
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Mobile Adjustments */
+@media (max-width: 768px) {
+    .callback-mini-btn, .whatsapp-mini-btn, .call-mini-btn {
+        width: 45px;
+        height: 45px;
+        font-size: 1.2rem;
+    }
+    
+    .whatsapp-mini-btn {
+        bottom: 80px;
+    }
+    
+    .call-mini-btn {
+        bottom: 140px;
+    }
+    
+    .callback-modal-mini {
+        width: 95%;
+        border-radius: 14px;
+    }
+    
+    .modal-body-mini {
+        padding: 20px 15px;
+    }
+}
+
+@media (max-width: 480px) {
+    .callback-widget-mini {
+        bottom: 15px;
+        right: 15px;
+    }
+    
+    .callback-mini-btn, .whatsapp-mini-btn, .call-mini-btn {
+        width: 42px;
+        height: 42px;
+        font-size: 1.1rem;
+    }
+    
+    .whatsapp-mini-btn {
+        bottom: 72px;
+        right: 15px;
+    }
+    
+    .call-mini-btn {
+        bottom: 129px;
+        right: 15px;
+    }
+}
 
      
   </style>
 </head>
 
 <body>
-  <!-- Loader
-  <div id="loader">
-    <div class="travel-loader">
-      <span class="path"></span>
-      <i class="ri-flight-takeoff-line plane"></i>
-    </div>
-    <h2 class="brand-name">Zubi Tours & Holiday</h2>
-  </div> -->
+ 
 
   <!--==================== HEADER ====================-->
   <header class="header" id="header">
@@ -1268,17 +1590,9 @@ Kashmir tour company
     </div>
   </section>
 
-  <!-- INSTANT CTA  -->
-  <div class="instant-cta">
-    <a href="tel:+916006696105" class="instant-cta-btn cta-left" target="_blank">
-      <i class="ri-phone-fill" ></i> 
-    </a>
+ 
 
-    <a href="https://wa.link/76iska" class="instant-cta-btn cta-right" target="_blank">
-      <i class="ri-whatsapp-fill" style="color: green;" ></i> 
-    </a>
-
-  </div>
+   
 
   <footer class="footer">
     <div class="footer-container">
@@ -1401,6 +1715,11 @@ Kashmir tour company
         observer.observe(card);
       });
     });
+
+
+
+    
+
   </script>
 
   <!-- Linking GSAP script -->
@@ -1423,8 +1742,201 @@ Kashmir tour company
     }
   </script> 
 
-  <!-- fast images loading script
-    -->
+<!-- Premium Minimalistic Small Callback Widget -->
+<div class="callback-widget-mini">
+    <!-- Floating Callback Button -->
+    <button class="callback-mini-btn" id="callbackMiniBtn">
+        <i class="ri-phone-line"></i>
+    </button>
+    
+    <!-- WhatsApp Quick Button -->
+    <a href="https://wa.link/76iska" class="whatsapp-mini-btn" target="_blank">
+        <i class="ri-whatsapp-line"></i>
+    </a>
+    
+    <!-- Call Quick Button -->
+    <a href="tel:+917006296814" class="call-mini-btn">
+        <i class="ri-phone-fill"></i>
+    </a>
+    
+    <!-- Overlay -->
+    <div class="callback-overlay-mini" id="callbackOverlayMini"></div>
+    
+    <!-- Compact Modal -->
+    <div class="callback-modal-mini" id="callbackModalMini">
+        <div class="modal-content-mini">
+            <button class="modal-close-mini" id="modalCloseMini">
+                <i class="ri-close-line"></i>
+            </button>
+            
+            <div class="modal-header-mini">
+                <i class="ri-phone-fill"></i>
+                <h4>Need Help?</h4>
+                <p>We'll call you back</p>
+            </div>
+            
+            <div class="modal-body-mini">
+                <form id="callbackFormMini">
+                    <!-- Honeypot -->
+                    <input type="text" name="website" style="display:none;" tabindex="-1">
+                    
+                    <div class="form-group-mini">
+                        <input type="text" name="name" placeholder="Your Name" required>
+                    </div>
+                    
+                    <div class="form-group-mini">
+                        <input type="tel" name="phone" placeholder="Phone Number" 
+                               pattern="[0-9]{10}" required>
+                    </div>
+                    
+                    <!-- Simple human check -->
+                    <div class="form-group-mini">
+                        <input type="number" name="human_check" 
+                               placeholder="3 + 4 = ?" required>
+                    </div>
+                    
+                    <button type="submit" class="submit-btn-mini">
+                        <i class="ri-send-plane-line"></i> Call Me
+                    </button>
+                </form>
+                
+                <div class="success-message-mini" id="successMessageMini" style="display:none;">
+                    <i class="ri-checkbox-circle-fill"></i>
+                    <p>We'll call shortly!</p>
+                </div>
+                
+                <div class="direct-cta-mini">
+                    <a href="tel:+917006296814" class="cta-mini call-mini">
+                        <i class="ri-phone-line"></i> Call Now
+                    </a>
+                    <a href="https://wa.link/76iska" class="cta-mini whatsapp-mini" target="_blank">
+                        <i class="ri-whatsapp-line"></i> WhatsApp
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+// Minimal JavaScript
+document.addEventListener('DOMContentLoaded', function() {
+    const callbackBtn = document.getElementById('callbackMiniBtn');
+    const modal = document.getElementById('callbackModalMini');
+    const overlay = document.getElementById('callbackOverlayMini');
+    const closeBtn = document.getElementById('modalCloseMini');
+    const form = document.getElementById('callbackFormMini');
+    const successMessage = document.getElementById('successMessageMini');
+    
+    // First-time visitor detection (simpler)
+    if (!sessionStorage.getItem('callback_shown')) {
+        // Show after 3 seconds
+        setTimeout(openModal, 3000);
+        sessionStorage.setItem('callback_shown', 'true');
+    }
+    
+    // Exit intent
+    document.addEventListener('mouseleave', function(e) {
+        if (e.clientY < 0 && !sessionStorage.getItem('exit_shown')) {
+            openModal();
+            sessionStorage.setItem('exit_shown', 'true');
+        }
+    });
+    
+    // Event listeners
+    callbackBtn.addEventListener('click', openModal);
+    closeBtn.addEventListener('click', closeModal);
+    overlay.addEventListener('click', closeModal);
+    
+    // Form submission
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const submitBtn = form.querySelector('.submit-btn-mini');
+        const originalText = submitBtn.innerHTML;
+        
+        // Disable button
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i>';
+        
+        try {
+            const formData = new FormData(form);
+            const response = await fetch('./admin/logic/submit_callback.php', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                // Show success
+                form.style.display = 'none';
+                successMessage.style.display = 'block';
+                
+                // Auto close after 2 seconds
+                setTimeout(() => {
+                    closeModal();
+                    resetForm();
+                }, 2000);
+            } else {
+                alert(data.message || 'Error submitting form');
+                resetButton();
+            }
+        } catch (error) {
+            alert('Network error. Please try again.');
+            resetButton();
+        }
+        
+        function resetButton() {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        }
+        
+        function resetForm() {
+            form.reset();
+            form.style.display = 'block';
+            successMessage.style.display = 'none';
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        }
+    });
+    
+    // Modal functions
+    function openModal() {
+        modal.classList.add('active');
+        overlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+    
+    function closeModal() {
+        modal.classList.remove('active');
+        overlay.classList.remove('active');
+        document.body.style.overflow = '';
+        
+        // Reset form
+        form.reset();
+        form.style.display = 'block';
+        successMessage.style.display = 'none';
+    }
+    
+    // Add CSS for spinner
+    const style = document.createElement('style');
+    style.textContent = `
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    `;
+    document.head.appendChild(style);
+});
+</script>
+
+
+
 
   <!--=============== MAIN JS ===============-->
   <script src="./assets/js/main.js" defer></script>

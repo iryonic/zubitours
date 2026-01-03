@@ -1,78 +1,82 @@
-
 <div class="sidebar">
-        <div class="sidebar-header">
-            <div class="sidebar-logo">
-                <img src="../../assets/img/zubilogo.jpg" alt="zubilogo" id="logo" style="height: 50px; width: auto ;border-radius: 20px;">
-            </div>
-            <div class="sidebar-title">Zubi Tours</div>
+    <div class="sidebar-header">
+        <div class="sidebar-logo">
+            <img src="../../assets/img/zubilogo.jpg" alt="zubilogo" id="logo" style="height: 50px; width: auto ;border-radius: 20px;">
+        </div>
+        <div class="sidebar-title">Zubi Tours</div>
+    </div>
+
+    <div class="sidebar-menu">
+        <div class="menu-section">
+            <div class="menu-label">Main</div>
+            <a href="../adminpannel.php" class="menu-item <?php echo basename($_SERVER['PHP_SELF']) == 'adminpannel.php' ? 'active' : ''; ?>">
+                <i class="ri-dashboard-line"></i>
+                <span>Dashboard</span>
+            </a>
+
+
         </div>
 
-        <div class="sidebar-menu">
-            <div class="menu-section">
-                <div class="menu-label">Main</div>
-                <a href="../adminpannel.php" class="menu-item active">
-                    <i class="ri-dashboard-line"></i>
-                    <span>Dashboard</span>
-                </a>
-               
-               
-            </div>
+        <div class="menu-section">
+            <div class="menu-label">Manage Website</div>
+            <a href="manage-homepage.php" class="menu-item <?php echo basename($_SERVER['PHP_SELF']) == 'manage-homepage.php' ? 'active' : ''; ?>">
+                <i class="ri-home-4-line"></i>
+                <span>Homepage</span>
+            </a>
 
-            <div class="menu-section">
-                <div class="menu-label">Manage Website</div>
-                <a href="manage-homepage.php" class="menu-item">
-                   <i class="ri-home-4-line"></i>
-                    <span>Homepage</span>
-                </a>
-                <a href="manage-destinations.php" class="menu-item">
-                    <i class="ri-map-2-line"></i>
-                    <span>Destinations</span>
-                </a>
-                <a href="manage-packages.php" class="menu-item">
-                    <i class="ri-briefcase-4-line"></i>
-                    <span>Packages</span>
-                </a>
-                <a href="manage-gallery.php" class="menu-item">
-                    <i class="ri-gallery-line"></i>
-                    <span>Gallery</span>
-                </a>
-                <a href="manage-car-rentals.php" class="menu-item">
-                    <i class="ri-car-line"></i>
-                    <span>Car Rentals</span>
-                </a>
-                 <a href="./manage-contacts.php" class="menu-item ">
-                    <i class="ri-mail-line"></i>
-                    <span>Contact</span>
-                   
-                </a>
-            </div>
+            <a href="manage-callbacks.php" class="menu-item <?php echo basename($_SERVER['PHP_SELF']) == 'manage-callbacks.php' ? 'active' : ''; ?>">
+                <i class="ri-phone-line"></i> <span>Callback Requests</span>
+            </a>
 
-          
+            <a href="manage-destinations.php" class="menu-item <?php echo basename($_SERVER['PHP_SELF']) == 'manage-destinations.php' ? 'active' : ''; ?>">
+                <i class="ri-map-2-line"></i>
+                <span>Destinations</span>
+            </a>
+            <a href="manage-packages.php" class="menu-item <?php echo basename($_SERVER['PHP_SELF']) == 'manage-packages.php' ? 'active' : ''; ?>">
+                <i class="ri-briefcase-4-line"></i>
+                <span>Packages</span>
+            </a>
+            <a href="manage-gallery.php" class="menu-item <?php echo basename($_SERVER['PHP_SELF']) == 'manage-gallery.php' ? 'active' : ''; ?>">
+                <i class="ri-gallery-line"></i>
+                <span>Gallery</span>
+            </a>
+            <a href="manage-car-rentals.php" class="menu-item <?php echo basename($_SERVER['PHP_SELF']) == 'manage-car-rentals.php' ? 'active' : ''; ?>">
+                <i class="ri-car-line"></i>
+                <span>Car Rentals</span>
+            </a>
+            <a href="./manage-contacts.php" class="menu-item <?php echo basename($_SERVER['PHP_SELF']) == 'manage-contacts.php' ? 'active' : ''; ?>">
+                <i class="ri-mail-line"></i>
+                <span>Contact</span>
 
-            <div class="menu-section">
-                <div class="menu-label">Settings</div>
-                <a href="./register.php" class="menu-item">
-                   <i class="ri-user-add-line"></i>
-                    <span>Register Admin</span>
-                </a>
-                  <a href="./change-password.php" class="menu-item">
-                    <i class="ri-settings-3-line"></i>
-                    <span>Change Password</span>
-                </a>
-                <a href="../logout.php" class="menu-item">
-                    <i class="ri-logout-box-line"></i>
-                    <span>Logout</span>
-                </a>
-            </div>
+            </a>
         </div>
 
-        <div class="sidebar-footer">
-            <div class="admin-profile">
-                <div class="admin-avatar"> <img src="../../assets/img/zubilogo.jpg" alt="zubilogo" id="logo" style="height: 50px; width: auto ;border-radius: 20px;"></div>
-                <div class="admin-info">
-                    <div class="admin-name">Admin User</div>
-                    <div class="admin-role">Super Admin</div>
-                </div>
+
+
+        <div class="menu-section">
+            <div class="menu-label">Settings</div>
+            <a href="./register.php" class="menu-item">
+                <i class="ri-user-add-line"></i>
+                <span>Register Admin</span>
+            </a>
+            <a href="./change-password.php" class="menu-item">
+                <i class="ri-settings-3-line"></i>
+                <span>Change Password</span>
+            </a>
+            <a href="../logout.php" class="menu-item">
+                <i class="ri-logout-box-line"></i>
+                <span>Logout</span>
+            </a>
+        </div>
+    </div>
+
+    <div class="sidebar-footer">
+        <div class="admin-profile">
+            <div class="admin-avatar"> <img src="../../assets/img/zubilogo.jpg" alt="zubilogo" id="logo" style="height: 50px; width: auto ;border-radius: 20px;"></div>
+            <div class="admin-info">
+                <div class="admin-name">Admin User</div>
+                <div class="admin-role">Super Admin</div>
             </div>
         </div>
     </div>
+</div>
