@@ -14,7 +14,7 @@ try {
     $recent_bookings = [];
     $new_messages_count = 0;
     $pending_bookings_count = 0;
-    
+
     // Total Users (assuming from package_bookings table)
     if ($stmt = $conn->prepare("SELECT COUNT(DISTINCT customer_email) as total_users FROM package_bookings")) {
         $stmt->execute();
@@ -23,7 +23,7 @@ try {
         $stats['total_users'] = $row['total_users'] ?? 0;
         $stmt->close();
     }
-    
+
     // Total Bookings
     if ($stmt = $conn->prepare("SELECT COUNT(*) as total_bookings FROM package_bookings")) {
         $stmt->execute();
@@ -32,7 +32,7 @@ try {
         $stats['total_bookings'] = $row['total_bookings'] ?? 0;
         $stmt->close();
     }
-    
+
     // Total Revenue
     if ($stmt = $conn->prepare("SELECT SUM(total_amount) as total_revenue FROM package_bookings WHERE payment_status = 'paid'")) {
         $stmt->execute();
@@ -41,7 +41,7 @@ try {
         $stats['total_revenue'] = $row['total_revenue'] ? $row['total_revenue'] : 0;
         $stmt->close();
     }
-    
+
     // Total Packages
     if ($stmt = $conn->prepare("SELECT COUNT(*) as total_packages FROM packages WHERE is_active = 1")) {
         $stmt->execute();
@@ -50,7 +50,7 @@ try {
         $stats['total_packages'] = $row['total_packages'] ?? 0;
         $stmt->close();
     }
-    
+
     // Fetch recent package bookings
     if ($stmt = $conn->prepare("SELECT pb.*, p.package_name FROM package_bookings pb LEFT JOIN packages p ON pb.package_id = p.id ORDER BY pb.booked_at DESC LIMIT 5")) {
         $stmt->execute();
@@ -60,7 +60,7 @@ try {
         }
         $stmt->close();
     }
-    
+
     // Fetch recent car bookings (if table exists)
     $recent_car_bookings = [];
     // Uncomment if car_bookings table exists
@@ -74,7 +74,7 @@ try {
         $stmt->close();
     }
     */
-    
+
     // Fetch recent contact messages
     $recent_messages = [];
     if ($stmt = $conn->prepare("SELECT * FROM contact_messages WHERE status = 'new' ORDER BY created_at DESC LIMIT 10")) {
@@ -85,7 +85,7 @@ try {
         }
         $stmt->close();
     }
-    
+
     // Count new messages for badge
     if ($stmt = $conn->prepare("SELECT COUNT(*) as new_messages FROM contact_messages WHERE status = 'new'")) {
         $stmt->execute();
@@ -94,7 +94,7 @@ try {
         $new_messages_count = $row['new_messages'] ?? 0;
         $stmt->close();
     }
-    
+
     // Count pending package bookings for badge
     if ($stmt = $conn->prepare("SELECT COUNT(*) as pending_bookings FROM package_bookings WHERE booking_status = 'pending'")) {
         $stmt->execute();
@@ -103,8 +103,7 @@ try {
         $pending_bookings_count = $row['pending_bookings'] ?? 0;
         $stmt->close();
     }
-    
-} catch(Exception $e) {
+} catch (Exception $e) {
     die("Database connection failed: " . $e->getMessage());
 }
 
@@ -115,6 +114,7 @@ $first_letter = strtoupper(substr($admin_name, 0, 1));
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -122,7 +122,7 @@ $first_letter = strtoupper(substr($admin_name, 0, 1));
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/3.5.0/remixicon.css">
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-   <style>
+    <style>
         /* CSS Variables */
         :root {
             --primary-color: #2563eb;
@@ -476,10 +476,25 @@ $first_letter = strtoupper(substr($admin_name, 0, 1));
             font-size: 2rem;
         }
 
-        .icon-users { background: rgba(37, 99, 235, 0.15); color: var(--primary-color); }
-        .icon-bookings { background: rgba(16, 185, 129, 0.15); color: var(--success-color); }
-        .icon-revenue { background: rgba(245, 158, 11, 0.15); color: var(--warning-color); }
-        .icon-packages { background: rgba(239, 68, 68, 0.15); color: var(--error-color); }
+        .icon-users {
+            background: rgba(37, 99, 235, 0.15);
+            color: var(--primary-color);
+        }
+
+        .icon-bookings {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--success-color);
+        }
+
+        .icon-revenue {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--warning-color);
+        }
+
+        .icon-packages {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--error-color);
+        }
 
         .overview-info h3 {
             font-size: 2.2rem;
@@ -749,12 +764,13 @@ $first_letter = strtoupper(substr($admin_name, 0, 1));
         }
     </style>
 </head>
+
 <body>
- 
-    
+
+
     <!-- Sidebar -->
-  
-<div class="sidebar">
+
+    <div class="sidebar">
         <div class="sidebar-header">
             <div class="sidebar-logo">
                 <img src="../assets/img/zubilogo.jpg" alt="zubilogo" id="logo" style="height: 50px; width: auto ;border-radius: 20px;">
@@ -769,16 +785,20 @@ $first_letter = strtoupper(substr($admin_name, 0, 1));
                     <i class="ri-dashboard-line"></i>
                     <span>Dashboard</span>
                 </a>
-               
-               
+
+
             </div>
 
             <div class="menu-section">
-                 <div class="menu-label">Manage Website</div>
-                <a href="../admin/pages/manage-homepage.php" class="menu-item">
-                   <i class="ri-home-4-line"></i>
+                <div class="menu-label">Manage Website</div>
+                <a href="../admin/pages/manage-homepage.php" class="menu-item ">
+                    <i class="ri-home-4-line"></i>
                     <span>Homepage</span>
                 </a>
+                <a href="../admin/pages/manage-callbacks.php" class="menu-item <?php echo basename($_SERVER['PHP_SELF']) == 'manage-callbacks.php' ? 'active' : ''; ?>">
+                    <i class="ri-phone-line"></i> <span>Callback Requests</span>
+                </a>
+
                 <a href="../admin/pages/manage-destinations.php" class="menu-item">
                     <i class="ri-map-2-line"></i>
                     <span>Destinations</span>
@@ -795,22 +815,22 @@ $first_letter = strtoupper(substr($admin_name, 0, 1));
                     <i class="ri-car-line"></i>
                     <span>Car Rentals</span>
                 </a>
-                 <a href="../admin/pages/manage-contacts.php" class="menu-item ">
+                <a href="../admin/pages/manage-contacts.php" class="menu-item ">
                     <i class="ri-mail-line"></i>
                     <span>Contact</span>
-                   
+
                 </a>
             </div>
 
-          
+
 
             <div class="menu-section">
                 <div class="menu-label">Settings</div>
-                  <a href="../admin/pages/register.php" class="menu-item">
+                <a href="../admin/pages/register.php" class="menu-item">
                     <i class="ri-user-add-line"></i>
                     <span>Register Admin</span>
                 </a>
-                  <a href="../admin/pages/change-password.php" class="menu-item">
+                <a href="../admin/pages/change-password.php" class="menu-item">
                     <i class="ri-settings-3-line"></i>
                     <span>Change Password</span>
                 </a>
@@ -837,7 +857,7 @@ $first_letter = strtoupper(substr($admin_name, 0, 1));
         <!-- Header -->
         <header class="header">
             <h1 class="page-title">Dashboard</h1>
-           
+
         </header>
 
         <!-- Content -->
@@ -859,7 +879,7 @@ $first_letter = strtoupper(substr($admin_name, 0, 1));
                         <p>Total Users</p>
                     </div>
                 </div>
-                
+
                 <div class="overview-card">
                     <div class="overview-icon icon-bookings">
                         <i class="fas fa-calendar-check"></i>
@@ -869,7 +889,7 @@ $first_letter = strtoupper(substr($admin_name, 0, 1));
                         <p>Bookings</p>
                     </div>
                 </div>
-                
+
                 <div class="overview-card">
                     <div class="overview-icon icon-revenue">
                         <i class="fas fa-dollar-sign"></i>
@@ -879,7 +899,7 @@ $first_letter = strtoupper(substr($admin_name, 0, 1));
                         <p>Revenue</p>
                     </div>
                 </div>
-                
+
                 <div class="overview-card">
                     <div class="overview-icon icon-packages">
                         <i class="fas fa-suitcase"></i>
@@ -895,24 +915,24 @@ $first_letter = strtoupper(substr($admin_name, 0, 1));
             <div class="recent-activity">
                 <h3>Recent Bookings</h3>
                 <div class="activity-list">
-                    <?php foreach($recent_bookings as $booking): ?>
-                    <div class="activity-item">
-                        <div class="activity-icon" style="background: rgba(16, 185, 129, 0.15); color: var(--success-color);">
-                            <i class="fas fa-shopping-cart"></i>
-                        </div>
-                        <div class="activity-content">
-                            <h4><?php echo htmlspecialchars($booking['customer_name']); ?></h4>
-                            <p>
-                                <?php echo htmlspecialchars($booking['package_name'] ?? 'Package'); ?> - 
-                                $<?php echo number_format($booking['total_amount'], 2); ?>
-                            </p>
-                        </div>
-                        <div class="activity-time">
-                            <?php 
+                    <?php foreach ($recent_bookings as $booking): ?>
+                        <div class="activity-item">
+                            <div class="activity-icon" style="background: rgba(16, 185, 129, 0.15); color: var(--success-color);">
+                                <i class="fas fa-shopping-cart"></i>
+                            </div>
+                            <div class="activity-content">
+                                <h4><?php echo htmlspecialchars($booking['customer_name']); ?></h4>
+                                <p>
+                                    <?php echo htmlspecialchars($booking['package_name'] ?? 'Package'); ?> -
+                                    $<?php echo number_format($booking['total_amount'], 2); ?>
+                                </p>
+                            </div>
+                            <div class="activity-time">
+                                <?php
                                 $timeAgo = strtotime($booking['booked_at']);
                                 $now = time();
                                 $diff = $now - $timeAgo;
-                                
+
                                 if ($diff < 60) {
                                     echo $diff . ' seconds ago';
                                 } elseif ($diff < 3600) {
@@ -922,9 +942,9 @@ $first_letter = strtoupper(substr($admin_name, 0, 1));
                                 } else {
                                     echo floor($diff / 86400) . ' days ago';
                                 }
-                            ?>
+                                ?>
+                            </div>
                         </div>
-                    </div>
                     <?php endforeach; ?>
                 </div>
             </div>
@@ -939,8 +959,8 @@ $first_letter = strtoupper(substr($admin_name, 0, 1));
                     <h4>Add Package</h4>
                     <p>Create new travel package</p>
                 </a>
-                
-               <a href="../admin/pages/manage-destinations.php" class="quick-action">
+
+                <a href="../admin/pages/manage-destinations.php" class="quick-action">
                     <div class="quick-action-icon">
                         <i class="fas fa-plus"></i>
                     </div>
@@ -948,7 +968,7 @@ $first_letter = strtoupper(substr($admin_name, 0, 1));
                     <p>Create new travel package</p>
                 </a>
 
-               <a href="../admin/pages/manage-gallery.php" class="quick-action">
+                <a href="../admin/pages/manage-gallery.php" class="quick-action">
                     <div class="quick-action-icon">
                         <i class="fas fa-plus"></i>
                     </div>
@@ -956,7 +976,7 @@ $first_letter = strtoupper(substr($admin_name, 0, 1));
                     <p>post another gallery Image </p>
                 </a>
 
-                 <a href="../admin/pages/manage-car-rentals.php" class="quick-action">
+                <a href="../admin/pages/manage-car-rentals.php" class="quick-action">
                     <div class="quick-action-icon">
                         <i class="fas fa-plus"></i>
                     </div>
@@ -979,10 +999,10 @@ $first_letter = strtoupper(substr($admin_name, 0, 1));
         // Dark/Light Mode Toggle
         const themeToggle = document.getElementById('themeToggle');
         const themeIcon = themeToggle.querySelector('i');
-        
+
         themeToggle.addEventListener('click', function() {
             document.body.classList.toggle('dark-mode');
-            
+
             if (document.body.classList.contains('dark-mode')) {
                 themeIcon.classList.remove('fa-moon');
                 themeIcon.classList.add('fa-sun');
@@ -990,7 +1010,7 @@ $first_letter = strtoupper(substr($admin_name, 0, 1));
                 themeIcon.classList.remove('fa-sun');
                 themeIcon.classList.add('fa-moon');
             }
-            
+
             // Save theme preference to localStorage
             const isDarkMode = document.body.classList.contains('dark-mode');
             localStorage.setItem('darkMode', isDarkMode);
@@ -1033,7 +1053,7 @@ $first_letter = strtoupper(substr($admin_name, 0, 1));
                 icon.style.transform = 'scale(1.1)';
                 icon.style.transition = 'transform 0.3s ease';
             });
-            
+
             action.addEventListener('mouseleave', function() {
                 const icon = this.querySelector('.quick-action-icon i');
                 icon.style.transform = 'scale(1)';
@@ -1047,4 +1067,5 @@ $first_letter = strtoupper(substr($admin_name, 0, 1));
         }, 30000);
     </script>
 </body>
+
 </html>

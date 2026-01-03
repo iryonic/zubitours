@@ -55,11 +55,11 @@
 
         <div class="menu-section">
             <div class="menu-label">Settings</div>
-            <a href="./register.php" class="menu-item">
+            <a href="./register.php" class="menu-item <?php echo basename($_SERVER['PHP_SELF']) == 'register.php' ? 'active' : ''; ?>">
                 <i class="ri-user-add-line"></i>
                 <span>Register Admin</span>
             </a>
-            <a href="./change-password.php" class="menu-item">
+            <a href="./change-password.php" class="menu-item <?php echo basename($_SERVER['PHP_SELF']) == 'change-password.php' ? 'active' : ''; ?>">
                 <i class="ri-settings-3-line"></i>
                 <span>Change Password</span>
             </a>
