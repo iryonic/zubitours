@@ -30,7 +30,7 @@ if (isset($_POST['update_status'])) {
     }
 }
 
-if (isset($_GET['delete_lead'])) {
+if (isset($_GET['delete_lead']) && $_SERVER['REQUEST_METHOD'] !== 'POST') {
     $lead_id = $_GET['delete_lead'];
     $conn->query("DELETE FROM callback_leads WHERE id = $lead_id");
     $message = "Lead deleted!";
