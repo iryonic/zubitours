@@ -611,19 +611,30 @@ Kashmir tour company
   }
 }
 
-* Ultra Minimalistic Style */
-.callback-widget-mini {
+/* Premium Minimalistic Style - Fixed Spacing */
+.callback-widget-premium-fixed {
     position: fixed;
-    bottom: 20px;
-    right: 20px;
+    bottom: 25px;
+    right: 25px;
     z-index: 9999;
 }
 
-/* Floating Buttons */
-.callback-mini-btn, .whatsapp-mini-btn, .call-mini-btn {
+/* Floating Buttons Stack - Properly Spaced */
+.floating-buttons-stack {
     position: fixed;
-    width: 50px;
-    height: 50px;
+    bottom: 25px;
+    right: 25px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px; /* Consistent spacing between buttons */
+    z-index: 10000;
+}
+
+/* Individual Button Styles */
+.callback-premium-fixed, .whatsapp-premium-fixed, .call-premium-fixed {
+    width: 55px;
+    height: 55px;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -631,241 +642,410 @@ Kashmir tour company
     border: none;
     cursor: pointer;
     font-size: 1.3rem;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
-    z-index: 10000;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    flex-shrink: 0; /* Prevent shrinking */
 }
 
-.callback-mini-btn {
-    bottom: 20px;
-    right: 20px;
-    background: radial-gradient(ellipse, #f9de73, #e8862a);
+/* Callback Button (Main) */
+.callback-premium-fixed {
+    background: radial-gradient(ellipse at center, #f9de73, #e8862a);
     color: white;
-    animation: gentle-pulse 3s ease-in-out infinite;
+    order: 3; /* Bottom-most */
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    animation: premium-pulse-fixed 3s ease-in-out infinite;
 }
 
-.whatsapp-mini-btn {
-    bottom: 85px;
-    right: 20px;
+/* WhatsApp Button */
+.whatsapp-premium-fixed {
     background: #25D366;
     color: white;
     text-decoration: none;
+    order: 2; /* Middle */
+    box-shadow: 0 8px 20px rgba(37, 211, 102, 0.3);
 }
 
-.call-mini-btn {
-    bottom: 150px;
-    right: 20px;
+/* Call Button */
+.call-premium-fixed {
     background: #2563eb;
     color: white;
     text-decoration: none;
+    order: 1; /* Top-most */
+    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3);
 }
 
-.callback-mini-btn:hover {
-    transform: scale(1.1) rotate(5deg);
-    box-shadow: 0 10px 25px rgba(249, 222, 115, 0.3);
+/* Tooltip Styling */
+[data-tooltip] {
+    position: relative;
 }
 
-.whatsapp-mini-btn:hover, .call-mini-btn:hover {
+[data-tooltip]::before {
+    content: attr(data-tooltip);
+    position: absolute;
+    right: 70px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: #1e293b;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    pointer-events: none;
+    z-index: 10001;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+[data-tooltip]::after {
+    content: '';
+    position: absolute;
+    right: 60px;
+    top: 50%;
+    transform: translateY(-50%);
+    border: 6px solid transparent;
+    border-left-color: #1e293b;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    pointer-events: none;
+    z-index: 10001;
+}
+
+[data-tooltip]:hover::before,
+[data-tooltip]:hover::after {
+    opacity: 1;
+    visibility: visible;
+    right: 65px;
+}
+
+/* Button Hover Effects */
+.callback-premium-fixed:hover {
+    transform: scale(1.1) rotate(10deg);
+    box-shadow: 0 12px 25px rgba(249, 222, 115, 0.35);
+}
+
+.whatsapp-premium-fixed:hover {
     transform: scale(1.1);
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 12px 25px rgba(37, 211, 102, 0.4);
 }
 
-@keyframes gentle-pulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.05); }
+.call-premium-fixed:hover {
+    transform: scale(1.1);
+    box-shadow: 0 12px 25px rgba(37, 99, 235, 0.4);
 }
 
-/* Overlay */
-.callback-overlay-mini {
+@keyframes premium-pulse-fixed {
+    0%, 100% { 
+        transform: scale(1);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    }
+    50% { 
+        transform: scale(1.08);
+        box-shadow: 0 12px 28px rgba(249, 222, 115, 0.3);
+    }
+}
+
+/* Premium Overlay with Blur */
+.callback-overlay-fixed {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(3px);
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     z-index: 9998;
     opacity: 0;
     visibility: hidden;
-    transition: all 0.3s ease;
+    transition: all 0.4s ease;
 }
 
-.callback-overlay-mini.active {
+.callback-overlay-fixed.active {
     opacity: 1;
     visibility: visible;
 }
 
-/* Compact Modal */
-.callback-modal-mini {
+/* Elegant Modal */
+.callback-modal-fixed {
     position: fixed;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%) scale(0.95);
     width: 90%;
-    max-width: 380px;
+    max-width: 400px;
     background: white;
-    border-radius: 16px;
+    border-radius: 20px;
     overflow: hidden;
     z-index: 9999;
     opacity: 0;
     visibility: hidden;
-    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
 }
 
-.callback-modal-mini.active {
+.callback-modal-fixed.active {
     opacity: 1;
     visibility: visible;
     transform: translate(-50%, -50%) scale(1);
 }
 
-.modal-content-mini {
-    padding: 0;
-}
-
-.modal-close-mini {
-    position: absolute;
-    top: 15px;
-    right: 15px;
-    background: none;
-    border: none;
-    color: #94a3b8;
-    font-size: 1.5rem;
-    cursor: pointer;
-    width: 30px;
-    height: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 10;
-    transition: color 0.3s;
-}
-
-.modal-close-mini:hover {
-    color: #1e293b;
-}
-
-/* Header */
-.modal-header-mini {
-    background: radial-gradient(ellipse, #f9de73, #e8862a);
-    color: white;
-    padding: 25px 20px;
-    text-align: center;
+.modal-content-fixed {
     position: relative;
 }
 
-.modal-header-mini i {
-    font-size: 2rem;
-    margin-bottom: 10px;
-    display: block;
-    opacity: 0.9;
+/* Close Button */
+.modal-close-fixed {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 1.2rem;
+    transition: all 0.3s;
+    z-index: 10;
 }
 
-.modal-header-mini h4 {
-    margin: 0 0 5px 0;
-    font-size: 1.3rem;
-    font-weight: 700;
+.modal-close-fixed:hover {
+    background: rgba(255, 255, 255, 0.25);
+    transform: rotate(90deg);
 }
 
-.modal-header-mini p {
-    margin: 0;
-    opacity: 0.9;
-    font-size: 0.9rem;
+/* Header with Gradient */
+.modal-header-fixed {
+    background: linear-gradient(135deg, #f9de73 0%, #e8862a 100%);
+    color: white;
+    padding: 40px 30px 30px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
 }
 
-/* Body */
-.modal-body-mini {
-    padding: 25px 20px;
+.modal-header-fixed::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 100%;
+    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.1) 0%, transparent 50%);
 }
 
-.form-group-mini {
+.header-icon-fixed {
     margin-bottom: 15px;
 }
 
-.form-group-mini input {
+.header-icon-fixed svg {
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));
+}
+
+.modal-title-fixed {
+    margin: 0 0 8px 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.modal-subtitle-fixed {
+    margin: 0;
+    opacity: 0.9;
+    font-size: 0.95rem;
+    font-weight: 400;
+}
+
+/* Body */
+.modal-body-fixed {
+    padding: 30px;
+}
+
+/* Form Styles */
+.form-group-fixed {
+    margin-bottom: 20px;
+}
+
+.input-wrapper-fixed {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-wrapper-fixed i {
+    position: absolute;
+    left: 15px;
+    color: #94a3b8;
+    font-size: 1.1rem;
+}
+
+.input-fixed {
     width: 100%;
-    padding: 14px;
+    padding: 16px 16px 16px 45px;
     border: 1.5px solid #e2e8f0;
-    border-radius: 10px;
+    border-radius: 12px;
     font-size: 0.95rem;
     transition: all 0.3s;
     background: #f8fafc;
-    box-sizing: border-box;
+    color: #1e293b;
 }
 
-.form-group-mini input:focus {
+.input-fixed:focus {
     outline: none;
     border-color: #f9de73;
     background: white;
     box-shadow: 0 0 0 3px rgba(249, 222, 115, 0.1);
 }
 
-.form-group-mini input::placeholder {
+.input-fixed::placeholder {
     color: #94a3b8;
 }
 
-.submit-btn-mini {
+/* Human Check */
+.human-check-fixed {
+    background: #f8fafc;
+    padding: 12px 15px;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    color: #64748b;
+    margin: 25px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.human-check-fixed strong {
+    color: #1e293b;
+}
+
+.human-check-fixed input {
+    width: 60px;
+    padding: 8px 12px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    text-align: center;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.human-check-fixed input:focus {
+    outline: none;
+    border-color: #f9de73;
+}
+
+/* Submit Button */
+.submit-btn-fixed {
     width: 100%;
-    padding: 15px;
-    background: radial-gradient(ellipse, #f9de73, #e8862a);
+    padding: 18px;
+    background: linear-gradient(135deg, #f9de73 0%, #e8862a 100%);
     color: white;
     border: none;
-    border-radius: 10px;
+    border-radius: 12px;
     font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 10px;
     transition: all 0.3s;
     margin-top: 10px;
+    overflow: hidden;
+    position: relative;
 }
 
-.submit-btn-mini:hover {
+.submit-btn-fixed::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.6s;
+}
+
+.submit-btn-fixed:hover::before {
+    left: 100%;
+}
+
+.submit-btn-fixed:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 15px rgba(249, 222, 115, 0.3);
+    box-shadow: 0 10px 20px rgba(249, 222, 115, 0.3);
 }
 
-.submit-btn-mini:disabled {
+.submit-btn-fixed:disabled {
     opacity: 0.7;
     cursor: not-allowed;
     transform: none !important;
 }
 
-/* Success Message */
-.success-message-mini {
+.submit-btn-fixed i {
+    transition: transform 0.3s;
+}
+
+.submit-btn-fixed:hover i {
+    transform: translateX(5px);
+}
+
+/* Success State */
+.success-state-fixed {
     text-align: center;
-    padding: 20px 0;
-    animation: fadeIn 0.3s ease;
+    padding: 30px 0;
+    display: none;
 }
 
-.success-message-mini i {
-    font-size: 2.5rem;
-    color: #10b981;
-    margin-bottom: 10px;
-    display: block;
+.success-icon-fixed {
+    margin-bottom: 20px;
 }
 
-.success-message-mini p {
-    margin: 0;
+.success-title-fixed {
+    margin: 0 0 10px 0;
+    font-size: 1.4rem;
+    font-weight: 700;
     color: #1e293b;
-    font-weight: 500;
 }
 
-/* Direct CTA */
-.direct-cta-mini {
-    display: flex;
-    gap: 10px;
-    margin-top: 20px;
+.success-message-fixed {
+    margin: 0;
+    color: #64748b;
+    font-size: 1rem;
+}
+
+/* Alternative CTA */
+.alternative-cta-fixed {
+    margin-top: 25px;
+    padding-top: 25px;
     border-top: 1px solid #f1f5f9;
-    padding-top: 20px;
 }
 
-.cta-mini {
+.cta-label-fixed {
+    text-align: center;
+    color: #64748b;
+    font-size: 0.9rem;
+    margin-bottom: 15px;
+}
+
+.cta-buttons-fixed {
+    display: flex;
+    gap: 12px;
+}
+
+.cta-fixed {
     flex: 1;
-    padding: 12px;
-    border-radius: 8px;
+    padding: 14px;
+    border-radius: 10px;
     text-decoration: none;
     font-size: 0.9rem;
     font-weight: 600;
@@ -876,77 +1056,107 @@ Kashmir tour company
     transition: all 0.3s;
 }
 
-.call-mini {
+.call-now-fixed {
     background: #2563eb;
     color: white;
 }
 
-.whatsapp-mini {
+.whatsapp-fixed {
     background: #25D366;
     color: white;
 }
 
-.cta-mini:hover {
-    opacity: 0.9;
+.cta-fixed:hover {
     transform: translateY(-2px);
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
 }
 
-/* Animations */
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+/* Honeypot */
+.honeypot-fixed {
+    display: none;
 }
 
-/* Mobile Adjustments */
+/* Mobile Responsive */
 @media (max-width: 768px) {
-    .callback-mini-btn, .whatsapp-mini-btn, .call-mini-btn {
-        width: 45px;
-        height: 45px;
+    .callback-widget-premium-fixed {
+        bottom: 20px;
+        right: 20px;
+    }
+    
+    .floating-buttons-stack {
+        bottom: 20px;
+        right: 20px;
+        gap: 12px; /* Slightly smaller gap on mobile */
+    }
+    
+    .callback-premium-fixed, .whatsapp-premium-fixed, .call-premium-fixed {
+        width: 50px;
+        height: 50px;
         font-size: 1.2rem;
     }
     
-    .whatsapp-mini-btn {
-        bottom: 80px;
+    /* Hide tooltips on mobile */
+    [data-tooltip]::before,
+    [data-tooltip]::after {
+        display: none;
     }
     
-    .call-mini-btn {
-        bottom: 140px;
+    .modal-header-fixed {
+        padding: 35px 25px 25px;
     }
     
-    .callback-modal-mini {
-        width: 95%;
-        border-radius: 14px;
-    }
-    
-    .modal-body-mini {
-        padding: 20px 15px;
+    .modal-body-fixed {
+        padding: 25px;
     }
 }
 
 @media (max-width: 480px) {
-    .callback-widget-mini {
+    .floating-buttons-stack {
         bottom: 15px;
         right: 15px;
+        gap: 10px; /* Even smaller gap on very small screens */
     }
     
-    .callback-mini-btn, .whatsapp-mini-btn, .call-mini-btn {
-        width: 42px;
-        height: 42px;
+    .callback-premium-fixed, .whatsapp-premium-fixed, .call-premium-fixed {
+        width: 48px;
+        height: 48px;
         font-size: 1.1rem;
     }
     
-    .whatsapp-mini-btn {
-        bottom: 72px;
-        right: 15px;
+    .callback-modal-fixed {
+        width: 95%;
+        border-radius: 18px;
     }
     
-    .call-mini-btn {
-        bottom: 129px;
-        right: 15px;
+    .human-check-fixed {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .human-check-fixed input {
+        width: 100%;
+    }
+
+     .alternative-cta-fixed{
+      display: none;
     }
 }
 
-     
+/* Extra small screens */
+@media (max-height: 600px) {
+    .floating-buttons-stack {
+        gap: 8px; /* Minimal gap on short screens */
+    }
+    
+    .callback-premium-fixed, .whatsapp-premium-fixed, .call-premium-fixed {
+        width: 45px;
+        height: 45px;
+        font-size: 1rem;
+    }
+
+   
+}  
   </style>
 </head>
 
@@ -1742,76 +1952,114 @@ Kashmir tour company
     }
   </script> 
 
-<!-- Premium Minimalistic Small Callback Widget -->
-<div class="callback-widget-mini">
-    <!-- Floating Callback Button -->
-    <button class="callback-mini-btn" id="callbackMiniBtn">
-        <i class="ri-phone-line"></i>
-    </button>
+<!-- Premium Minimalistic Callback Widget with Tooltips - Fixed Spacing -->
+<div class="callback-widget-premium-fixed">
+    <!-- Floating Buttons Stack -->
+    <div class="floating-buttons-stack">
+        <a href="tel:+916006696105" class="call-premium-fixed" 
+           data-tooltip="Call Now">
+            <i class="ri-phone-fill"></i>
+        </a>
+        
+        <a href="https://wa.link/76iska" class="whatsapp-premium-fixed" 
+           data-tooltip="Chat on WhatsApp" target="_blank">
+            <i class="ri-whatsapp-line"></i>
+        </a>
+        
+        <button class="callback-premium-fixed" id="callbackPremiumFixed" 
+                data-tooltip="Request Callback">
+            <i class="ri-phone-line"></i>
+        </button>
+    </div>
     
-    <!-- WhatsApp Quick Button -->
-    <a href="https://wa.link/76iska" class="whatsapp-mini-btn" target="_blank">
-        <i class="ri-whatsapp-line"></i>
-    </a>
+    <!-- Glowing Overlay -->
+    <div class="callback-overlay-fixed" id="callbackOverlayFixed"></div>
     
-    <!-- Call Quick Button -->
-    <a href="tel:+917006296814" class="call-mini-btn">
-        <i class="ri-phone-fill"></i>
-    </a>
-    
-    <!-- Overlay -->
-    <div class="callback-overlay-mini" id="callbackOverlayMini"></div>
-    
-    <!-- Compact Modal -->
-    <div class="callback-modal-mini" id="callbackModalMini">
-        <div class="modal-content-mini">
-            <button class="modal-close-mini" id="modalCloseMini">
+    <!-- Elegant Modal -->
+    <div class="callback-modal-fixed" id="callbackModalFixed">
+        <div class="modal-content-fixed">
+            <!-- Close Button -->
+            <button class="modal-close-fixed" id="modalCloseFixed">
                 <i class="ri-close-line"></i>
             </button>
             
-            <div class="modal-header-mini">
-                <i class="ri-phone-fill"></i>
-                <h4>Need Help?</h4>
-                <p>We'll call you back</p>
+            <!-- Header with Gradient -->
+            <div class="modal-header-fixed">
+                <div class="header-icon-fixed">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M6.62 10.79C8.06 13.62 10.38 15.94 13.21 17.38L15.41 15.18C15.69 14.9 16.08 14.82 16.43 14.96C17.55 15.41 18.76 15.67 20 15.67C20.55 15.67 21 16.11 21 16.67V20C21 20.55 20.55 21 20 21C10.61 21 3 13.39 3 4C3 3.45 3.45 3 4 3H7.33C7.89 3 8.33 3.45 8.33 4C8.33 5.24 8.59 6.45 9.04 7.57C9.18 7.92 9.1 8.31 8.82 8.59L6.62 10.79Z" 
+                              fill="white" opacity="0.9"/>
+                    </svg>
+                </div>
+                <h4 class="modal-title-fixed">Priority Callback</h4>
+                <p class="modal-subtitle-fixed">We'll connect you within minutes</p>
             </div>
             
-            <div class="modal-body-mini">
-                <form id="callbackFormMini">
+            <!-- Compact Form -->
+            <div class="modal-body-fixed">
+                <form id="callbackFormFixed">
                     <!-- Honeypot -->
-                    <input type="text" name="website" style="display:none;" tabindex="-1">
+                    <input type="text" name="website" class="honeypot-fixed" tabindex="-1">
                     
-                    <div class="form-group-mini">
-                        <input type="text" name="name" placeholder="Your Name" required>
+                    <!-- Form Inputs -->
+                    <div class="form-group-fixed">
+                        <div class="input-wrapper-fixed">
+                            <i class="ri-user-line"></i>
+                            <input type="text" name="name" 
+                                   placeholder="Your full name" 
+                                   class="input-fixed" required>
+                        </div>
                     </div>
                     
-                    <div class="form-group-mini">
-                        <input type="tel" name="phone" placeholder="Phone Number" 
-                               pattern="[0-9]{10}" required>
+                    <div class="form-group-fixed">
+                        <div class="input-wrapper-fixed">
+                            <i class="ri-phone-line"></i>
+                            <input type="tel" name="phone" 
+                                   pattern="[0-9]{10}"
+                                   placeholder="10-digit mobile number" 
+                                   class="input-fixed" required>
+                        </div>
                     </div>
                     
-                    <!-- Simple human check -->
-                    <div class="form-group-mini">
+                    <!-- Human Check (Subtle) -->
+                    <div class="human-check-fixed">
+                        <span>Quick verification: <strong>3 + 4 = </strong></span>
                         <input type="number" name="human_check" 
-                               placeholder="3 + 4 = ?" required>
+                               placeholder="?" required>
                     </div>
                     
-                    <button type="submit" class="submit-btn-mini">
-                        <i class="ri-send-plane-line"></i> Call Me
+                    <!-- Submit Button -->
+                    <button type="submit" class="submit-btn-fixed">
+                        <span class="btn-text-fixed">Request Callback</span>
+                        <i class="ri-arrow-right-line"></i>
                     </button>
                 </form>
                 
-                <div class="success-message-mini" id="successMessageMini" style="display:none;">
-                    <i class="ri-checkbox-circle-fill"></i>
-                    <p>We'll call shortly!</p>
+                <!-- Success State -->
+                <div class="success-state-fixed" id="successStateFixed">
+                    <div class="success-icon-fixed">
+                        <svg width="60" height="60" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM10 17L5 12L6.41 10.59L10 14.17L17.59 6.58L19 8L10 17Z" 
+                                  fill="#10B981"/>
+                        </svg>
+                    </div>
+                    <h4 class="success-title-fixed">You're All Set!</h4>
+                    <p class="success-message-fixed">Our team will call you shortly</p>
                 </div>
                 
-                <div class="direct-cta-mini">
-                    <a href="tel:+917006296814" class="cta-mini call-mini">
-                        <i class="ri-phone-line"></i> Call Now
-                    </a>
-                    <a href="https://wa.link/76iska" class="cta-mini whatsapp-mini" target="_blank">
-                        <i class="ri-whatsapp-line"></i> WhatsApp
-                    </a>
+                <!-- Alternative CTA -->
+                <div class="alternative-cta-fixed">
+                    <p class="cta-label-fixed">Need immediate assistance?</p>
+                    <div class="cta-buttons-fixed">
+                        <a href="tel:+916006696105" class="cta-fixed call-now-fixed">
+                            <i class="ri-phone-line"></i>
+                            <span>Call Now</span>
+                        </a>
+                        <a href="https://wa.link/76iska" class="cta-fixed whatsapp-fixed" target="_blank">
+                            <i class="ri-whatsapp-line"></i>
+                            <span>WhatsApp</span>
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1819,49 +2067,71 @@ Kashmir tour company
 </div>
 
 
+
 <script>
-// Minimal JavaScript
+// Premium JavaScript with smooth interactions - Fixed
 document.addEventListener('DOMContentLoaded', function() {
-    const callbackBtn = document.getElementById('callbackMiniBtn');
-    const modal = document.getElementById('callbackModalMini');
-    const overlay = document.getElementById('callbackOverlayMini');
-    const closeBtn = document.getElementById('modalCloseMini');
-    const form = document.getElementById('callbackFormMini');
-    const successMessage = document.getElementById('successMessageMini');
+    const callbackBtn = document.getElementById('callbackPremiumFixed');
+    const modal = document.getElementById('callbackModalFixed');
+    const overlay = document.getElementById('callbackOverlayFixed');
+    const closeBtn = document.getElementById('modalCloseFixed');
+    const form = document.getElementById('callbackFormFixed');
+    const successState = document.getElementById('successStateFixed');
     
-    // First-time visitor detection (simpler)
-    if (!sessionStorage.getItem('callback_shown')) {
-        // Show after 3 seconds
-        setTimeout(openModal, 3000);
-        sessionStorage.setItem('callback_shown', 'true');
+    // Check if modal was already shown in this session
+    let shownFirstTime = sessionStorage.getItem('premium_callback_shown_fixed');
+    
+    // Show on first visit after 4 seconds
+    if (!shownFirstTime) {
+        setTimeout(() => {
+            openModal();
+            sessionStorage.setItem('premium_callback_shown_fixed', 'true');
+        }, 4000);
     }
     
-    // Exit intent
+    // Exit intent with delay
+    let exitTimer;
     document.addEventListener('mouseleave', function(e) {
-        if (e.clientY < 0 && !sessionStorage.getItem('exit_shown')) {
-            openModal();
-            sessionStorage.setItem('exit_shown', 'true');
+        if (e.clientY < 0 && !sessionStorage.getItem('premium_exit_shown_fixed')) {
+            exitTimer = setTimeout(() => {
+                openModal();
+                sessionStorage.setItem('premium_exit_shown_fixed', 'true');
+            }, 500);
         }
     });
     
-    // Event listeners
+    // Cancel exit intent if mouse returns
+    document.addEventListener('mouseenter', function() {
+        clearTimeout(exitTimer);
+    });
+    
+    // Event Listeners
     callbackBtn.addEventListener('click', openModal);
     closeBtn.addEventListener('click', closeModal);
     overlay.addEventListener('click', closeModal);
     
-    // Form submission
+    // Escape key to close
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeModal();
+    });
+    
+    // Form Submission
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
         
-        const submitBtn = form.querySelector('.submit-btn-mini');
-        const originalText = submitBtn.innerHTML;
+        const submitBtn = form.querySelector('.submit-btn-fixed');
+        const originalHTML = submitBtn.innerHTML;
         
-        // Disable button
+        // Disable and show loading
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i>';
         
         try {
             const formData = new FormData(form);
+            
+            // Add timestamp to prevent replay
+            formData.append('timestamp', Date.now());
+            
             const response = await fetch('./admin/logic/submit_callback.php', {
                 method: 'POST',
                 body: formData
@@ -1870,43 +2140,73 @@ document.addEventListener('DOMContentLoaded', function() {
             const data = await response.json();
             
             if (data.success) {
-                // Show success
-                form.style.display = 'none';
-                successMessage.style.display = 'block';
+                // Show success animation
+                form.style.opacity = '0';
+                form.style.transform = 'translateY(-20px)';
                 
-                // Auto close after 2 seconds
                 setTimeout(() => {
-                    closeModal();
-                    resetForm();
-                }, 2000);
+                    form.style.display = 'none';
+                    form.style.opacity = '';
+                    form.style.transform = '';
+                    
+                    successState.style.display = 'block';
+                    successState.style.animation = 'fadeInFixed 0.5s ease';
+                    
+                    // Auto-close after success
+                    setTimeout(closeModal, 2500);
+                }, 300);
             } else {
-                alert(data.message || 'Error submitting form');
-                resetButton();
+                // Show error subtly
+                submitBtn.innerHTML = '<span class="btn-text-fixed">Try Again</span>';
+                submitBtn.style.background = '#ef4444';
+                
+                setTimeout(() => {
+                    submitBtn.innerHTML = originalHTML;
+                    submitBtn.style.background = '';
+                    submitBtn.disabled = false;
+                }, 2000);
+                
+                // Show brief error message
+                const errorMsg = document.createElement('div');
+                errorMsg.className = 'error-message-fixed';
+                errorMsg.innerHTML = `<i class="ri-error-warning-line"></i> ${data.message}`;
+                errorMsg.style.cssText = `
+                    background: #fee2e2;
+                    color: #dc2626;
+                    padding: 12px;
+                    border-radius: 8px;
+                    margin-top: 15px;
+                    font-size: 0.9rem;
+                    animation: slideInFixed 0.3s ease;
+                `;
+                
+                form.appendChild(errorMsg);
+                setTimeout(() => errorMsg.remove(), 3000);
             }
         } catch (error) {
-            alert('Network error. Please try again.');
-            resetButton();
-        }
-        
-        function resetButton() {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = originalText;
-        }
-        
-        function resetForm() {
-            form.reset();
-            form.style.display = 'block';
-            successMessage.style.display = 'none';
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = originalText;
+            submitBtn.innerHTML = '<span class="btn-text-fixed">Network Error</span>';
+            setTimeout(() => {
+                submitBtn.innerHTML = originalHTML;
+                submitBtn.disabled = false;
+            }, 2000);
         }
     });
     
-    // Modal functions
+    // Modal Functions
     function openModal() {
         modal.classList.add('active');
         overlay.classList.add('active');
         document.body.style.overflow = 'hidden';
+        
+        // Reset form state
+        form.style.display = 'block';
+        successState.style.display = 'none';
+        form.reset();
+        
+        // Focus first input after animation
+        setTimeout(() => {
+            form.querySelector('input[name="name"]').focus();
+        }, 400);
     }
     
     function closeModal() {
@@ -1917,21 +2217,50 @@ document.addEventListener('DOMContentLoaded', function() {
         // Reset form
         form.reset();
         form.style.display = 'block';
-        successMessage.style.display = 'none';
+        successState.style.display = 'none';
+        
+        // Re-enable submit button
+        const submitBtn = form.querySelector('.submit-btn-fixed');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<span class="btn-text-fixed">Request Callback</span><i class="ri-arrow-right-line"></i>';
     }
     
-    // Add CSS for spinner
+    // Add animations CSS
     const style = document.createElement('style');
     style.textContent = `
         .animate-spin {
             animation: spin 1s linear infinite;
         }
+        
         @keyframes spin {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
         }
+        
+        @keyframes fadeInFixed {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes slideInFixed {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        
+        .error-message-fixed {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
     `;
     document.head.appendChild(style);
+    
+    // Add subtle floating animation to buttons
+    const buttons = document.querySelectorAll('.callback-premium-fixed, .whatsapp-premium-fixed, .call-premium-fixed');
+    buttons.forEach((btn, index) => {
+        // Stagger the floating animation
+        btn.style.animationDelay = `${index * 0.2}s`;
+    });
 });
 </script>
 
