@@ -59,6 +59,11 @@ if ($stmt) {
     $safe_q = $conn->real_escape_string($q);
     $result = $conn->query("SELECT d.*, di.image_path FROM destinations d LEFT JOIN destination_images di ON d.id = di.destination_id AND di.is_primary = 1 WHERE d.is_active = 1 ORDER BY d.is_featured DESC, d.created_at DESC");
 }
+
+// Get unique regions for filtering
+$regions_res = $conn->query("SELECT DISTINCT region FROM destinations WHERE is_active = 1 AND region != ''");
+$all_dist_regions = [];
+while($r = $regions_res->fetch_assoc()) $all_dist_regions[] = $r['region'];
 ?>
 
 <!DOCTYPE html>
@@ -105,6 +110,21 @@ places to visit in Kashmir
 ">
 
 
+    <!--=============== TAILWIND CSS ===============-->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#e8862a',
+                        'slate-dark': '#0f172a',
+                    }
+                }
+            }
+        }
+    </script>
+
     <!--=============== REMIXICONS ===============-->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/3.5.0/remixicon.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
@@ -114,89 +134,125 @@ places to visit in Kashmir
 
    
     
-   <style>
-    /* Modern Hero Section */
-    .modern-hero {
-        position: relative;
-        height: 30vh;
-        min-height: 500px;
-        background: linear-gradient(135deg, 
-                    rgba(50, 50, 51, 0.95) 0%, 
-                    rgba(15, 23, 42, 0.9) 100%),
-                    url('../assets/img/bg1.jpg');
-        background-size: cover;
-        background-position: center;
-        background-attachment: fixed;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        text-align: center;
-        color: white;
-        overflow: hidden;
-        margin-top: 80px;
-    }
+    <style>
+        .hero-bg-overlay { background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(15, 23, 42, 0.7) 100%); }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans">
+    <!--==================== HEADER ====================-->
+    <?php include '../admin/includes/navbar.php'; ?>
 
-    .modern-hero::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: radial-gradient(circle at 30% 20%, 
-                    rgba(37, 99, 235, 0.2) 0%, 
-                    transparent 50%),
-                    radial-gradient(circle at 70% 80%, 
-                    rgba(16, 185, 129, 0.2) 0%, 
-                    transparent 50%);
-        animation: gradientShift 15s ease infinite;
-    }
+    <main class="pt-20">
+        <!-- Modern Hero -->
+        <section class="relative h-[40vh] min-h-[400px] flex items-center justify-center text-white overflow-hidden">
+            <div class="absolute inset-0 z-0">
+                <img src="../assets/img/bg1.jpg" class="w-full h-full object-cover">
+                <div class="hero-bg-overlay absolute inset-0"></div>
+            </div>
+            <div class="relative z-10 text-center px-6">
+                <h1 class="text-4xl md:text-6xl font-black mb-4">Explore Kashmir</h1>
+                <p class="text-lg md:text-xl text-gray-300 max-w-2xl mx-auto">Discover the timeless beauty of paradise, from serene lakes to majestic peaks.</p>
+            </div>
+        </section>
 
-    @keyframes gradientShift {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.05); }
-    }
+        <div class="max-w-7xl mx-auto px-6 py-12">
+            <!-- Search & Filters -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm mb-12 flex flex-col md:flex-row gap-4 items-center justify-between border border-gray-100">
+                <div class="relative w-full md:w-1/2">
+                    <i class="ri-search-line absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                    <input type="text" id="dest-search" placeholder="Search destinations..." class="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition">
+                </div>
+                <div class="flex gap-3 overflow-x-auto pb-2 md:pb-0 w-full md:w-auto">
+                    <button onclick="filterDest('all')" class="filter-chip active flex-shrink-0 px-6 py-2 rounded-full border border-gray-200 hover:border-primary transition font-bold text-sm bg-white" data-filter="all">All</button>
+                    <?php foreach($all_dist_regions as $reg): ?>
+                        <button onclick="filterDest('<?php echo strtolower($reg); ?>')" class="filter-chip flex-shrink-0 px-6 py-2 rounded-full border border-gray-200 hover:border-primary transition font-bold text-sm bg-white" data-filter="<?php echo strtolower($reg); ?>"><?php echo ucfirst($reg); ?></button>
+                    <?php endforeach; ?>
+                </div>
+            </div>
 
-    .hero-content {
-        position: relative;
-        z-index: 2;
-        max-width: 800px;
-        padding: 0 20px;
-        animation: fadeInUp 1s cubic-bezier(0.4, 0, 0.2, 1);
-    }
+            <!-- Destinations Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" id="dest-grid">
+                <?php if ($result && $result->num_rows > 0): ?>
+                    <?php while($row = $result->fetch_assoc()): ?>
+                        <div class="dest-card group bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-xl transition-all duration-300" 
+                             data-region="<?php echo $row['region']; ?>">
+                            <div class="relative h-64 overflow-hidden">
+                                <?php 
+                                $imgPath = !empty($row['image_path']) ? '../admin/upload/'.$row['image_path'] : '../assets/img/bg1.jpg';
+                                ?>
+                                <img src="<?php echo $imgPath; ?>" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
+                                <div class="absolute top-4 right-4 bg-white/90 backdrop-blur px-4 py-1.5 rounded-full text-xs font-black text-primary shadow-sm">
+                                    <?php echo ucfirst($row['destination_type']); ?>
+                                </div>
+                            </div>
+                            <div class="p-8">
+                                <div class="flex justify-between items-start mb-4">
+                                    <h3 class="text-2xl font-black text-slate-900 leading-tight"><?php echo htmlspecialchars($row['destination_name']); ?></h3>
+                                    <div class="flex items-center gap-1 text-primary">
+                                        <i class="ri-star-fill text-yellow-400"></i>
+                                        <span class="font-bold text-sm"><?php echo $row['rating'] ?: '4.8'; ?></span>
+                                    </div>
+                                </div>
+                                <p class="text-gray-500 text-sm mb-6 line-clamp-3 leading-relaxed">
+                                    <?php echo htmlspecialchars($row['short_description']); ?>
+                                </p>
+                                <div class="flex items-center justify-between pt-6 border-t border-gray-50">
+                                    <div class="flex items-center gap-2 text-gray-400 text-xs font-bold uppercase tracking-wider">
+                                        <i class="ri-map-pin-line text-primary"></i>
+                                        <?php echo htmlspecialchars($row['location']); ?>
+                                    </div>
+                                    <a href="destination-details.php?id=<?php echo $row['id']; ?>" class="bg-slate-900 text-white px-6 py-2.5 rounded-xl text-xs font-black uppercase hover:bg-primary transition-all">Explore</a>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endwhile; ?>
+                <?php endif; ?>
+            </div>
+        </div>
+    </main>
 
-    .hero-content h1 {
-        font-size: 4.5rem;
-        font-weight: 800;
-        margin-bottom: 20px;
-        background: linear-gradient(135deg, 
-                    #fff 0%, 
-                    #93c5fd 50%, 
-                    #60a5fa 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        background-size: 200% auto;
-        animation: gradientText 3s ease infinite;
-        text-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-    }
+    <style>
+        .filter-chip.active { background: #0f172a !important; color: white !important; border-color: #0f172a !important; }
+    </style>
 
-    @keyframes gradientText {
-        0%, 100% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-    }
+    <script>
+        function filterDest(region) {
+            const cards = document.querySelectorAll('.dest-card');
+            const chips = document.querySelectorAll('.filter-chip');
+            
+            chips.forEach(c => c.classList.remove('active'));
+            document.querySelector(`[data-filter="${region}"]`).classList.add('active');
 
-    .hero-content p {
-        font-size: 1.3rem;
-        margin-bottom: 40px;
-        opacity: 0.9;
-        line-height: 1.6;
-        max-width: 600px;
-        margin-left: auto;
-        margin-right: auto;
-        animation: fadeInUp 1s ease 0.3s forwards;
-        opacity: 0;
-    }
+            cards.forEach(card => {
+                if (region === 'all' || card.getAttribute('data-region').toLowerCase() === region.toLowerCase()) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        // Search logic
+        document.getElementById('dest-search').addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            const cards = document.querySelectorAll('.dest-card');
+            
+            cards.forEach(card => {
+                const name = card.querySelector('h3').textContent.toLowerCase();
+                const loc = card.querySelector('.tracking-wider').textContent.toLowerCase();
+                if (name.includes(term) || loc.includes(term)) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
+    </script>
+
+    <?php include '../admin/includes/footer.php'; ?>
+</body>
+</html>
+<?php exit(); ?>
 
     .hero-stats {
         display: flex;
@@ -1364,7 +1420,11 @@ places to visit in Kashmir
                         </div>
                     </div>
                     
-                 
+                    <div class="card-actions">
+                        <a href="destination-details.php?id=<?php echo $destination['id']; ?>" class="card-btn primary">
+                            Explore <i class="ri-arrow-right-line"></i>
+                        </a>
+                    </div>
                 </div>
             </div>
             <?php

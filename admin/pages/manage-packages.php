@@ -14,6 +14,13 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
 $message = '';
 $message_type = '';
 
+// Session messages
+if (isset($_SESSION['message'])) {
+    $message = $_SESSION['message'];
+    $message_type = $_SESSION['message_type'];
+    unset($_SESSION['message'], $_SESSION['message_type']);
+}
+
 // Add new package
 if (isset($_POST['add_package'])) {
     $package_name = $_POST['package_name'];
@@ -94,23 +101,29 @@ if (isset($_POST['add_package'])) {
         $day_titles = $_POST['day_titles'];
         $day_descriptions = $_POST['day_descriptions'];
         $day_activities = $_POST['day_activities'] ?? [];
+        $day_activities_desc = $_POST['day_activities_desc'] ?? [];
         
         for ($i = 0; $i < count($day_numbers); $i++) {
+            $current_day = $day_numbers[$i];
             if (!empty(trim($day_titles[$i]))) {
                 $day_activities_list = [];
-                if (isset($day_activities[$i])) {
-                    foreach ($day_activities[$i] as $activity_time => $activity_desc) {
-                        if (!empty(trim($activity_time)) && !empty(trim($activity_desc))) {
+                if (isset($day_activities[$current_day])) {
+                    $times = $day_activities[$current_day];
+                    $descs = $day_activities_desc[$current_day] ?? [];
+                    for ($k = 0; $k < count($times); $k++) {
+                        $time = $times[$k];
+                        $desc = $descs[$k] ?? '';
+                        if (!empty(trim($time)) || !empty(trim($desc))) {
                             $day_activities_list[] = [
-                                'time' => $activity_time,
-                                'description' => $activity_desc
+                                'time' => $time,
+                                'description' => $desc
                             ];
                         }
                     }
                 }
                 
                 $itinerary[] = [
-                    'day' => $day_numbers[$i],
+                    'day' => $current_day,
                     'title' => $day_titles[$i],
                     'description' => $day_descriptions[$i] ?? '',
                     'activities' => $day_activities_list
@@ -147,11 +160,15 @@ if (isset($_POST['add_package'])) {
             }
         }
         
-        $message = "Package added successfully!";
-        $message_type = "success";
+        $_SESSION['message'] = "Package added successfully!";
+        $_SESSION['message_type'] = "success";
+        header("Location: manage-packages.php");
+        exit();
     } else {
-        $message = "Error adding package: " . $conn->error;
-        $message_type = "error";
+        $_SESSION['message'] = "Error adding package: " . $conn->error;
+        $_SESSION['message_type'] = "error";
+        header("Location: manage-packages.php");
+        exit();
     }
 }
 
@@ -226,23 +243,29 @@ if (isset($_POST['update_package'])) {
         $day_titles = $_POST['day_titles'];
         $day_descriptions = $_POST['day_descriptions'];
         $day_activities = $_POST['day_activities'] ?? [];
+        $day_activities_desc = $_POST['day_activities_desc'] ?? [];
         
         for ($i = 0; $i < count($day_numbers); $i++) {
+            $current_day = $day_numbers[$i];
             if (!empty(trim($day_titles[$i]))) {
                 $day_activities_list = [];
-                if (isset($day_activities[$i])) {
-                    foreach ($day_activities[$i] as $activity_time => $activity_desc) {
-                        if (!empty(trim($activity_time)) && !empty(trim($activity_desc))) {
+                if (isset($day_activities[$current_day])) {
+                    $times = $day_activities[$current_day];
+                    $descs = $day_activities_desc[$current_day] ?? [];
+                    for ($k = 0; $k < count($times); $k++) {
+                        $time = $times[$k];
+                        $desc = $descs[$k] ?? '';
+                        if (!empty(trim($time)) || !empty(trim($desc))) {
                             $day_activities_list[] = [
-                                'time' => $activity_time,
-                                'description' => $activity_desc
+                                'time' => $time,
+                                'description' => $desc
                             ];
                         }
                     }
                 }
                 
                 $itinerary[] = [
-                    'day' => $day_numbers[$i],
+                    'day' => $current_day,
                     'title' => $day_titles[$i],
                     'description' => $day_descriptions[$i] ?? '',
                     'activities' => $day_activities_list
@@ -280,11 +303,15 @@ if (isset($_POST['update_package'])) {
             }
         }
 
-        $message = "Package updated successfully!";
-        $message_type = "success";
+        $_SESSION['message'] = "Package updated successfully!";
+        $_SESSION['message_type'] = "success";
+        header("Location: manage-packages.php");
+        exit();
     } else {
-        $message = "Error updating package: " . $conn->error;
-        $message_type = "error";
+        $_SESSION['message'] = "Error updating package: " . $conn->error;
+        $_SESSION['message_type'] = "error";
+        header("Location: manage-packages.php");
+        exit();
     }
 }
 
@@ -355,45 +382,75 @@ if (isset($_GET['delete'])) {
     exit();
 }
 
+// Handle manual image upload for existing package
+if (isset($_POST['upload_more_images'])) {
+    $package_id = $_POST['package_id'];
+    if (isset($_FILES['package_images']) && !empty($_FILES['package_images']['name'][0])) {
+        $upload_dir = '../upload/packages/';
+        $success_count = 0;
+        foreach ($_FILES['package_images']['tmp_name'] as $key => $tmp_name) {
+            if ($_FILES['package_images']['error'][$key] === UPLOAD_ERR_OK) {
+                $file_name = uniqid() . '_' . basename($_FILES['package_images']['name'][$key]);
+                $target_file = $upload_dir . $file_name;
+                if (move_uploaded_file($tmp_name, $target_file)) {
+                    $image_path = 'packages/' . $file_name;
+                    $img_stmt = $conn->prepare("INSERT INTO package_images (package_id, image_path, is_primary) VALUES (?, ?, 0)");
+                    $img_stmt->bind_param("is", $package_id, $image_path);
+                    $img_stmt->execute();
+                    $success_count++;
+                }
+            }
+        }
+        $_SESSION['message'] = "$success_count image(s) uploaded successfully!";
+        $_SESSION['message_type'] = "success";
+    }
+    header("Location: manage-packages.php");
+    exit();
+}
+
 // Delete image
 if (isset($_GET['delete_image'])) {
-    $image_id = $_GET['delete_image'];
+    $image_id = intval($_GET['delete_image']);
     
     // Get image path to delete file
     $image_result = $conn->query("SELECT image_path FROM package_images WHERE id = $image_id");
-    if ($image_result->num_rows > 0) {
+    if ($image_result && $image_result->num_rows > 0) {
         $image = $image_result->fetch_assoc();
-        $file_path = '../upload/packages/' . $image['image_path'];
+        $file_path = '../upload/' . $image['image_path'];
         if (file_exists($file_path)) {
             unlink($file_path);
         }
+        
+        if ($conn->query("DELETE FROM package_images WHERE id = $image_id")) {
+            $_SESSION['message'] = "Image deleted successfully!";
+            $_SESSION['message_type'] = "success";
+        } else {
+            $_SESSION['message'] = "Error deleting image database record.";
+            $_SESSION['message_type'] = "error";
+        }
     }
-    
-    if ($conn->query("DELETE FROM package_images WHERE id = $image_id")) {
-        $message = "Image deleted successfully!";
-        $message_type = "success";
-    } else {
-        $message = "Error deleting image: " . $conn->error;
-        $message_type = "error";
-    }
+    header("Location: manage-packages.php");
+    exit();
 }
 
 // Set primary image
 if (isset($_GET['set_primary'])) {
-    $image_id = $_GET['set_primary'];
+    $image_id = intval($_GET['set_primary']);
     
     $img_result = $conn->query("SELECT package_id FROM package_images WHERE id = $image_id");
-    if ($img_result->num_rows > 0) {
+    if ($img_result && $img_result->num_rows > 0) {
         $img = $img_result->fetch_assoc();
         $package_id = $img['package_id'];
         
         $conn->query("UPDATE package_images SET is_primary = 0 WHERE package_id = $package_id");
         
         if ($conn->query("UPDATE package_images SET is_primary = 1 WHERE id = $image_id")) {
-            $message = "Primary image updated successfully!";
-            $message_type = "success";
+            $_SESSION['message'] = "Primary image updated successfully!";
+            $_SESSION['message_type'] = "success";
         }
     }
+    header("Location: manage-packages.php");
+    exit();
 }
 
 // Update booking status
@@ -407,12 +464,14 @@ if (isset($_POST['update_booking_status'])) {
     $stmt->bind_param("sssi", $booking_status, $payment_status, $notes, $booking_id);
     
     if ($stmt->execute()) {
-        $message = "Booking status updated successfully!";
-        $message_type = "success";
+        $_SESSION['message'] = "Booking status updated successfully!";
+        $_SESSION['message_type'] = "success";
     } else {
-        $message = "Error updating booking: " . $conn->error;
-        $message_type = "error";
+        $_SESSION['message'] = "Error updating booking: " . $conn->error;
+        $_SESSION['message_type'] = "error";
     }
+    header("Location: manage-packages.php");
+    exit();
 }
 
 // Bulk actions
@@ -426,36 +485,38 @@ if (isset($_POST['bulk_action'])) {
         switch ($action) {
             case 'activate':
                 $conn->query("UPDATE packages SET is_active = 1 WHERE id IN ($ids)");
-                $message = "Selected packages activated!";
+                $_SESSION['message'] = "Selected packages activated!";
                 break;
             case 'deactivate':
                 $conn->query("UPDATE packages SET is_active = 0 WHERE id IN ($ids)");
-                $message = "Selected packages deactivated!";
+                $_SESSION['message'] = "Selected packages deactivated!";
                 break;
             case 'feature':
                 $conn->query("UPDATE packages SET is_featured = 1 WHERE id IN ($ids)");
-                $message = "Selected packages marked as featured!";
+                $_SESSION['message'] = "Selected packages marked as featured!";
                 break;
             case 'unfeature':
                 $conn->query("UPDATE packages SET is_featured = 0 WHERE id IN ($ids)");
-                $message = "Selected packages unfeatured!";
+                $_SESSION['message'] = "Selected packages unfeatured!";
                 break;
             case 'delete':
                 // Delete images first
                 $images = $conn->query("SELECT image_path FROM package_images WHERE package_id IN ($ids)");
                 while ($image = $images->fetch_assoc()) {
-                    $file_path = '../../assets/img/' . $image['image_path'];
+                    $file_path = '../upload/' . $image['image_path'];
                     if (file_exists($file_path)) {
                         unlink($file_path);
                     }
                 }
                 $conn->query("DELETE FROM package_images WHERE package_id IN ($ids)");
                 $conn->query("DELETE FROM packages WHERE id IN ($ids)");
-                $message = "Selected packages deleted!";
+                $_SESSION['message'] = "Selected packages deleted!";
                 break;
         }
-        $message_type = "success";
+        $_SESSION['message_type'] = "success";
     }
+    header("Location: manage-packages.php");
+    exit();
 }
 
 // Fetch all packages with their primary images and stats
@@ -1092,9 +1153,10 @@ $revenue = $conn->query("SELECT SUM(total_amount) as total FROM package_bookings
             <div id="images-list" style="margin: 20px 0;"></div>
             <form id="upload-images-form" method="POST" enctype="multipart/form-data" style="margin-top: 20px;">
                 <input type="hidden" id="images_package_id" name="package_id">
+                <input type="hidden" name="upload_more_images" value="1">
                 <div class="form-group">
                     <label>Add More Images</label>
-                    <input type="file" name="package_images[]" accept="image/*" multiple>
+                    <input type="file" name="package_images[]" accept="image/*" multiple required>
                 </div>
                 <button type="submit" class="btn btn-primary">
                     <i class="ri-upload-line"></i> Upload Images

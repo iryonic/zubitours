@@ -798,6 +798,14 @@ $first_letter = strtoupper(substr($admin_name, 0, 1));
                 <a href="../admin/pages/manage-callbacks.php" class="menu-item <?php echo basename($_SERVER['PHP_SELF']) == 'manage-callbacks.php' ? 'active' : ''; ?>">
                     <i class="ri-phone-line"></i> <span>Callback Requests</span>
                 </a>
+                <a href="../admin/pages/manage-about.php" class="menu-item <?php echo basename($_SERVER['PHP_SELF']) == 'manage-about.php' ? 'active' : ''; ?>">
+                    <i class="ri-information-line"></i>
+                    <span>About Page</span>
+                </a>   
+                 <a href="../admin/pages/manage-testimonials.php" class="menu-item <?php echo basename($_SERVER['PHP_SELF']) == 'manage-testimonials.php' ? 'active' : ''; ?>">
+                <i class="ri-chat-quote-line"></i>
+                <span>Testimonials</span>
+            </a> 
 
                 <a href="../admin/pages/manage-destinations.php" class="menu-item">
                     <i class="ri-map-2-line"></i>

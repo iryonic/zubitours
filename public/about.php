@@ -1,3 +1,22 @@
+<?php
+require_once '../admin/includes/connection.php';
+
+// Fetch General Sections
+$about_res = $conn->query("SELECT * FROM about_page");
+$about_sections = [];
+while($row = $about_res->fetch_assoc()) {
+    $about_sections[$row['section_key']] = $row;
+}
+
+// Fetch Values
+$values_res = $conn->query("SELECT * FROM about_values WHERE is_active = 1 ORDER BY display_order");
+
+// Fetch Team
+$team_res = $conn->query("SELECT * FROM about_team WHERE is_active = 1 ORDER BY display_order");
+
+// Fetch Stats
+$stats_res = $conn->query("SELECT * FROM about_stats ORDER BY display_order");
+?>
 <!DOCTYPE html>
 <html lang="en">
 
@@ -63,8 +82,8 @@ best tour planner Kashmir
   <!-- Hero Section -->
   <section class="hero">
     <div class="section-header">
-      <h2>About Us</h2>
-      <p>Your trusted partner for unforgettable experiences in Kashmir and Ladakh</p>
+      <h2><?php echo htmlspecialchars($about_sections['hero']['title'] ?? 'About Us'); ?></h2>
+      <p><?php echo htmlspecialchars($about_sections['hero']['subtitle'] ?? 'Your trusted partner for tours in Kashmir'); ?></p>
     </div>
   </section>
 
@@ -72,33 +91,29 @@ best tour planner Kashmir
   <section class="about-content">
     <div class="about-container">
       <div class="about-text">
-        <h2>Our Story</h2>
-        <p>Founded in 2010, Zubi Tours & Holidays began with a simple mission: to share the breathtaking beauty of Kashmir and Ladakh with travelers from around the world. What started as a small family operation has grown into one of the region's most trusted tour operators.</p>
-
-        <p>Our name "Zubi" means "beautiful" in the local Kashmiri language, reflecting our commitment to showcasing the unparalleled beauty of this region while preserving its cultural heritage and natural environment.</p>
+        <h2><?php echo htmlspecialchars($about_sections['story']['title'] ?? 'Our Story'); ?></h2>
+        <div class="story-content">
+            <?php echo nl2br(htmlspecialchars($about_sections['story']['content'] ?? 'Founded in 2010...')); ?>
+        </div>
 
         <div class="stats-container">
+          <?php while($stat = $stats_res->fetch_assoc()): ?>
           <div class="stat">
-            <h3><span class="count" data-target="5000">0</span>+</h3>
-            <p>Happy Travelers</p>
+            <h3><span class="count" data-target="<?php echo $stat['value']; ?>">0</span>+</h3>
+            <p><?php echo htmlspecialchars($stat['label']); ?></p>
           </div>
-          <div class="stat">
-            <h3><span class="count" data-target="13">0</span>+</h3>
-            <p>Years Experience</p>
-          </div>
-          <div class="stat">
-            <h3><span class="count" data-target="50">0</span>+</h3>
-            <p>Tour Packages</p>
-          </div>
-          <div class="stat">
-            <h3><span class="count" data-target="98">0</span>%</h3>
-            <p>Customer Satisfaction</p>
-          </div>
+          <?php endwhile; ?>
         </div>
       </div>
 
       <div class="about-image">
-        <img loading="lazy" src="../assets/img/bg1.jpg" alt="Our Team">
+        <?php 
+          $story_img = $about_sections['story']['image_path'] ?? '';
+          $story_src = (!empty($story_img) && file_exists('../admin/upload/' . $story_img)) 
+                       ? '../admin/upload/' . $story_img 
+                       : '../assets/img/bg1.jpg';
+        ?>
+        <img loading="lazy" src="<?php echo $story_src; ?>" alt="Our Story" onerror="this.src='../assets/img/bg1.jpg'">
       </div>
     </div>
   </section>
@@ -111,37 +126,15 @@ best tour planner Kashmir
     </div>
 
     <div class="values-container">
+      <?php while($value = $values_res->fetch_assoc()): ?>
       <div class="value-card">
         <div class="value-icon">
-          <i class="ri-user-heart-line"></i>
+          <i class="<?php echo htmlspecialchars($value['icon']); ?>"></i>
         </div>
-        <h3>Customer First</h3>
-        <p>Your satisfaction is our top priority. We tailor experiences to match your preferences and ensure every detail is perfect.</p>
+        <h3><?php echo htmlspecialchars($value['title']); ?></h3>
+        <p><?php echo htmlspecialchars($value['description']); ?></p>
       </div>
-
-      <div class="value-card">
-        <div class="value-icon">
-          <i class="ri-shield-check-line"></i>
-        </div>
-        <h3>Safety & Security</h3>
-        <p>We maintain the highest safety standards with experienced guides and well-maintained vehicles for your peace of mind.</p>
-      </div>
-
-      <div class="value-card">
-        <div class="value-icon">
-          <i class="ri-leaf-line"></i>
-        </div>
-        <h3>Sustainable Tourism</h3>
-        <p>We're committed to eco-friendly practices that preserve the natural beauty of Kashmir and Ladakh for future generations.</p>
-      </div>
-
-      <div class="value-card">
-        <div class="value-icon">
-          <i class="ri-community-line"></i>
-        </div>
-        <h3>Local Community</h3>
-        <p>We support local communities by employing local guides and promoting authentic cultural experiences.</p>
-      </div>
+      <?php endwhile; ?>
     </div>
   </section>
 
@@ -153,80 +146,67 @@ best tour planner Kashmir
     </div>
 
     <div class="team-container">
+      <?php while($member = $team_res->fetch_assoc()): ?>
       <div class="team-member">
         <div class="member-image">
-          <img loading="lazy" src="../assets/img/bg1.jpg" alt="Team Member">
+          <?php 
+            $member_img = $member['image_path'] ?? '';
+            $member_src = (!empty($member_img) && file_exists('../admin/upload/' . $member_img)) 
+                         ? '../admin/upload/' . $member_img 
+                         : '../assets/img/bg1.jpg';
+          ?>
+          <img loading="lazy" src="<?php echo $member_src; ?>" alt="<?php echo htmlspecialchars($member['name']); ?>" onerror="this.src='../assets/img/bg1.jpg'">
         </div>
-        <h3>Zubair Ahmad</h3>
-        <p class="role">Founder & CEO</p>
-        <p>With over 15 years in the tourism industry, Zubair's vision drives our company's success.</p>
+        <h3><?php echo htmlspecialchars($member['name']); ?></h3>
+        <p class="role"><?php echo htmlspecialchars($member['role']); ?></p>
+        <p><?php echo htmlspecialchars($member['description']); ?></p>
       </div>
-
-      <div class="team-member">
-        <div class="member-image">
-          <img loading="lazy" src="../assets/img/bg1.jpg" alt="Team Member">
-        </div>
-        <h3>Ayesha Andrabi</h3>
-        <p class="role">Operations Manager</p>
-        <p>Ayesha ensures every tour runs smoothly and exceeds our guests' expectations.</p>
-      </div>
-
-      <div class="team-member">
-        <div class="member-image">
-          <img loading="lazy" src="../assets/img/iry.png" alt="Team Member">
-        </div>
-        <h3>Irfan Manzoor</h3>
-        <p class="role">Developer</p>
-        <p>Irfan handles all our tech needs, from website development to online bookings.</p>
-      </div>
+      <?php endwhile; ?>
     </div>
   </section>
 
   <!-- Testimonials -->
+  <?php
+  $testimonials_res = $conn->query("SELECT * FROM testimonials WHERE is_active = 1 ORDER BY display_order ASC, created_at DESC LIMIT 10");
+  if ($testimonials_res->num_rows > 0):
+  ?>
   <section class="testimonials-section">
     <div class="section-heading">
       <h2>What Our Travelers Say</h2>
       <p>Authentic experiences from real customers</p>
     </div>
 
-    <div class="testimonials-container">
-      <div class="testimonial">
-        <div class="testimonial-content">
-          <p>"Zubi Tours made our Kashmir trip absolutely magical. Their attention to detail and knowledgeable guides made all the difference. We'll definitely be back for the Ladakh tour!"</p>
+    <div class="testimonials-swiper swiper" style="padding: 20px 0 50px;">
+      <div class="swiper-wrapper">
+        <?php while($testi = $testimonials_res->fetch_assoc()): ?>
+        <div class="swiper-slide">
+          <div class="testimonial">
+            <div class="testimonial-content">
+              <p>"<?php echo htmlspecialchars($testi['testimonial_text']); ?>"</p>
+            </div>
+            <div class="testimonial-author" style="display: flex; align-items: center; gap: 15px; margin-top: 20px;">
+              <img src="../admin/upload/<?php echo $testi['avatar_path'] ?: 'bg1.jpg'; ?>" 
+                   style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover;" 
+                   onerror="this.src='../assets/img/iry.png'">
+              <div>
+                <h4 style="margin: 0;"><?php echo htmlspecialchars($testi['author_name']); ?></h4>
+                <p style="margin: 0; font-size: 0.85rem; color: var(--primary-color);"><?php echo htmlspecialchars($testi['package_name'] ?? 'Verified Customer'); ?></p>
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="testimonial-author">
-          <h4>Priya Sharma</h4>
-          <p>New Delhi, India</p>
-        </div>
+        <?php endwhile; ?>
       </div>
-
-      <div class="testimonial">
-        <div class="testimonial-content">
-          <p>"As a solo female traveler, I felt completely safe and well taken care of throughout my journey. The team at Zubi Tours became like family to me."</p>
-        </div>
-        <div class="testimonial-author">
-          <h4>Sarah Johnson</h4>
-          <p>London, UK</p>
-        </div>
-      </div>
-
-      <div class="testimonial">
-        <div class="testimonial-content">
-          <p>"The customized package they created for our anniversary trip was perfect. Every accommodation, meal, and activity exceeded our expectations."</p>
-        </div>
-        <div class="testimonial-author">
-          <h4>Raj & Meera Patel</h4>
-          <p>Mumbai, India</p>
-        </div>
-      </div>
+      <div class="swiper-pagination"></div>
     </div>
   </section>
+  <?php endif; ?>
 
   <!-- CTA Section -->
   <section class="about-cta">
     <div class="cta-content">
-      <h2>Ready to Explore with Us?</h2>
-      <p>Join thousands of satisfied travelers who have experienced the magic of Kashmir and Ladakh with Zubi Tours</p>
+      <h2><?php echo htmlspecialchars($about_sections['cta']['title'] ?? 'Ready to Explore with Us?'); ?></h2>
+      <p><?php echo htmlspecialchars($about_sections['cta']['subtitle'] ?? 'Join thousands of satisfied travelers...'); ?></p>
       <div class="cta-buttons">
         <a href="./packages.php" class="cta-btn primary">View Packages</a>
         <a href="./contact.php" class="cta-btn secondary">Contact Us</a>
@@ -284,6 +264,25 @@ best tour planner Kashmir
       // Fallback: animate immediately
       counters.forEach(animateCount);
     }
+
+    // Initialize Testimonials Swiper
+    new Swiper(".testimonials-swiper", {
+      slidesPerView: 1,
+      spaceBetween: 30,
+      loop: true,
+      autoplay: {
+        delay: 5000,
+        disableOnInteraction: false,
+      },
+      pagination: {
+        el: ".swiper-pagination",
+        clickable: true,
+      },
+      breakpoints: {
+        768: { slidesPerView: 2 },
+        1024: { slidesPerView: 3 },
+      },
+    });
   </script>
 </body>
 

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+  <!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -75,6 +75,7 @@ Kashmir tour company
       text-align: center;
       color: white;
       overflow: hidden;
+      transform: translateZ(0); /* Hardware acceleration */
     }
 
     .hero-img-background {
@@ -143,14 +144,16 @@ Kashmir tour company
 
     /* Enhanced Search Box */
     .search-box-container {
-      background: rgba(255, 255, 255, 0.15);
-      backdrop-filter: blur(10px);
+      background: rgba(255, 255, 255, 0.12); /* Slightly darker for contrast */
+      backdrop-filter: blur(8px); /* Reduced from 10px */
+      -webkit-backdrop-filter: blur(8px);
       border-radius: 20px;
       padding: 30px;
       max-width: 1000px;
       margin: 0 auto;
       border: 1px solid rgba(255, 255, 255, 0.2);
       animation: fadeIn 1.5s ease-out;
+      will-change: transform, opacity;
     }
 
     .search-box {
@@ -219,6 +222,86 @@ Kashmir tour company
       box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
     }
 
+    /* AJAX Search Results tray */
+    .search-results-tray {
+      margin-top: 30px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.5s ease;
+      visibility: hidden;
+      max-height: 0;
+      overflow: hidden;
+    }
+
+    .search-results-tray.active {
+      opacity: 1;
+      transform: translateY(0);
+      visibility: visible;
+      max-height: 1000px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .live-result-card {
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(5px); /* Significant reduction for performance */
+      -webkit-backdrop-filter: blur(5px);
+      border-radius: 15px;
+      overflow: hidden;
+      display: flex;
+      gap: 15px;
+      padding: 12px;
+      color: white;
+      text-decoration: none;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      transition: transform 0.3s ease, background 0.3s ease;
+      animation: fadeInUp 0.5s ease;
+    }
+
+    .live-result-card:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: translateX(5px);
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    .live-result-img {
+      width: 100px;
+      height: 100px;
+      border-radius: 10px;
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+
+    .live-result-info {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      text-align: left;
+    }
+
+    .live-result-info h4 {
+      margin: 0;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: white;
+    }
+
+    .live-result-info .price {
+      font-size: 0.9rem;
+      color: var(--first-color);
+      font-weight: 600;
+      margin-top: 4px;
+    }
+
+    .live-result-info .meta {
+      font-size: 0.8rem;
+      color: rgba(255, 255, 255, 0.7);
+      margin-top: 8px;
+    }
+
     .scroll-indicator {
       position: absolute;
       bottom: 30px;
@@ -285,21 +368,49 @@ Kashmir tour company
       line-height: 1.6;
     }
 
-    .destinations-container {
+    .destinations-swiper {
       max-width: 1400px;
       margin: 0 auto;
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-      gap: 30px;
+      padding: 20px 50px 50px;
+      position: relative;
+    }
+
+    .destinations-swiper .swiper-slide {
+      height: auto;
+      padding-bottom: 20px;
+    }
+
+    .swiper-button-next,
+    .swiper-button-prev {
+      background: white;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+      color: var(--first-color) !important;
+      transition: all 0.3s ease;
+    }
+
+    .swiper-button-next:after,
+    .swiper-button-prev:after {
+      font-size: 1.2rem !important;
+      font-weight: 900;
+    }
+
+    .swiper-button-next:hover,
+    .swiper-button-prev:hover {
+      background: var(--first-color);
+      color: white !important;
     }
 
     .destination-card {
       background: white;
       border-radius: 20px;
       overflow: hidden;
-      box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
-      transition: all 0.4s ease;
+      box-shadow: 0 15px 30px rgba(0, 0, 0, 0.08); /* Lighter shadow */
+      transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1), box-shadow 0.4s ease;
       position: relative;
+      will-change: transform;
     }
 
     .destination-card:hover {
@@ -1162,6 +1273,14 @@ Kashmir tour company
 
 <body>
  
+  <!-- Loader -->
+    <div id="loader">
+      <div class="travel-loader">
+        <span class="path"></span>
+        <i class="ri-flight-takeoff-line plane"></i>
+      </div>
+      <h2 class="brand-name">Zubi Tours & Holiday</h2>
+    </div>
 
   <!--==================== HEADER ====================-->
   <header class="header" id="header">
@@ -1234,7 +1353,7 @@ Kashmir tour company
     <!-- Improved Hero Section -->
     <section class="modern-hero">
       <div class="hero-img-background">
-        <img src="<?php echo $hero_background; ?>" alt="Hero Background" id="banner"/>
+        <img src="<?php echo $hero_background; ?>" alt="Hero Background" id="banner" fetchpriority="high" />
       </div>
       <div class="hero-overlay"></div>
 
@@ -1278,8 +1397,10 @@ Kashmir tour company
               </select>
             </div>
 
-            <button type="submit" class="srch-btn">Search Tours</button>
+            <button type="submit" class="srch-btn" id="searchSubmit">Search Tours</button>
           </form>
+          <!-- AJAX Results Container -->
+          <div id="searchResults" class="search-results-tray"></div>
         </div>
       </div>
 
@@ -1334,6 +1455,56 @@ Kashmir tour company
             } catch(e){ console.error(e); }
         }
         if (destInput) destInput.addEventListener('input', debounce(e => fetchSuggestions(e.target.value), 200));
+
+        // Dynamic Global Search Logic
+        const searchResults = document.getElementById('searchResults');
+        const searchBtn = document.getElementById('searchSubmit');
+
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            searchBtn.innerHTML = '<i class="ri-loader-4-line ri-spin"></i> Searching...';
+            
+            const formData = new FormData(form);
+            const queryParams = new URLSearchParams(formData).toString();
+            
+            try {
+                const response = await fetch(`./admin/logic/search_packages.php?${queryParams}`);
+                const data = await response.json();
+                
+                renderSearchResults(data);
+            } catch (err) {
+                console.error("Search error:", err);
+                searchBtn.innerHTML = 'Search Tours';
+            }
+        });
+
+        function renderSearchResults(packages) {
+            searchBtn.innerHTML = 'Search Tours';
+            searchResults.innerHTML = '';
+            
+            if (packages.length === 0) {
+                searchResults.innerHTML = '<div style="color: white; grid-column: 1/-1; padding: 20px;">No matching tours found. Try different filters.</div>';
+            } else {
+                packages.forEach(pkg => {
+                    const img = pkg.image_path ? `./admin/upload/${pkg.image_path}` : './assets/img/bg1.jpg';
+                    const card = `
+                        <a href="public/package-details.php?id=${pkg.id}" class="live-result-card">
+                            <img src="${img}" class="live-result-img" alt="${pkg.package_name}">
+                            <div class="live-result-info">
+                                <h4>${pkg.package_name}</h4>
+                                <div class="price">₹${parseFloat(pkg.price_per_person).toLocaleString()}</div>
+                                <div class="meta">
+                                    <i class="ri-time-line"></i> ${pkg.duration_days} Days &nbsp; | &nbsp; 
+                                    <i class="ri-user-line"></i> Max ${pkg.max_people}
+                                </div>
+                            </div>
+                        </a>
+                    `;
+                    searchResults.insertAdjacentHTML('beforeend', card);
+                });
+            }
+            searchResults.classList.add('active');
+        }
     });
     </script>
     
@@ -1347,11 +1518,11 @@ Kashmir tour company
     $destinations_description = $destinations_section['description'] ?? 'Discover the most breathtaking locations in Kashmir and Ladakh that will leave you with unforgettable memories.';
     
     // Fetch destinations from database (include primary image if present)
-    $destinations_query = mysqli_query($conn, "SELECT d.*, di.image_path FROM destinations d LEFT JOIN destination_images di ON d.id = di.destination_id AND di.is_primary = 1 ORDER BY d.created_at DESC LIMIT 3");
+    $destinations_query = mysqli_query($conn, "SELECT d.*, di.image_path FROM destinations d LEFT JOIN destination_images di ON d.id = di.destination_id AND di.is_primary = 1 WHERE d.is_active = 1 AND d.is_featured = 1 ORDER BY d.created_at DESC LIMIT 6");
     ?>
     
     <!-- Improved Destinations Section -->
-    <section class="destinations-section">
+    <section class="destinations-section" style="content-visibility: auto; contain-intrinsic-size: 800px;">
       <div class="section-header">
         <span class="section-subtitle"><?php echo htmlspecialchars($destinations_subtitle); ?></span>
         <h2 class="section-title"><?php echo htmlspecialchars($destinations_title); ?></h2>
@@ -1361,43 +1532,52 @@ Kashmir tour company
       </div>
 
       <?php if (mysqli_num_rows($destinations_query) > 0): ?>
-        <div class="destinations-container">
-          <?php while ($destination = mysqli_fetch_assoc($destinations_query)): 
-              // Defensive fields and fallbacks
-              $image_path = $destination['image_path'] ?? '';
-              $image_src = $image_path ? './admin/upload/' . htmlspecialchars($image_path) : './assets/img/bg1.jpg';
-              $name = htmlspecialchars($destination['destination_name'] ?? $destination['name'] ?? 'Unknown Destination');
-              $desc = '';
-              if (!empty($destination['short_description'])) {
-                  $desc = substr(htmlspecialchars($destination['short_description']), 0, 100) . '...';
-              } elseif (!empty($destination['description'])) {
-                  $desc = substr(htmlspecialchars($destination['description']), 0, 100) . '...';
-              }
-          ?>
-            <!-- Destination Card -->
-            <div class="destination-card">
-              <div class="card-image">
-                <img src="<?php echo $image_src; ?>" alt="<?php echo $name; ?>" />
-                <?php if (!empty($destination['region'])): ?>
-                  <span class="card-badge"><?php echo htmlspecialchars($destination['region']); ?></span>
-                <?php endif; ?>
-              </div>
-              <div class="card-content">
-                <h3><?php echo $name; ?></h3>
-                <p><?php echo $desc; ?></p>
-
-                <div class="card-meta">
-                  <div class="location">
-                    <i class="ri-map-pin-line"></i> <?php echo htmlspecialchars($destination['category'] ?? 'Destination'); ?>
+        <div class="destinations-swiper swiper">
+          <div class="swiper-wrapper">
+            <?php while ($destination = mysqli_fetch_assoc($destinations_query)): 
+                // Defensive fields and fallbacks
+                $image_path = $destination['image_path'] ?? '';
+                $image_src = $image_path ? './admin/upload/' . htmlspecialchars($image_path) : './assets/img/bg1.jpg';
+                $name = htmlspecialchars($destination['destination_name'] ?? $destination['name'] ?? 'Unknown Destination');
+                $desc = '';
+                if (!empty($destination['short_description'])) {
+                    $desc = mb_strimwidth(htmlspecialchars($destination['short_description']), 0, 100, "...");
+                } elseif (!empty($destination['description'])) {
+                    $desc = mb_strimwidth(htmlspecialchars($destination['description']), 0, 100, "...");
+                }
+            ?>
+              <!-- Destination Slide -->
+              <div class="swiper-slide">
+                <div class="destination-card fade-up" style="height: 100%;">
+                  <div class="card-image">
+                    <img src="<?php echo $image_src; ?>" alt="<?php echo $name; ?>" loading="lazy" decoding="async" />
+                    <?php if (!empty($destination['region'])): ?>
+                      <span class="card-badge"><?php echo htmlspecialchars($destination['region']); ?></span>
+                    <?php endif; ?>
                   </div>
-                  <?php if (!empty($destination['rating'])): ?>
-                    <div class="rating"><i class="ri-star-fill"></i> <?php echo htmlspecialchars($destination['rating']); ?></div>
-                  <?php endif; ?>
+                  <div class="card-content">
+                    <h3><?php echo $name; ?></h3>
+                    <p><?php echo $desc; ?></p>
+    
+                    <div class="card-meta">
+                      <div class="location">
+                        <i class="ri-map-pin-line"></i> <?php echo htmlspecialchars($destination['category'] ?? 'Destination'); ?>
+                      </div>
+                      <?php if (!empty($destination['rating'])): ?>
+                        <div class="rating"><i class="ri-star-fill"></i> <?php echo htmlspecialchars($destination['rating']); ?></div>
+                      <?php endif; ?>
+                    </div>
+                    <a href="public/destination-details.php?id=<?php echo $destination['id']; ?>" class="card-button">Explore</a>
+                  </div>
                 </div>
-                <a href="/public/destinations.php?id=<?php echo $destination['id']; ?>" class="card-button">Explore</a>
               </div>
-            </div>
-          <?php endwhile; ?>
+            <?php endwhile; ?>
+          </div>
+          <!-- Swiper Navigation -->
+          <div class="swiper-button-next"></div>
+          <div class="swiper-button-prev"></div>
+          <!-- Swiper Pagination -->
+          <div class="swiper-pagination"></div>
         </div>
       <?php else: ?>
         <div style="text-align: center; padding: 50px; color: var(--text-color);">
@@ -1454,6 +1634,8 @@ Kashmir tour company
             <div class="card-image">
               <img src="./admin/upload/<?php echo htmlspecialchars($package['image_path'] ?? 'packages/default.jpg'); ?>" 
                    alt="<?php echo htmlspecialchars($package['package_name']); ?>"
+                   loading="lazy" 
+                   decoding="async"
                    onerror="this.src='./assets/img/bg1.jpg'" />
               <?php if (!empty($package['badge'])): ?>
                 <span class="card-badge"><?php echo htmlspecialchars($package['badge']); ?></span>
@@ -1490,82 +1672,14 @@ Kashmir tour company
                   </div>
                 <?php endif; ?>
               </div>
-              <a href="/public/packages.php?id=<?php echo $package['id']; ?>" class="card-button">View Details</a>
+              <a href="/public/package-details.php?id=<?php echo $package['id']; ?>" class="card-button">View Details</a>
             </div>
           </div>
         <?php endwhile; ?>
       </div>
     <?php else: ?>
-      <!-- Fallback packages if no featured packages are set -->
-      <div class="enhanced-grid">
-        <!-- Package 1 -->
-        <div class="enhanced-card fade-up">
-          <div class="card-image">
-            <img src="./assets/img/bg1.jpg" alt="Kashmir Valley Explorer" />
-            <span class="card-badge">Bestseller</span>
-          </div>
-          <div class="card-content">
-            <h3>Kashmir Valley Explorer</h3>
-            <p>Complete Kashmir experience including Dal Lake, Gulmarg, Pahalgam, and Sonamarg with cultural immersion.</p>
-            <div class="package-details">
-              <div class="detail-item"><i class="ri-calendar-event-line"></i> 7 Days</div>
-              <div class="detail-item"><i class="ri-user-line"></i> 6 People</div>
-              <div class="detail-item"><i class="ri-hotel-bed-line"></i> 4 Star</div>
-            </div>
-            <div class="package-price">₹25,999 / person</div>
-            <div class="card-meta">
-              <div class="location"><i class="ri-map-pin-line"></i> Srinagar · Gulmarg · Pahalgam</div>
-              <div class="rating"><i class="ri-star-fill"></i><span>4.9</span></div>
-            </div>
-            <a href="/public/packages.php" class="card-button">View Details</a>
-          </div>
-        </div>
-
-        <!-- Package 2 -->
-        <div class="enhanced-card fade-up">
-          <div class="card-image">
-            <img src="./assets/img/dalbg.jpg" alt="Ladakh Adventure" />
-            <span class="card-badge">Adventure</span>
-          </div>
-          <div class="card-content">
-            <h3>Ladakh Adventure</h3>
-            <p>Explore the majestic landscapes of Ladakh including Pangong Lake, Nubra Valley, and ancient monasteries.</p>
-            <div class="package-details">
-              <div class="detail-item"><i class="ri-calendar-event-line"></i> 9 Days</div>
-              <div class="detail-item"><i class="ri-user-line"></i> 8 People</div>
-              <div class="detail-item"><i class="ri-hotel-bed-line"></i> 3 Star</div>
-            </div>
-            <div class="package-price">₹32,499 / person</div>
-            <div class="card-meta">
-              <div class="location"><i class="ri-map-pin-line"></i> Leh · Nubra · Pangong</div>
-              <div class="rating"><i class="ri-star-fill"></i><span>4.8</span></div>
-            </div>
-            <a href="/public/packages.php" class="card-button">View Details</a>
-          </div>
-        </div>
-
-        <!-- Package 3 -->
-        <div class="enhanced-card fade-up">
-          <div class="card-image">
-            <img src="./assets/img/bg3.jpg" alt="Honeymoon Special" />
-            <span class="card-badge">Romantic</span>
-          </div>
-          <div class="card-content">
-            <h3>Kashmir Honeymoon Special</h3>
-            <p>Romantic getaway for couples with luxury houseboat stay, shikara ride, and private sightseeing.</p>
-            <div class="package-details">
-              <div class="detail-item"><i class="ri-calendar-event-line"></i> 6 Days</div>
-              <div class="detail-item"><i class="ri-user-line"></i> 2 People</div>
-              <div class="detail-item"><i class="ri-hotel-bed-line"></i> 5 Star</div>
-            </div>
-            <div class="package-price">₹38,999 / couple</div>
-            <div class="card-meta">
-              <div class="location"><i class="ri-map-pin-line"></i> Srinagar · Gulmarg · Pahalgam</div>
-              <div class="rating"><i class="ri-star-fill"></i><span>4.9</span></div>
-            </div>
-            <a href="/public/packages.php" class="card-button">View Details</a>
-          </div>
-        </div>
+      <div style="text-align: center; padding: 50px; color: var(--text-color); grid-column: 1/-1;">
+        <p>No featured packages found. Please mark packages as featured in the admin panel.</p>
       </div>
     <?php endif; ?>
 
@@ -1573,6 +1687,11 @@ Kashmir tour company
       <a href="/public/packages.php" class="view-all-btn">View All Packages</a>
     </div>
   </section>
+
+
+  
+
+
 
   <?php
   // Fetch gallery section data
@@ -1857,7 +1976,7 @@ Kashmir tour company
         &copy; <span id="getYear"></span> Zubi Tours & Holidays. All rights
         reserved.
       </p>
-      <p>Powered By <a href="https://irfanmanzoor.in">KRYON</a></p>
+      <p>Powered By <a href="https://irfanmanzoor.in">EXORA.DEVS</a></p>
     </div>
   </footer>
 
@@ -1869,67 +1988,57 @@ Kashmir tour company
 
   <!-- Your GSAP animations file -->
   <script src="./assets/js/gsap.js"></script>
-
   <script>
-    // SEARCH TOUR
-    document
-      .getElementById("tourForm")
-      .addEventListener("submit", function(e) {
-        e.preventDefault();
+    document.addEventListener('DOMContentLoaded', function() {
+      // Swiper Init
+      new Swiper(".modern-testimonials-swiper", {
+        slidesPerView: 1,
+        spaceBetween: 30,
+        loop: true,
+        autoplay: {
+          delay: 5000,
+          disableOnInteraction: false,
+        },
+        navigation: {
+          nextEl: ".next-btn",
+          prevEl: ".prev-btn",
+        },
+        breakpoints: {
+          640: { slidesPerView: 1, spaceBetween: 20 },
+          1024: { slidesPerView: 2, spaceBetween: 30 },
+        },
+      });
 
-        const destination = document.getElementById("destination").value;
-        const checkin = document.getElementById("checkin").value;
-        const duration = document.getElementById("duration").value;
-        const travelers = document.getElementById("travelers").value;
+      // SEARCH TOUR
+      const tourForm = document.getElementById("tourForm");
+      if(tourForm) {
+        tourForm.addEventListener("submit", function(e) {
+          e.preventDefault();
 
-        if (destination && checkin && duration && travelers) {
-          alert(`Searching tours for:
+          const destination = document.getElementById("destination").value;
+          const checkin = document.getElementById("checkin").value;
+          const duration = document.getElementById("duration").value;
+          const travelers = document.getElementById("travelers").value;
+
+          if (destination && checkin && duration && travelers) {
+            alert(`Searching tours for:
   Destination: ${destination}
   Check-in: ${checkin}
   Duration: ${duration} days
   Travelers: ${travelers}`);
-        } else {
-          alert("Please fill all fields.");
-        }
-      });
+          } else {
+            alert("Please fill all fields.");
+          }
+        });
+      }
 
-    // Get today's date in YYYY-MM-DD format
-    const today = new Date().toISOString().split("T")[0];
+      // Get today's date in YYYY-MM-DD format
+      const today = new Date().toISOString().split("T")[0];
 
-    // Set it as default value
-    document.getElementById("checkin").value = today;
-
-    // Initialize animations
-    document.addEventListener("DOMContentLoaded", function() {
-      // Animate destination cards on scroll
-      const destinationCards = document.querySelectorAll(".destination-card");
-
-      const observer = new IntersectionObserver(
-        (entries) => {
-          entries.forEach((entry) => {
-            if (entry.isIntersecting) {
-              entry.target.style.opacity = 1;
-              entry.target.style.transform = "translateY(0)";
-            }
-          });
-        }, {
-          threshold: 0.1
-        }
-      );
-
-      destinationCards.forEach((card, index) => {
-        card.style.opacity = 0;
-        card.style.transform = "translateY(30px)";
-        card.style.transition = "opacity 0.5s ease, transform 0.5s ease";
-        card.style.transitionDelay = `${index * 0.1}s`;
-        observer.observe(card);
-      });
+      // Set it as default value
+      const checkinEl = document.getElementById("checkin");
+      if(checkinEl) checkinEl.value = today;
     });
-
-
-
-    
-
   </script>
 
   <!-- Linking GSAP script -->
@@ -2269,6 +2378,40 @@ document.addEventListener('DOMContentLoaded', function() {
 
   <!--=============== MAIN JS ===============-->
   <script src="./assets/js/main.js" defer></script>
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      new Swiper(".destinations-swiper", {
+        slidesPerView: 1,
+        spaceBetween: 30,
+        loop: true,
+        autoplay: {
+          delay: 4000,
+          disableOnInteraction: false,
+        },
+        pagination: {
+          el: ".swiper-pagination",
+          clickable: true,
+          dynamicBullets: true,
+        },
+        navigation: {
+          nextEl: ".swiper-button-next",
+          prevEl: ".swiper-button-prev",
+        },
+        breakpoints: {
+          640: {
+            slidesPerView: 1,
+          },
+          768: {
+            slidesPerView: 2,
+          },
+          1024: {
+            slidesPerView: 3,
+          },
+        },
+      });
+    });
+  </script>
 </body>
 
 </html>

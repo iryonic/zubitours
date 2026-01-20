@@ -32,6 +32,14 @@
                 <i class="ri-map-2-line"></i>
                 <span>Destinations</span>
             </a>
+            <a href="manage-about.php" class="menu-item <?php echo basename($_SERVER['PHP_SELF']) == 'manage-about.php' ? 'active' : ''; ?>">
+                <i class="ri-information-line"></i>
+                <span>About Page</span>
+            </a>
+            <a href="manage-testimonials.php" class="menu-item <?php echo basename($_SERVER['PHP_SELF']) == 'manage-testimonials.php' ? 'active' : ''; ?>">
+                <i class="ri-chat-quote-line"></i>
+                <span>Testimonials</span>
+            </a>
             <a href="manage-packages.php" class="menu-item <?php echo basename($_SERVER['PHP_SELF']) == 'manage-packages.php' ? 'active' : ''; ?>">
                 <i class="ri-briefcase-4-line"></i>
                 <span>Packages</span>

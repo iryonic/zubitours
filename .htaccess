@@ -1,0 +1,9 @@
+RewriteEngine On
+
+# Prevent directory listing
+Options -Indexes
+
+# Custom Error Pages
+ErrorDocument 404 /zubitours/public/404.php
+ErrorDocument 500 /zubitours/public/505.php
+ErrorDocument 505 /zubitours/public/505.php

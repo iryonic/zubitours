@@ -19,22 +19,25 @@ if (isset($_SESSION['flash_message'])) {
     unset($_SESSION['flash_message'], $_SESSION['flash_type']);
 }
 
+$form_action = $_POST['form_action'] ?? '';
+
 // Add new destination
-if (isset($_POST['add_destination'])) {
+if ($form_action === 'add_destination') {
     $destination_name = $_POST['destination_name'];
     $region = $_POST['region'];
     $destination_type = $_POST['destination_type'];
     $best_seasons = json_encode($_POST['best_seasons'] ?? []);
     $location = $_POST['location'];
     $short_description = $_POST['short_description'];
+    $detailed_description = $_POST['detailed_description'];
     $badge = $_POST['badge'];
     $rating = $_POST['rating'];
     $reviews_count = $_POST['reviews_count'];
     $is_featured = isset($_POST['is_featured']) ? 1 : 0;
     $is_active = isset($_POST['is_active']) ? 1 : 0;
     
-    $stmt = $conn->prepare("INSERT INTO destinations (destination_name, region, destination_type, best_seasons, location, short_description, badge, rating, reviews_count, is_featured, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-    $stmt->bind_param("sssssssdsii", $destination_name, $region, $destination_type, $best_seasons, $location, $short_description, $badge, $rating, $reviews_count, $is_featured, $is_active);
+    $stmt = $conn->prepare("INSERT INTO destinations (destination_name, region, destination_type, best_seasons, location, short_description, detailed_description, badge, rating, reviews_count, is_featured, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    $stmt->bind_param("ssssssssdsii", $destination_name, $region, $destination_type, $best_seasons, $location, $short_description, $detailed_description, $badge, $rating, $reviews_count, $is_featured, $is_active);
     
     if ($stmt->execute()) {
         $destination_id = $conn->insert_id;
@@ -75,7 +78,7 @@ if (isset($_POST['add_destination'])) {
 }
 
 // Update destination
-if (isset($_POST['update_destination'])) {
+if ($form_action === 'update_destination') {
     $id = $_POST['destination_id'];
     $destination_name = $_POST['destination_name'];
     $region = $_POST['region'];
@@ -83,14 +86,15 @@ if (isset($_POST['update_destination'])) {
     $best_seasons = json_encode($_POST['best_seasons'] ?? []);
     $location = $_POST['location'];
     $short_description = $_POST['short_description'];
+    $detailed_description = $_POST['detailed_description'];
     $badge = $_POST['badge'];
     $rating = $_POST['rating'];
     $reviews_count = $_POST['reviews_count'];
     $is_featured = isset($_POST['is_featured']) ? 1 : 0;
     $is_active = isset($_POST['is_active']) ? 1 : 0;
     
-    $stmt = $conn->prepare("UPDATE destinations SET destination_name = ?, region = ?, destination_type = ?, best_seasons = ?, location = ?, short_description = ?, badge = ?, rating = ?, reviews_count = ?, is_featured = ?, is_active = ? WHERE id = ?");
-    $stmt->bind_param("sssssssdsiii", $destination_name, $region, $destination_type, $best_seasons, $location, $short_description, $badge, $rating, $reviews_count, $is_featured, $is_active, $id);
+    $stmt = $conn->prepare("UPDATE destinations SET destination_name = ?, region = ?, destination_type = ?, best_seasons = ?, location = ?, short_description = ?, detailed_description = ?, badge = ?, rating = ?, reviews_count = ?, is_featured = ?, is_active = ? WHERE id = ?");
+    $stmt->bind_param("ssssssssdsiii", $destination_name, $region, $destination_type, $best_seasons, $location, $short_description, $detailed_description, $badge, $rating, $reviews_count, $is_featured, $is_active, $id);
     
     if ($stmt->execute()) {
         $destination_id = $id;
@@ -736,6 +740,44 @@ $ladakh_destinations = $conn->query("SELECT COUNT(*) as count FROM destinations 
         .region-jammu {
             color: #10b981;
         }
+
+        /* Content Modal Styles */
+        .content-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border: 1px solid var(--border-color);
+        }
+        .content-item-info {
+            flex: 1;
+        }
+        .content-item-info h5 {
+            margin: 0 0 4px 0;
+            color: var(--text-primary);
+        }
+        .content-item-info p {
+            margin: 0;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+        .content-tab-box {
+            display: none;
+            padding-top: 20px;
+        }
+        .content-tab-box.active {
+            display: block;
+        }
+        .add-content-form {
+            background: rgba(255,255,255,0.03);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border: 1px dashed var(--border-color);
+        }
      </style>
 </head>
 <body>
@@ -933,18 +975,30 @@ $ladakh_destinations = $conn->query("SELECT COUNT(*) as count FROM destinations 
                                         <span class="status-badge status-inactive">Inactive</span>
                                     <?php endif; ?>
                                     
-                                    <?php if ($destination['is_featured']): ?>
-                                        <br><span class="status-badge status-featured" style="margin-top: 5px;">Featured</span>
-                                    <?php endif; ?>
+                                    <div class="featured-toggle" onclick="toggleFeatured(<?php echo $destination['id']; ?>, <?php echo $destination['is_featured'] ? 0 : 1; ?>)" style="cursor: pointer;">
+                                        <?php if ($destination['is_featured']): ?>
+                                            <span class="status-badge status-featured" style="margin-top: 5px; background: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid #f59e0b;">
+                                                <i class="ri-star-fill"></i> Featured
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="status-badge" style="margin-top: 5px; opacity: 0.5;">
+                                                <i class="ri-star-line"></i> Not Featured
+                                            </span>
+                                        <?php endif; ?>
+                                    </div>
                                 </td>
                                 <td>
                                     <div class="table-actions">
+                                        <a href="../../public/destination-details.php?id=<?php echo $destination['id']; ?>" class="btn btn-primary btn-sm" target="_blank">
+                                            <i class="ri-external-link-line"></i> View
+                                        </a>
                                         <button class="btn btn-primary btn-sm" onclick="editDestination(<?php echo $destination['id']; ?>)">
                                             <i class="ri-edit-line"></i> Edit
                                         </button>
                                         <button class="btn btn-warning btn-sm" onclick="manageDestinationImages(<?php echo $destination['id']; ?>)">
                                             <i class="ri-image-line"></i> Images
                                         </button>
+
                                         <button class="btn btn-danger btn-sm" onclick="deleteDestination(<?php echo $destination['id']; ?>)">
                                             <i class="ri-delete-bin-line"></i>
                                         </button>
@@ -1069,6 +1123,10 @@ $ladakh_destinations = $conn->query("SELECT COUNT(*) as count FROM destinations 
                         <label for="short_description">Short Description *</label>
                         <textarea id="short_description" name="short_description" rows="3" required placeholder="Brief description for cards and listings..."></textarea>
                     </div>
+                    <div class="form-group">
+                        <label for="detailed_description">Detailed Description</label>
+                        <textarea id="detailed_description" name="detailed_description" rows="6" placeholder="Full description for the explore page..."></textarea>
+                    </div>
                 </div>
                 
                 <!-- Media Tab -->
@@ -1124,6 +1182,149 @@ $ladakh_destinations = $conn->query("SELECT COUNT(*) as count FROM destinations 
         </div>
     </div>
 
+    <!-- Manage Content Modal -->
+    <div class="modal" id="content-modal">
+        <div class="modal-content" style="max-width: 800px;">
+            <span class="close-modal" onclick="closeContentModal()">&times;</span>
+            <h2>Manage Destination Content</h2>
+            <p id="content-destination-name" style="color: var(--primary-color); font-weight: 600; margin-top: -10px; margin-bottom: 20px;"></p>
+            
+            <div class="tabs" style="margin-bottom: 20px;">
+                <div class="tab active" data-content-tab="highlights" onclick="switchContentTab('highlights')">Highlights</div>
+                <div class="tab" data-content-tab="activities" onclick="switchContentTab('activities')">Activities</div>
+                <div class="tab" data-content-tab="tips" onclick="switchContentTab('tips')">Travel Tips</div>
+                <div class="tab" data-content-tab="nearby" onclick="switchContentTab('nearby')">Nearby</div>
+            </div>
+
+            <!-- Highlights Tab -->
+            <div id="highlights-tab-box" class="content-tab-box active">
+                <div class="add-content-form">
+                    <h4>Add New Highlight</h4>
+                    <form onsubmit="saveContentItem(event, 'add_highlight')">
+                        <input type="hidden" name="destination_id" class="modal-destination-id">
+                        <input type="hidden" name="action" value="add_highlight">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Title</label>
+                                <input type="text" name="title" required placeholder="e.g. Scenic Views">
+                            </div>
+                            <div class="form-group">
+                                <label>Icon (RemixIcon)</label>
+                                <input type="text" name="icon" placeholder="ri-image-line" value="ri-check-line">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Description</label>
+                            <textarea name="description" rows="2" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm">Add Highlight</button>
+                    </form>
+                </div>
+                <div id="highlights-list"></div>
+            </div>
+
+            <!-- Activities Tab -->
+            <div id="activities-tab-box" class="content-tab-box">
+                <div class="add-content-form">
+                    <h4>Add New Activity</h4>
+                    <form onsubmit="saveContentItem(event, 'add_activity')">
+                        <input type="hidden" name="destination_id" class="modal-destination-id">
+                        <input type="hidden" name="action" value="add_activity">
+                        <div class="form-row">
+                            <div class="form-group" style="flex: 2;">
+                                <label>Activity Name</label>
+                                <input type="text" name="activity_name" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Difficulty</label>
+                                <select name="difficulty_level">
+                                    <option value="easy">Easy</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="hard">Hard</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Duration (Hrs)</label>
+                                <input type="number" name="duration_hours" step="0.5" value="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Icon</label>
+                                <input type="text" name="icon" placeholder="ri-direction-line" value="ri-direction-line text-blue-500">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Description</label>
+                            <textarea name="description" rows="2" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm">Add Activity</button>
+                    </form>
+                </div>
+                <div id="activities-list"></div>
+            </div>
+
+            <!-- Tips Tab -->
+            <div id="tips-tab-box" class="content-tab-box">
+                <div class="add-content-form">
+                    <h4>Add Travel Tip</h4>
+                    <form onsubmit="saveContentItem(event, 'add_tip')">
+                        <input type="hidden" name="destination_id" class="modal-destination-id">
+                        <input type="hidden" name="action" value="add_tip">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Tip Type</label>
+                                <select name="tip_type">
+                                    <option value="general">General</option>
+                                    <option value="best_time">Best Time</option>
+                                    <option value="what_to_pack">What to Pack</option>
+                                    <option value="safety">Safety</option>
+                                    <option value="transport">Transport</option>
+                                    <option value="food">Food</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="flex: 2;">
+                                <label>Title</label>
+                                <input type="text" name="title" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Description</label>
+                            <textarea name="description" rows="2" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm">Add Tip</button>
+                    </form>
+                </div>
+                <div id="tips-list"></div>
+            </div>
+
+            <!-- Nearby Tab -->
+            <div id="nearby-tab-box" class="content-tab-box">
+                <div class="add-content-form">
+                    <h4>Add Nearby Attraction</h4>
+                    <form onsubmit="saveContentItem(event, 'add_nearby')">
+                        <input type="hidden" name="destination_id" class="modal-destination-id">
+                        <input type="hidden" name="action" value="add_nearby">
+                        <div class="form-row">
+                            <div class="form-group" style="flex: 2;">
+                                <label>Attraction Name</label>
+                                <input type="text" name="attraction_name" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Distance (KM)</label>
+                                <input type="number" name="distance_km" step="0.1" value="0">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Description (Optional)</label>
+                            <textarea name="description" rows="2"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm">Add Attraction</button>
+                    </form>
+                </div>
+                <div id="nearby-list"></div>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Global variables
         let currentDestinationId = null;
@@ -1145,7 +1346,6 @@ $ladakh_destinations = $conn->query("SELECT COUNT(*) as count FROM destinations 
         // Modal functions
         function openAddDestinationModal() {
             document.getElementById('modal-title').textContent = 'Add New Destination';
-            document.getElementById('form_action').name = 'add_destination';
             document.getElementById('form_action').value = 'add_destination';
             
             document.getElementById('destination-form').reset();
@@ -1207,7 +1407,6 @@ $ladakh_destinations = $conn->query("SELECT COUNT(*) as count FROM destinations 
                     }
                     
                     document.getElementById('modal-title').textContent = 'Edit Destination';
-                    document.getElementById('form_action').name = 'update_destination';
                     document.getElementById('form_action').value = 'update_destination';
                     
                     document.getElementById('destination_id').value = data.id;
@@ -1216,6 +1415,7 @@ $ladakh_destinations = $conn->query("SELECT COUNT(*) as count FROM destinations 
                     document.getElementById('destination_type').value = data.destination_type;
                     document.getElementById('location').value = data.location;
                     document.getElementById('short_description').value = data.short_description;
+                    document.getElementById('detailed_description').value = data.detailed_description || '';
                     document.getElementById('badge').value = data.badge || '';
                     document.getElementById('rating').value = data.rating || '4.5';
                     document.getElementById('reviews_count').value = data.reviews_count || '100';
@@ -1365,7 +1565,148 @@ $ladakh_destinations = $conn->query("SELECT COUNT(*) as count FROM destinations 
         function closeImagesModal() {
             document.getElementById('images-modal').classList.remove('active');
         }
-        
+
+        // Manage Content Logic
+        function manageDestinationContent(destinationId) {
+            currentDestinationId = destinationId;
+            document.querySelectorAll('.modal-destination-id').forEach(el => el.value = destinationId);
+            
+            // Set name in modal
+            const row = document.querySelector(`button[onclick*="manageDestinationContent(${destinationId})"]`).closest('tr');
+            const name = row.querySelector('h4').textContent;
+            document.getElementById('content-destination-name').textContent = "Destination: " + name;
+
+            loadDestinationContent(destinationId);
+            document.getElementById('content-modal').classList.add('active');
+        }
+
+        function switchContentTab(tabName) {
+            document.querySelectorAll('#content-modal .tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.content-tab-box').forEach(b => b.classList.remove('active'));
+
+            const tab = document.querySelector(`[data-content-tab="${tabName}"]`);
+            if (tab) tab.classList.add('active');
+            
+            const box = document.getElementById(`${tabName}-tab-box`);
+            if (box) box.classList.add('active');
+        }
+
+        function loadDestinationContent(destinationId) {
+            fetch(`../logic/get_destination_content.php?id=${destinationId}`)
+                .then(r => r.json())
+                .then(data => {
+                    renderHighlights(data.highlights);
+                    renderActivities(data.activities);
+                    renderTips(data.tips);
+                    renderNearby(data.nearby);
+                });
+        }
+
+        function renderHighlights(items) {
+            const list = document.getElementById('highlights-list');
+            list.innerHTML = items.length ? items.map(item => `
+                <div class="content-item">
+                    <div class="content-item-info">
+                        <h5><i class="${item.icon}"></i> ${item.title}</h5>
+                        <p>${item.description}</p>
+                    </div>
+                    <button class="btn btn-danger btn-sm" onclick="deleteContentItem(${item.id}, 'delete_highlight')">
+                        <i class="ri-delete-bin-line"></i>
+                    </button>
+                </div>
+            `).join('') : '<p style="text-align:center; opacity:0.6;">No highlights added yet.</p>';
+        }
+
+        function renderActivities(items) {
+            const list = document.getElementById('activities-list');
+            list.innerHTML = items.length ? items.map(item => `
+                <div class="content-item">
+                    <div class="content-item-info">
+                        <h5><i class="${item.icon || 'ri-direction-line'}"></i> ${item.activity_name} (${item.difficulty_level})</h5>
+                        <p>${item.description} - ${item.duration_hours}h</p>
+                    </div>
+                    <button class="btn btn-danger btn-sm" onclick="deleteContentItem(${item.id}, 'delete_activity')">
+                        <i class="ri-delete-bin-line"></i>
+                    </button>
+                </div>
+            `).join('') : '<p style="text-align:center; opacity:0.6;">No activities added yet.</p>';
+        }
+
+        function renderTips(items) {
+            const list = document.getElementById('tips-list');
+            list.innerHTML = items.length ? items.map(item => `
+                <div class="content-item">
+                    <div class="content-item-info">
+                        <h5>[${item.tip_type.toUpperCase()}] ${item.title}</h5>
+                        <p>${item.description}</p>
+                    </div>
+                    <button class="btn btn-danger btn-sm" onclick="deleteContentItem(${item.id}, 'delete_tip')">
+                        <i class="ri-delete-bin-line"></i>
+                    </button>
+                </div>
+            `).join('') : '<p style="text-align:center; opacity:0.6;">No travel tips added yet.</p>';
+        }
+
+        function renderNearby(items) {
+            const list = document.getElementById('nearby-list');
+            list.innerHTML = items.length ? items.map(item => `
+                <div class="content-item">
+                    <div class="content-item-info">
+                        <h5>${item.attraction_name} (${item.distance_km} KM)</h5>
+                        <p>${item.description || 'No description provided.'}</p>
+                    </div>
+                    <button class="btn btn-danger btn-sm" onclick="deleteContentItem(${item.id}, 'delete_nearby')">
+                        <i class="ri-delete-bin-line"></i>
+                    </button>
+                </div>
+            `).join('') : '<p style="text-align:center; opacity:0.6;">No nearby attractions added yet.</p>';
+        }
+
+        function saveContentItem(e, action) {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            
+            fetch('../logic/manage_destination_content.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    e.target.reset();
+                    loadDestinationContent(currentDestinationId);
+                } else {
+                    alert(data.error);
+                }
+            });
+        }
+
+        function deleteContentItem(id, action) {
+            if (!confirm('Are you sure you want to delete this item?')) return;
+            
+            const formData = new FormData();
+            formData.append('action', action);
+            formData.append('id', id);
+            formData.append('destination_id', currentDestinationId);
+
+            fetch('../logic/manage_destination_content.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    loadDestinationContent(currentDestinationId);
+                } else {
+                    alert(data.error);
+                }
+            });
+        }
+
+        function closeContentModal() {
+            document.getElementById('content-modal').classList.remove('active');
+        }
+
         // Close modals when clicking outside
         document.querySelectorAll('.modal').forEach(modal => {
             modal.addEventListener('click', function(e) {
@@ -1375,6 +1716,26 @@ $ladakh_destinations = $conn->query("SELECT COUNT(*) as count FROM destinations 
             });
         });
         
+        // Feature Toggle
+        function toggleFeatured(id, status) {
+            const formData = new FormData();
+            formData.append('destination_id', id);
+            formData.append('is_featured', status);
+
+            fetch('../logic/toggle_featured.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert(data.error);
+                }
+            });
+        }
+
         // Form validation
         document.getElementById('destination-form').addEventListener('submit', function(e) {
             const requiredFields = ['destination_name', 'region', 'destination_type', 'location', 'short_description'];

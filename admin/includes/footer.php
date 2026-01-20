@@ -51,6 +51,6 @@
         &copy; <span id="getYear"></span> Zubi Tours & Holidays. All rights
         reserved.
       </p>
-      <p>Powered By <a href="https://irfanmanzoor.in">KRYON</a></p>
+      <p>Powered By <a href="https://irfanmanzoor.in">EXORA.DEVS</a></p>
     </div>
   </footer>
