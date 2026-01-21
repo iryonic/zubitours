@@ -1,12 +1,16 @@
 <?php
 require_once '../admin/includes/connection.php';
 
-if (!isset($_GET['id'])) {
+if (isset($_GET['id'])) {
+    $identifier = $_GET['id'];
+    $where_clause = "d.id = ?";
+} elseif (isset($_GET['slug'])) {
+    $identifier = $_GET['slug'];
+    $where_clause = "d.slug = ?";
+} else {
     header('Location: destinations.php');
     exit();
 }
-
-$destination_id = $_GET['id'];
 
 // Fetch destination details
 $dest_query = $conn->prepare("
@@ -14,10 +18,11 @@ $dest_query = $conn->prepare("
            GROUP_CONCAT(DISTINCT di.image_path ORDER BY di.is_primary DESC, di.id ASC) as all_images
     FROM destinations d 
     LEFT JOIN destination_images di ON d.id = di.destination_id 
-    WHERE d.id = ? AND d.is_active = 1
+    WHERE $where_clause AND d.is_active = 1
     GROUP BY d.id
 ");
-$dest_query->bind_param("i", $destination_id);
+$param_type = is_numeric($identifier) && isset($_GET['id']) ? "i" : "s";
+$dest_query->bind_param($param_type, $identifier);
 $dest_query->execute();
 $dest_result = $dest_query->get_result();
 
@@ -27,9 +32,18 @@ if ($dest_result->num_rows === 0) {
 }
 
 $destination = $dest_result->fetch_assoc();
+$destination_id = $destination['id'];
 
 // Decode JSON fields
 $best_seasons = json_decode($destination['best_seasons'], true) ?: [];
+$dest_itinerary = json_decode($destination['itinerary'] ?? '[]', true) ?: [];
+$dest_inclusions = json_decode($destination['inclusions'] ?? '[]', true) ?: [];
+$dest_exclusions = json_decode($destination['exclusions'] ?? '[]', true) ?: [];
+$dest_faqs = json_decode($destination['faqs'] ?? '[]', true) ?: [];
+$dest_duration = $destination['duration_days'] ?? 0;
+$dest_price = $destination['price_per_person'] ?? 0;
+$dest_max_people = $destination['max_people'] ?? 0;
+$dest_accommodation = $destination['accommodation_type'] ?? '';
 
 // Get all images
 $destination_images = [];
@@ -69,15 +83,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_inquiry'])) {
     $name = trim($_POST['name'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $phone = trim($_POST['phone'] ?? '');
+    $adults = intval($_POST['adults'] ?? 0);
+    $children = intval($_POST['children'] ?? 0);
+    $travel_date = $_POST['travel_date'] ?? null;
     $message = "Inquiry for: " . $destination['destination_name'] . "\n" . trim($_POST['message'] ?? '');
     $subject = "Destination Inquiry: " . $destination['destination_name'];
     
-    if (!empty($name) && !empty($email) && !empty($message)) {
+    if (!empty($name) && !empty($email)) {
         $ip_address = $_SERVER['REMOTE_ADDR'] ?? '';
         $user_agent = $_SERVER['HTTP_USER_AGENT'] ?? '';
         
-        $stmt = $conn->prepare("INSERT INTO contact_messages (name, email, phone, subject, message, ip_address, user_agent) VALUES (?, ?, ?, ?, ?, ?, ?)");
-        $stmt->bind_param("sssssss", $name, $email, $phone, $subject, $message, $ip_address, $user_agent);
+        $stmt = $conn->prepare("INSERT INTO contact_messages (destination_id, name, email, phone, adults, children, travel_date, subject, message, ip_address, user_agent) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->bind_param("isssiisssss", $destination_id, $name, $email, $phone, $adults, $children, $travel_date, $subject, $message, $ip_address, $user_agent);
         
         if ($stmt->execute()) {
             $form_message = "Thank you! Our travel expert will contact you shortly.";
@@ -90,49 +107,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_inquiry'])) {
 
 // Helper function for robust image path checking
 function get_image_path($path) {
-    if (empty($path)) return '../assets/img/bg1.jpg';
+    if (empty($path)) return BASE_URL . 'assets/img/bg1.jpg';
     
-    $possible_paths = [
-        '../uploads/' . $path,
-        '../upload/' . $path,
-        '../admin/uploads/' . $path,
-        '../admin/upload/' . $path,
-        './admin/upload/' . $path,
-        $path
-    ];
-    
-    foreach ($possible_paths as $p) {
-        if (file_exists($p)) return $p;
-    }
-    
-    return '../assets/img/bg1.jpg';
+    // If it's already an absolute path or starts with http, return it
+    if (strpos($path, 'http') === 0) return $path;
+
+    // Check if it's in the upload directory
+    return BASE_URL . 'admin/upload/' . ltrim($path, '/');
 }
 
-// Fetch related packages (try to match destination name)
+// Fetch THE primary package for this destination to show its full details (Landing Page Mode)
 $dest_name_search = "%" . $destination['destination_name'] . "%";
 $pkg_stmt = $conn->prepare("
-    SELECT p.*, pi.image_path 
+    SELECT p.*, 
+           GROUP_CONCAT(DISTINCT pi.image_path ORDER BY pi.is_primary DESC, pi.id ASC) as all_pkg_images
     FROM packages p 
-    LEFT JOIN package_images pi ON p.id = pi.package_id AND pi.is_primary = 1 
+    LEFT JOIN package_images pi ON p.id = pi.package_id 
     WHERE p.is_active = 1 AND (p.package_name LIKE ? OR p.description LIKE ?)
-    ORDER BY p.is_featured DESC, p.created_at DESC 
-    LIMIT 3
+    GROUP BY p.id
+    ORDER BY p.is_featured DESC, p.rating DESC 
+    LIMIT 1
 ");
 $pkg_stmt->bind_param("ss", $dest_name_search, $dest_name_search);
 $pkg_stmt->execute();
-$packages_query = $pkg_stmt->get_result();
+$pkg_result = $pkg_stmt->get_result();
 
-// If no matching packages, fall back to featured ones
-if ($packages_query->num_rows == 0) {
-    $packages_query = $conn->query("
-        SELECT p.*, pi.image_path 
-        FROM packages p 
-        LEFT JOIN package_images pi ON p.id = pi.package_id AND pi.is_primary = 1 
-        WHERE p.is_active = 1 
-        ORDER BY p.is_featured DESC, p.created_at DESC 
-        LIMIT 3
-    ");
+$package = null;
+if ($pkg_result->num_rows > 0) {
+    $package = $pkg_result->fetch_assoc();
+    // Decode JSON fields
+    $package['highlights'] = json_decode($package['highlights'], true) ?: [];
+    $package['inclusions'] = json_decode($package['inclusions'], true) ?: [];
+    $package['exclusions'] = json_decode($package['exclusions'], true) ?: [];
+    $package['faqs'] = json_decode($package['faqs'], true) ?: [];
+    $package['itinerary'] = json_decode($package['itinerary'], true) ?: [];
 }
+
+// Override package data with destination-specific data if available
+$itinerary = !empty($dest_itinerary) ? $dest_itinerary : ($package['itinerary'] ?? []);
+$inclusions = !empty($dest_inclusions) ? $dest_inclusions : ($package['inclusions'] ?? []);
+$exclusions = !empty($dest_exclusions) ? $dest_exclusions : ($package['exclusions'] ?? []);
+$faqs = !empty($dest_faqs) ? $dest_faqs : ($package['faqs'] ?? []);
+$duration_days = $dest_duration > 0 ? $dest_duration : ($package['duration_days'] ?? 0);
+$price_per_person = $dest_price > 0 ? $dest_price : ($package['price_per_person'] ?? 0);
+$max_people = $dest_max_people > 0 ? $dest_max_people : ($package['max_people'] ?? 0);
+$accommodation_type = !empty($dest_accommodation) ? $dest_accommodation : ($package['accommodation_type'] ?? '');
+$package_badge = !empty($destination['badge']) ? $destination['badge'] : ($package['badge'] ?? '');
+
 
 ?>
 
@@ -143,7 +164,7 @@ if ($packages_query->num_rows == 0) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title><?php echo htmlspecialchars($destination['destination_name']); ?> - Explore Kashmir & Ladakh | Zubi Tours</title>
     
-    <link rel="icon" type="image/png" href="../assets/img/zubilogo.jpg" />
+    <link rel="icon" type="image/png" href="<?php echo BASE_URL; ?>assets/img/zubilogo.jpg" />
     
     <!--=============== TAILWIND CSS ===============-->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -179,7 +200,7 @@ if ($packages_query->num_rows == 0) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/3.5.0/remixicon.css" />
 
     <!--=============== CSS ===============-->
-    <link rel="stylesheet" href="../assets/css/styles.css" />
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>assets/css/styles.css" />
 
     <style>
         /* Ultra-Premium Destination Detail Styles */
@@ -223,6 +244,22 @@ if ($packages_query->num_rows == 0) {
         .main-wrapper { padding-bottom: 100px; }
         footer { margin-top: 0 !important; }
 
+        /* Itinerary & Package Details Styles */
+        .itinerary-tab.active {
+            background: #e8862a;
+            color: white;
+            box-shadow: 0 10px 20px rgba(232, 134, 42, 0.2);
+        }
+        .itinerary-content { display: none; }
+        .itinerary-content.active { display: block; animation: fadeIn 0.5s ease; }
+        
+        .faq-item { border: 1px solid #e2e8f0; border-radius: 1.5rem; overflow: hidden; transition: all 0.3s ease; }
+        .faq-item.active { border-color: #e8862a; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+        .faq-answer { max-height: 0; overflow: hidden; transition: max-height 0.4s ease, padding 0.4s ease; opacity: 0; }
+        .faq-item.active .faq-answer { max-height: 500px; padding-bottom: 2rem; opacity: 1; }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
         /* Animation */
         .reveal-up { opacity: 0; transform: translateY(30px); transition: all 0.8s cubic-bezier(0.22, 1, 0.36, 1); }
         .reveal-up.active { opacity: 1; transform: translateY(0); }
@@ -235,7 +272,7 @@ if ($packages_query->num_rows == 0) {
 
     <main class="main-wrapper">
         <!-- Modern Hero -->
-        <section class="relative h-[85vh] min-h-[600px] flex items-center justify-center overflow-hidden bg-black">
+        <section class="relative h-[85vh] min-h-[500px] flex items-center justify-center overflow-hidden bg-black">
             <div class="hero-bg absolute inset-0 z-0">
                 <?php $primary_image = !empty($destination_images) ? get_image_path($destination_images[0]) : '../assets/img/bg1.jpg'; ?>
                 <img src="<?php echo $primary_image; ?>" class="w-full h-full object-cover filter brightness-[0.6] saturate-[1.2] scale-110" alt="<?php echo htmlspecialchars($destination['destination_name']); ?>">
@@ -243,23 +280,35 @@ if ($packages_query->num_rows == 0) {
             <div class="hero-gradient absolute inset-0 z-[1]"></div>
             
             <div class="relative z-[2] max-w-5xl px-6 text-center text-white">
+                <?php if ($package && !empty($package['badge'])): ?>
+                <span class="bg-accent-yellow text-primary-dark px-6 py-2 rounded-full font-black uppercase tracking-[0.2em] text-[10px] mb-4 inline-block shadow-lg animate-pulse">
+                    <?php echo htmlspecialchars($package['badge']); ?>
+                </span>
+                <?php endif; ?>
                 <span class="accent-gradient inline-flex items-center gap-2 px-6 py-2 rounded-full font-bold uppercase tracking-widest text-xs mb-8 shadow-lg">
                     <i class="ri-map-2-line"></i> <?php echo htmlspecialchars($destination['region']); ?>
                 </span>
-                <h1 class="text-5xl md:text-7xl lg:text-8xl font-black mb-6 leading-none tracking-tight drop-shadow-2xl">
+                <h1 class="text-4xl md:text-7xl lg:text-8xl font-black mb-6 leading-none tracking-tight drop-shadow-2xl">
                     <?php echo htmlspecialchars($destination['destination_name']); ?>
                 </h1>
-                <div class="flex flex-wrap justify-center gap-4 mt-8">
+                <!-- Hero Badges -->
+                <div class="flex flex-wrap items-center justify-center gap-4 mb-8">
+                    <?php if ($package_badge): ?>
+                    <span class="bg-accent-yellow text-primary-dark px-6 py-2 rounded-full font-black uppercase tracking-[0.2em] text-[10px] shadow-lg animate-pulse">
+                        <?php echo htmlspecialchars($package_badge); ?>
+                    </span>
+                    <?php endif; ?>
+                    
                     <div class="bg-white/10 backdrop-blur-xl border border-white/20 px-6 py-3 rounded-full flex items-center gap-3 transition hover:bg-white/20">
-                        <i class="ri-map-pin-2-fill text-accent-yellow text-xl"></i>
-                        <span class="font-medium"><?php echo htmlspecialchars($destination['location']); ?></span>
+                        <i class="ri-time-line text-accent-yellow text-xl"></i>
+                        <span class="font-medium"><?php echo $duration_days; ?> Days</span>
                     </div>
-                    <?php if ($destination['rating']): ?>
+
+         
                     <div class="bg-white/10 backdrop-blur-xl border border-white/20 px-6 py-3 rounded-full flex items-center gap-3 transition hover:bg-white/20">
                         <i class="ri-star-fill text-accent-yellow text-xl"></i>
                         <span class="font-medium"><?php echo number_format($destination['rating'], 1); ?> Rating</span>
                     </div>
-                    <?php endif; ?>
                 </div>
             </div>
 
@@ -269,17 +318,17 @@ if ($packages_query->num_rows == 0) {
         </section>
 
         <!-- Content Grid -->
-        <div class="max-w-7xl mx-auto px-6 -mt-24 relative z-10 flex flex-col lg:flex-row gap-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 -mt-12 sm:-mt-24 relative z-10 flex flex-col lg:flex-row gap-8">
             <!-- Main Content Area -->
             <div class="flex-1 min-w-0">
-                <div class="bg-white rounded-[2.5rem] p-8 md:p-12 shadow-premium space-y-20">
+                <div class="bg-white rounded-3xl md:rounded-[2.5rem] p-6 md:p-12 shadow-premium space-y-12 md:space-y-20">
                     <!-- Overview Section -->
                     <section class="reveal-up active">
                         <div class="mb-8">
-                            <span class="text-primary font-black uppercase tracking-widest text-sm block mb-2">Destination Insight</span>
-                            <h2 class="text-4xl md:text-5xl font-black text-slate-900 tracking-tight">Discover <?php echo htmlspecialchars($destination['destination_name']); ?></h2>
+                            <span class="text-primary font-black uppercase tracking-widest text-xs sm:text-sm block mb-2">Destination Insight</span>
+                            <h2 class="text-2xl sm:text-4xl md:text-5xl font-black text-slate-900 tracking-tight">Discover <?php echo htmlspecialchars($destination['destination_name']); ?></h2>
                         </div>
-                        <p class="text-xl leading-[1.8] text-slate-600">
+                        <p class="text-base sm:text-lg lg:text-xl leading-[1.8] text-slate-600">
                             <?php 
                             $full_desc = !empty($destination['detailed_description']) ? $destination['detailed_description'] : $destination['short_description'];
                             echo nl2br(htmlspecialchars($full_desc)); 
@@ -287,40 +336,79 @@ if ($packages_query->num_rows == 0) {
                         </p>
                     </section>
 
-                    <!-- Highlights Grid -->
+                    <!-- Destination Highlights -->
                     <?php if ($highlights->num_rows > 0): ?>
                     <section class="reveal-up">
                         <div class="mb-10">
-                            <span class="text-primary font-black uppercase tracking-widest text-sm block mb-2">The Best Of</span>
-                            <h2 class="text-4xl font-black text-slate-900 tracking-tight">Trip Highlights</h2>
+                            <span class="text-primary font-black uppercase tracking-widest text-xs sm:text-sm block mb-2">Experiences</span>
+                            <h2 class="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">Destination Highlights</h2>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <?php while ($h = $highlights->fetch_assoc()): ?>
-                            <div class="bg-slate-50 p-8 rounded-[2rem] border border-slate-100 transition-all hover:bg-white hover:shadow-hover group relative overflow-hidden">
-                                <div class="absolute top-0 left-0 w-full h-1.5 accent-gradient opacity-0 transition-opacity group-hover:opacity-100"></div>
-                                <div class="h-16 w-16 bg-white rounded-2xl flex items-center justify-center text-3xl text-primary shadow-sm mb-6 group-hover:scale-110 transition-transform">
-                                    <i class="<?php echo $h['icon'] ?: 'ri-check-double-line'; ?>"></i>
+                            <div class="bg-white p-6 md:p-8 rounded-2xl md:rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-hover hover:-translate-y-1 transition-all group">
+                                <div class="flex gap-6 items-start">
+                                    <div class="h-14 w-14 accent-gradient rounded-2xl flex items-center justify-center text-white text-2xl shadow-lg group-hover:scale-110 transition-transform">
+                                        <i class="<?php echo $h['icon'] ?: 'ri-check-line'; ?>"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-xl font-black mb-2 text-slate-900"><?php echo htmlspecialchars($h['title']); ?></h3>
+                                        <p class="text-slate-500 leading-relaxed"><?php echo htmlspecialchars($h['description']); ?></p>
+                                    </div>
                                 </div>
-                                <h3 class="text-xl font-black mb-3 text-slate-900"><?php echo htmlspecialchars($h['title']); ?></h3>
-                                <p class="text-slate-500 leading-relaxed"><?php echo htmlspecialchars($h['description']); ?></p>
                             </div>
                             <?php endwhile; ?>
                         </div>
                     </section>
                     <?php endif; ?>
 
+                    <!-- Package Highlights -->
+                    <?php if ($package && !empty($package['highlights'])): ?>
+                    <section class="reveal-up">
+                        <div class="mb-10 text-center">
+                            <span class="text-primary font-black uppercase tracking-widest text-xs sm:text-sm block mb-2">Why Book This Tour</span>
+                            <h2 class="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">Package Highlights</h2>
+                        </div>
+                        <div class="grid grid-cols-2 lg:grid-cols-4 gap-6">
+                            <?php foreach ($package['highlights'] as $index => $h): 
+                                $icons = ['ri-hotel-line', 'ri-restaurant-line', 'ri-car-line', 'ri-guide-line', 'ri-camera-line', 'ri-landscape-line', 'ri-heart-line', 'ri-shield-flash-line'];
+                                $icon = $icons[$index % count($icons)];
+                            ?>
+                            <div class="bg-slate-50 p-6 rounded-3xl border border-slate-100 text-center group hover:bg-white hover:shadow-hover transition-all">
+                                <div class="h-12 w-12 bg-white rounded-xl flex items-center justify-center text-primary text-2xl mx-auto mb-4 shadow-sm group-hover:rotate-12 transition-transform">
+                                    <i class="<?php echo $icon; ?>"></i>
+                                </div>
+                                <h4 class="font-black text-slate-900 mb-1"><?php echo htmlspecialchars($h['title']); ?></h4>
+                                <p class="text-xs text-slate-500 font-bold"><?php echo htmlspecialchars($h['description']); ?></p>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </section>
+                    <?php endif; ?>
+
                     <!-- Dynamic Swiper Gallery -->
-                    <?php if (count($destination_images) > 0): ?>
+                    <?php 
+                    $all_display_images = $destination_images;
+                    if ($package && !empty($package['all_pkg_images'])) {
+                        $pkg_imgs = explode(',', $package['all_pkg_images']);
+                        // Filter out empty strings and prefix with path if needed
+                        foreach($pkg_imgs as $pi) {
+                            if (!empty($pi) && !in_array($pi, $all_display_images)) {
+                                $all_display_images[] = $pi;
+                            }
+                        }
+                    }
+                    ?>
+                    <?php if (count($all_display_images) > 0): ?>
                     <section class="reveal-up">
                         <div class="mb-10">
-                            <span class="text-primary font-black uppercase tracking-widest text-sm block mb-2">Visual Journey</span>
-                            <h2 class="text-4xl font-black text-slate-900 tracking-tight">Visual Experiences</h2>
+                            <span class="text-primary font-black uppercase tracking-widest text-xs sm:text-sm block mb-2">Visual Journey</span>
+                            <h2 class="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">Visual Experiences</h2>
                         </div>
                         <div class="space-y-4">
-                            <div class="swiper gallery-main rounded-[3rem] shadow-premium group/gallery">
+                            <div class="swiper gallery-main rounded-2xl md:rounded-[3rem] shadow-premium group/gallery">
                                 <div class="swiper-wrapper">
-                                    <?php foreach ($destination_images as $img): ?>
-                                    <div class="swiper-slide h-[500px] md:h-[700px]">
+                                    <?php foreach ($all_display_images as $img): ?>
+                                    <div class="swiper-slide h-[300px] sm:h-[450px] md:h-[600px] lg:h-[700px]">
                                         <a data-fslightbox="gallery" href="<?php echo get_image_path($img); ?>" class="block w-full h-full">
                                             <img src="<?php echo get_image_path($img); ?>" class="w-full h-full object-cover transition-transform duration-700 group-hover/gallery:scale-105" alt="Gallery Image">
                                         </a>
@@ -332,7 +420,7 @@ if ($packages_query->num_rows == 0) {
                             </div>
                             <div class="swiper gallery-thumbs px-2">
                                 <div class="swiper-wrapper">
-                                    <?php foreach($destination_images as $img): ?>
+                                    <?php foreach($all_display_images as $img): ?>
                                     <div class="swiper-slide rounded-xl overflow-hidden">
                                         <img src="<?php echo get_image_path($img); ?>" class="w-full h-full object-cover">
                                     </div>
@@ -347,12 +435,12 @@ if ($packages_query->num_rows == 0) {
                     <?php if ($activities->num_rows > 0): ?>
                     <section class="reveal-up">
                         <div class="mb-10">
-                            <span class="text-primary font-black uppercase tracking-widest text-sm block mb-2">Things to do</span>
-                            <h2 class="text-4xl font-black text-slate-900 tracking-tight">Thrilling Activities</h2>
+                            <span class="text-primary font-black uppercase tracking-widest text-xs sm:text-sm block mb-2">Things to do</span>
+                            <h2 class="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">Thrilling Activities</h2>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <?php while ($a = $activities->fetch_assoc()): ?>
-                            <div class="bg-slate-50 p-8 rounded-[2rem] border border-slate-100 transition-all hover:bg-white hover:shadow-hover group relative overflow-hidden">
+                            <div class="bg-slate-50 p-6 md:p-8 rounded-2xl md:rounded-[2rem] border border-slate-100 transition-all hover:bg-white hover:shadow-hover group relative overflow-hidden">
                                 <div class="absolute top-0 left-0 w-full h-1.5 accent-gradient opacity-0 transition-opacity group-hover:opacity-100"></div>
                                 <div class="h-16 w-16 bg-white rounded-2xl flex items-center justify-center text-3xl shadow-sm mb-6 group-hover:scale-110 transition-transform">
                                     <i class="<?php echo $a['icon'] ?: 'ri-direction-line text-blue-500'; ?>"></i>
@@ -368,6 +456,129 @@ if ($packages_query->num_rows == 0) {
                         </div>
                     </section>
                     <?php endif; ?>
+
+                    <!-- Package Full Details (Landing Page Sections) -->
+                    <?php if (!empty($itinerary) || !empty($inclusions) || !empty($exclusions) || !empty($faqs)): ?>
+                        <!-- Itinerary Section -->
+                        <?php if (!empty($itinerary)): ?>
+                        <section class="reveal-up" id="itinerary">
+                            <div class="mb-10">
+                                <span class="text-primary font-black uppercase tracking-widest text-xs sm:text-sm block mb-2">Plan of Action</span>
+                                <h2 class="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">Day-wise Itinerary</h2>
+                            </div>
+                            <div class="space-y-8">
+                                <div class="flex gap-2 overflow-x-auto pb-4 scrollbar-hide">
+                                    <?php foreach ($itinerary as $index => $day): ?>
+                                    <button onclick="switchDay(<?php echo $index; ?>)" class="itinerary-tab whitespace-nowrap px-4 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-black text-[10px] sm:text-sm uppercase transition-all <?php echo $index === 0 ? 'active' : 'bg-slate-100 text-slate-400'; ?>" data-day-btn="<?php echo $index; ?>">
+                                        Day <?php echo $day['day']; ?>
+                                    </button>
+                                    <?php endforeach; ?>
+                                </div>
+                                
+                                <div class="itinerary-contents">
+                                    <?php foreach ($itinerary as $index => $day): ?>
+                                    <div class="itinerary-content <?php echo $index === 0 ? 'active' : ''; ?>" data-day-content="<?php echo $index; ?>">
+                                        <div class="bg-slate-50 p-6 md:p-12 rounded-3xl md:rounded-[2.5rem] border border-slate-100">
+                                            <div class="flex flex-col md:flex-row gap-8 items-start">
+                                                <div class="flex-1">
+                                                    <h3 class="text-xl font-black text-slate-900 mb-6 flex items-center gap-4">
+                                                        <span class="h-12 w-12 accent-gradient rounded-xl flex items-center justify-center text-white text-xl"><?php echo $day['day']; ?></span>
+                                                        <?php echo htmlspecialchars($day['title']); ?>
+                                                    </h3>
+                                                    <p class="text-base text-slate-600 leading-relaxed mb-8">
+                                                        <?php echo nl2br(htmlspecialchars($day['description'])); ?>
+                                                    </p>
+                                                    
+                                                    <?php if (!empty($day['activities'])): ?>
+                                                    <div class="space-y-4">
+                                                        <h4 class="text-sm font-black uppercase tracking-widest text-primary">Today's Highlights</h4>
+                                                        <div class="grid grid-cols-1 gap-4">
+                                                            <?php foreach ($day['activities'] as $act): ?>
+                                                            <div class="bg-white p-6 rounded-2xl border border-slate-100 flex gap-6 items-center group hover:border-primary/30 transition-colors">
+                                                                <div class="text-primary font-black text-sm whitespace-nowrap bg-primary/10 px-4 py-2 rounded-lg">
+                                                                    <?php echo htmlspecialchars($act['time']); ?>
+                                                                </div>
+                                                                <div class="text-slate-700 font-bold">
+                                                                    <?php echo htmlspecialchars($act['description']); ?>
+                                                                </div>
+                                                            </div>
+                                                            <?php endforeach; ?>
+                                                        </div>
+                                                    </div>
+                                                    <?php endif; ?>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                        </section>
+                        <?php endif; ?>
+
+                        <!-- Inclusions & Exclusions -->
+                        <section class="reveal-up grid grid-cols-1 md:grid-cols-2 gap-12" id="in-ex">
+                            <?php if (!empty($inclusions)): ?>
+                            <div>
+                                <div class="mb-10">
+                                    <span class="text-green-500 font-black uppercase tracking-widest text-xs sm:text-sm block mb-2">What's Covered</span>
+                                    <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Package Inclusions</h2>
+                                </div>
+                                <div class="space-y-4">
+                                    <?php foreach ($inclusions as $inc): ?>
+                                    <div class="flex gap-4 items-start p-4 rounded-2xl bg-green-50/50 border border-green-100">
+                                        <i class="ri-checkbox-circle-fill text-green-500 text-xl"></i>
+                                        <span class="text-slate-700 font-bold"><?php echo htmlspecialchars($inc); ?></span>
+                                    </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                            <?php endif; ?>
+
+                            <?php if (!empty($exclusions)): ?>
+                            <div>
+                                <div class="mb-10">
+                                    <span class="text-red-500 font-black uppercase tracking-widest text-xs sm:text-sm block mb-2">Not Included</span>
+                                    <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Package Exclusions</h2>
+                                </div>
+                                <div class="space-y-4">
+                                    <?php foreach ($exclusions as $exc): ?>
+                                    <div class="flex gap-4 items-start p-4 rounded-2xl bg-red-50/50 border border-red-100">
+                                        <i class="ri-close-circle-fill text-red-500 text-xl"></i>
+                                        <span class="text-slate-700 font-bold"><?php echo htmlspecialchars($exc); ?></span>
+                                    </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                            <?php endif; ?>
+                        </section>
+
+                        <!-- Frequently Asked Questions -->
+                        <?php if (!empty($faqs)): ?>
+                        <section class="reveal-up" id="faqs">
+                            <div class="mb-10 text-center">
+                                <span class="text-primary font-black uppercase tracking-widest text-xs sm:text-sm block mb-2">Common Queries</span>
+                                <h2 class="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">Traveler's FAQ</h2>
+                            </div>
+                            <div class="max-w-4xl mx-auto space-y-4">
+                                <?php foreach ($faqs as $index => $faq): ?>
+                                <div class="faq-item group" data-faq="<?php echo $index; ?>">
+                                    <button onclick="toggleFaq(<?php echo $index; ?>)" class="w-full text-left p-8 flex justify-between items-center transition-colors">
+                                        <span class="text-xl font-black text-slate-900"><?php echo htmlspecialchars($faq['question']); ?></span>
+                                        <i class="ri-add-line text-2xl text-primary transition-transform duration-300"></i>
+                                    </button>
+                                    <div class="faq-answer px-8">
+                                        <p class="text-lg text-slate-600 leading-relaxed">
+                                            <?php echo nl2br(htmlspecialchars($faq['answer'])); ?>
+                                        </p>
+                                    </div>
+                                </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </section>
+                        <?php endif; ?>
+                    <?php endif; ?>
+
                 </div>
             </div>
 
@@ -375,7 +586,7 @@ if ($packages_query->num_rows == 0) {
             <aside class="w-full lg:w-[400px] flex-shrink-0">
                 <div class="sticky top-28 space-y-6">
                     <!-- Stats Card -->
-                    <div class="bg-white/80 backdrop-blur-2xl border border-white p-10 rounded-[2.5rem] shadow-premium">
+                    <div class="bg-white/80 backdrop-blur-2xl border border-white p-6 md:p-10 rounded-3xl md:rounded-[2.5rem] shadow-premium">
                         <div class="flex items-center gap-4 mb-8">
                             <div class="accent-gradient h-12 w-12 rounded-xl flex items-center justify-center text-white text-xl shadow-lg">
                                 <i class="ri-information-line"></i>
@@ -384,22 +595,38 @@ if ($packages_query->num_rows == 0) {
                         </div>
                         <div class="space-y-4">
                             <div class="flex justify-between items-center py-4 border-b border-slate-100">
-                                <span class="text-slate-500 font-bold">Region</span>
-                                <span class="text-slate-900 font-black"><?php echo ucfirst($destination['region']); ?></span>
+                                <span class="text-slate-500 font-bold text-sm">Base Price</span>
+                                <span class="text-primary font-black text-sm sm:text-lg">₹<?php echo number_format($price_per_person); ?> <span class="text-xs text-slate-400 font-normal">/ person</span></span>
                             </div>
                             <div class="flex justify-between items-center py-4 border-b border-slate-100">
-                                <span class="text-slate-500 font-bold">Nature</span>
-                                <span class="text-slate-900 font-black"><?php echo ucfirst($destination['destination_type']); ?></span>
+                                <span class="text-slate-500 font-bold text-sm">Region</span>
+                                <span class="text-slate-900 font-black text-sm sm:text-base"><?php echo ucfirst($destination['region']); ?></span>
+                            </div>
+                            <div class="flex justify-between items-center py-4 border-b border-slate-100">
+                                <span class="text-slate-500 font-bold text-sm">Duration</span>
+                                <span class="text-slate-900 font-black text-sm sm:text-base"><?php echo $duration_days; ?> Days</span>
+                            </div>
+                            <div class="flex justify-between items-center py-4 border-b border-slate-100">
+                                <span class="text-slate-500 font-bold text-sm">Stay Style</span>
+                                <span class="text-slate-900 font-black text-sm sm:text-base"><?php echo !empty($accommodation_type) ? $accommodation_type : 'Standard Hotels'; ?></span>
+                            </div>
+                            <div class="flex justify-between items-center py-4 border-b border-slate-100">
+                                <span class="text-slate-500 font-bold text-sm">Capacity</span>
+                                <span class="text-slate-900 font-black text-sm sm:text-base">Up to <?php echo $max_people; ?> Persons</span>
+                            </div>
+                            <div class="flex justify-between items-center py-4 border-b border-slate-100">
+                                <span class="text-slate-500 font-bold text-sm">Nature</span>
+                                <span class="text-slate-900 font-black text-sm sm:text-base"><?php echo ucfirst($destination['destination_type']); ?></span>
                             </div>
                             <div class="flex justify-between items-center py-4">
-                                <span class="text-slate-500 font-bold">Best Months</span>
-                                <span class="text-slate-900 font-black text-right"><?php echo implode(', ', array_map('ucfirst', $best_seasons)); ?></span>
+                                <span class="text-slate-500 font-bold text-sm">Best Months</span>
+                                <span class="text-slate-900 font-black text-sm sm:text-base text-right"><?php echo implode(', ', array_map('ucfirst', $best_seasons)); ?></span>
                             </div>
                         </div>
                     </div>
 
                     <!-- Pricing/Call Card -->
-                    <div class="bg-slate-900 text-white p-10 rounded-[2.5rem] shadow-premium relative overflow-hidden group">
+                    <div class="bg-slate-900 text-white p-6 md:p-10 rounded-3xl md:rounded-[2.5rem] shadow-premium relative overflow-hidden group">
                         <div class="absolute -top-10 -right-10 w-40 h-40 bg-primary/20 blur-[60px] rounded-full"></div>
                         <div class="relative z-10">
                             <h3 class="text-2xl font-black mb-6">Quick Inquiry</h3>
@@ -422,14 +649,51 @@ if ($packages_query->num_rows == 0) {
                                 <div>
                                     <input type="email" name="email" placeholder="Email Address" required class="w-full bg-white/5 border border-white/10 rounded-xl px-5 py-4 text-sm focus:border-primary focus:bg-white/10 transition outline-none">
                                 </div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="text-[10px] text-slate-400 uppercase font-black tracking-widest block mb-1">Adults</label>
+                                        <select name="adults" id="sidebar_adults" onchange="updateSidebarSummary()" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-primary focus:bg-white/10 transition outline-none appearance-none">
+                                            <?php for($i=1; $i<=10; $i++): ?>
+                                                <option value="<?php echo $i; ?>" <?php echo $i==2 ? 'selected' : ''; ?> class="bg-slate-900"><?php echo $i; ?></option>
+                                            <?php endfor; ?>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="text-[10px] text-slate-400 uppercase font-black tracking-widest block mb-1">Children</label>
+                                        <select name="children" id="sidebar_children" onchange="updateSidebarSummary()" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-primary focus:bg-white/10 transition outline-none appearance-none">
+                                            <?php for($i=0; $i<=5; $i++): ?>
+                                                <option value="<?php echo $i; ?>" class="bg-slate-900"><?php echo $i; ?></option>
+                                            <?php endfor; ?>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="text-[10px] text-slate-400 uppercase font-black tracking-widest block mb-1">Travel Date</label>
+                                    <input type="date" name="travel_date" class="w-full bg-white/10 border border-white/10 rounded-xl px-5 py-4 text-sm focus:border-primary focus:bg-white/10 transition outline-none">
+                                </div>
                                 <div>
                                     <input type="tel" name="phone" placeholder="Phone Number" class="w-full bg-white/5 border border-white/10 rounded-xl px-5 py-4 text-sm focus:border-primary focus:bg-white/10 transition outline-none">
                                 </div>
-                                <div>
-                                    <textarea name="message" placeholder="Special requirements..." class="w-full bg-white/5 border border-white/10 rounded-xl px-5 py-4 text-sm focus:border-primary focus:bg-white/10 transition outline-none h-24 resize-none"></textarea>
+                                
+                                <?php if ($price_per_person > 0): ?>
+                                <div class="bg-white/5 rounded-2xl p-6 mt-4 space-y-3">
+                                    <div class="flex justify-between text-xs font-bold text-slate-400">
+                                        <span>Adults x <span id="summary_adult_count">2</span></span>
+                                        <span class="text-white">₹<span id="summary_adult_total">0</span></span>
+                                    </div>
+                                    <div class="flex justify-between text-xs font-bold text-slate-400">
+                                        <span>Children x <span id="summary_child_count">0</span></span>
+                                        <span class="text-white">₹<span id="summary_child_total">0</span></span>
+                                    </div>
+                                    <div class="flex justify-between text-xs font-black text-primary pt-3 border-t border-white/10">
+                                        <span>Estimated Total</span>
+                                        <span class="text-lg">₹<span id="summary_total">0</span></span>
+                                    </div>
                                 </div>
+                                <?php endif; ?>
+
                                 <button type="submit" class="accent-gradient w-full flex items-center justify-center gap-3 py-5 rounded-2xl font-black text-sm uppercase transition hover:scale-[1.02] shadow-xl text-white">
-                                    <i class="ri-send-plane-2-line"></i> Send Request
+                                    <i class="ri-send-plane-2-line"></i> Book This Tour
                                 </button>
                             </form>
 
@@ -498,7 +762,7 @@ if ($packages_query->num_rows == 0) {
         </div>
 
         <!-- Dynamic Inquiry Section -->
-        <section class="max-w-7xl mx-auto px-6 mt-32 relative reveal-up">
+        <!-- <section class="max-w-7xl mx-auto px-6 mt-32 relative reveal-up">
             <div class="accent-gradient rounded-[3rem] p-12 md:p-20 text-white text-center shadow-premium relative overflow-hidden">
                 <div class="absolute top-0 right-0 w-64 h-64 bg-white/10 blur-[100px] rounded-full"></div>
                 <div class="relative z-10">
@@ -510,51 +774,9 @@ if ($packages_query->num_rows == 0) {
                     <a href="contact.php?destination=<?php echo urlencode($destination['destination_name']); ?>" class="bg-white text-primary px-12 py-5 rounded-2xl font-black uppercase text-sm inline-block shadow-2xl hover:scale-105 transition-transform">Get My Luxury Quote</a>
                 </div>
             </div>
-        </section>
+        </section> -->
 
-        <!-- Dynamic Related Packages -->
-        <section class="py-32" id="related-packages">
-            <div class="max-w-7xl mx-auto px-6">
-                <div class="text-center mb-16">
-                    <span class="text-primary font-black uppercase tracking-[0.3em] text-xs">Curated Selection</span>
-                    <h2 class="text-4xl font-black text-slate-900 mt-2">Recommended Tour Packages</h2>
-                </div>
-                
-                <div class="swiper pkg-swiper !overflow-visible">
-                    <div class="swiper-wrapper">
-                        <?php if ($packages_query->num_rows > 0): ?>
-                            <?php while ($p = $packages_query->fetch_assoc()): ?>
-                            <div class="swiper-slide h-auto">
-                                <div class="bg-white rounded-[2.5rem] overflow-hidden shadow-premium group transition-all hover:shadow-hover border border-slate-100 flex flex-col h-full">
-                                    <div class="h-72 overflow-hidden relative">
-                                        <img src="<?php echo get_image_path($p['image_path']); ?>" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt="<?php echo htmlspecialchars($p['package_name']); ?>">
-                                        <div class="absolute top-6 left-6 bg-white/90 backdrop-blur-md px-4 py-2 rounded-full text-xs font-black text-primary flex items-center gap-2">
-                                            <i class="ri-history-line"></i> <?php echo $p['duration_days']; ?> Days
-                                        </div>
-                                    </div>
-                                    <div class="p-8 flex flex-col flex-1">
-                                        <h3 class="text-2xl font-black text-slate-900 mb-4"><?php echo htmlspecialchars($p['package_name']); ?></h3>
-                                        <div class="flex gap-4 mb-8 text-slate-500 text-sm font-bold">
-                                            <span class="flex items-center gap-2"><i class="ri-hotel-bed-line"></i> Boutique Stay</span>
-                                            <span class="flex items-center gap-2"><i class="ri-taxi-line"></i> Pvt. Cab</span>
-                                        </div>
-                                        <div class="mt-auto pt-8 border-t border-slate-50 flex justify-between items-center">
-                                            <div>
-                                                <span class="block text-[10px] text-slate-400 uppercase font-black tracking-widest">Pricing From</span>
-                                                <span class="text-2xl font-black text-primary">₹<?php echo number_format($p['price_per_person']); ?></span>
-                                            </div>
-                                            <a href="package-details.php?id=<?php echo $p['id']; ?>" class="bg-slate-900 text-white px-6 py-3 rounded-xl font-black text-xs uppercase hover:bg-primary transition-colors">Details</a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <?php endwhile; ?>
-                        <?php endif; ?>
-                    </div>
-                    <div class="swiper-pagination !-bottom-12"></div>
-                </div>
-            </div>
-        </section>
+
     </main>
 
     <!-- Global Floating CTAs -->
@@ -570,11 +792,12 @@ if ($packages_query->num_rows == 0) {
     </div>
 
     <!--==================== FOOTER ====================-->
-    <?php include '../admin/includes/footer.php'; ?>
+       <!-- FOOTER -->
+<?php include '../admin/includes/footer.php'; ?>
 
     <!--=============== JS ===============-->
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
-    <script src="../assets/js/main.js"></script>
+    <script src="<?php echo BASE_URL; ?>assets/js/main.js"></script>
     <script>
         // Reveal Section On Scroll logic
         const observerOptions = { threshold: 0.1 };
@@ -606,13 +829,53 @@ if ($packages_query->num_rows == 0) {
             autoplay: { delay: 5000, disableOnInteraction: false }
         });
 
-        // Packages swiper
-        new Swiper(".pkg-swiper", {
-            slidesPerView: 1,
-            spaceBetween: 30,
-            pagination: { el: ".swiper-pagination", clickable: true },
-            breakpoints: { 768: { slidesPerView: 2 }, 1200: { slidesPerView: 3 } }
-        });
+
+        // Package Details Interactivity
+        function switchDay(index) {
+            document.querySelectorAll('[data-day-btn]').forEach(btn => {
+                btn.classList.remove('active', 'accent-gradient', 'text-white');
+                btn.classList.add('bg-slate-100', 'text-slate-400');
+            });
+            document.querySelectorAll('[data-day-content]').forEach(content => content.classList.remove('active'));
+
+            const activeBtn = document.querySelector(`[data-day-btn="${index}"]`);
+            activeBtn.classList.remove('bg-slate-100', 'text-slate-400');
+            activeBtn.classList.add('active');
+            
+            document.querySelector(`[data-day-content="${index}"]`).classList.add('active');
+        }
+
+        function toggleFaq(index) {
+            const item = document.querySelector(`[data-faq="${index}"]`);
+            const isActive = item.classList.contains('active');
+            
+            document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('active'));
+            if (!isActive) item.classList.add('active');
+        }
+
+        // Sidebar Pricing Logic
+        const pkgPrice = <?php echo (float)$price_per_person; ?>;
+        const childDiscount = 0.3; // 30% off for kids
+
+        function updateSidebarSummary() {
+            if (!pkgPrice) return;
+            
+            const adults = parseInt(document.getElementById('sidebar_adults').value);
+            const children = parseInt(document.getElementById('sidebar_children').value);
+            
+            const adultTotal = adults * pkgPrice;
+            const childTotal = children * (pkgPrice * (1 - childDiscount));
+            const total = adultTotal + childTotal;
+            
+            document.getElementById('summary_adult_count').textContent = adults;
+            document.getElementById('summary_adult_total').textContent = adultTotal.toLocaleString();
+            document.getElementById('summary_child_count').textContent = children;
+            document.getElementById('summary_child_total').textContent = childTotal.toLocaleString();
+            document.getElementById('summary_total').textContent = total.toLocaleString();
+        }
+
+        // Initialize summary
+        if (pkgPrice) updateSidebarSummary();
 
         // Header and Parallax
         window.addEventListener('scroll', () => {

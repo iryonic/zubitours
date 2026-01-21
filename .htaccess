@@ -1,5 +1,8 @@
 RewriteEngine On
 
+# Base Path
+RewriteBase /zubitours/
+
 # Prevent directory listing
 Options -Indexes
 
@@ -7,3 +10,20 @@ Options -Indexes
 ErrorDocument 404 /zubitours/public/404.php
 ErrorDocument 500 /zubitours/public/505.php
 ErrorDocument 505 /zubitours/public/505.php
+
+# Redirect root to index
+RewriteRule ^index$ index.php [L]
+
+# Friendly URLs for main pages
+RewriteRule ^destinations$ public/destinations.php [L]
+RewriteRule ^packages$ public/packages.php [L]
+RewriteRule ^about$ public/about.php [L]
+RewriteRule ^gallery$ public/gallery.php [L]
+RewriteRule ^car-rentals$ public/car-rentals.php [L]
+RewriteRule ^contact$ public/contact.php [L]
+RewriteRule ^privacy-policy$ public/privacy-policy.php [L]
+RewriteRule ^terms-conditions$ public/terms-conditions.php [L]
+
+# Friendly URLs for details pages
+RewriteRule ^destination/([^/]+)$ public/destination-details.php?slug=$1 [L,QSA]
+RewriteRule ^package/([^/]+)$ public/package-details.php?slug=$1 [L,QSA]

@@ -132,9 +132,10 @@ if (isset($_POST['add_package'])) {
         }
     }
     $itinerary_json = json_encode($itinerary);
+    $slug = createSlug($package_name);
     
-    $stmt = $conn->prepare("INSERT INTO packages (package_name, package_type, duration_days, max_people, accommodation_type, price_per_person, description, highlights, inclusions, exclusions, faqs, itinerary, badge, rating, reviews_count, is_featured, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-    $stmt->bind_param("ssiissdssssssdsii", $package_name, $package_type, $duration_days, $max_people, $accommodation_type, $price_per_person, $description, $highlights_json, $inclusions_json, $exclusions_json, $faqs_json, $itinerary_json, $badge, $rating, $reviews_count, $is_featured, $is_active);
+    $stmt = $conn->prepare("INSERT INTO packages (package_name, slug, package_type, duration_days, max_people, accommodation_type, price_per_person, description, highlights, inclusions, exclusions, faqs, itinerary, badge, rating, reviews_count, is_featured, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    $stmt->bind_param("sssiisdsssssssdiii", $package_name, $slug, $package_type, $duration_days, $max_people, $accommodation_type, $price_per_person, $description, $highlights_json, $inclusions_json, $exclusions_json, $faqs_json, $itinerary_json, $badge, $rating, $reviews_count, $is_featured, $is_active);
     
     if ($stmt->execute()) {
         $package_id = $conn->insert_id;
@@ -279,9 +280,10 @@ if (isset($_POST['update_package'])) {
     $exclusions_json = json_encode($exclusions);
     $faqs_json = json_encode($faqs);
     $itinerary_json = json_encode($itinerary);
+    $slug = createSlug($package_name);
     
-    $stmt = $conn->prepare("UPDATE packages SET package_name = ?, package_type = ?, duration_days = ?, max_people = ?, accommodation_type = ?, price_per_person = ?, description = ?, highlights = ?, inclusions = ?, exclusions = ?, faqs = ?, itinerary = ?, badge = ?, rating = ?, reviews_count = ?, is_featured = ?, is_active = ? WHERE id = ?");
-    $stmt->bind_param("ssiissdssssssdsiii", $package_name, $package_type, $duration_days, $max_people, $accommodation_type, $price_per_person, $description, $highlights_json, $inclusions_json, $exclusions_json, $faqs_json, $itinerary_json, $badge, $rating, $reviews_count, $is_featured, $is_active, $id);
+    $stmt = $conn->prepare("UPDATE packages SET package_name = ?, slug = ?, package_type = ?, duration_days = ?, max_people = ?, accommodation_type = ?, price_per_person = ?, description = ?, highlights = ?, inclusions = ?, exclusions = ?, faqs = ?, itinerary = ?, badge = ?, rating = ?, reviews_count = ?, is_featured = ?, is_active = ? WHERE id = ?");
+    $stmt->bind_param("sssiisdsssssssdiiii", $package_name, $slug, $package_type, $duration_days, $max_people, $accommodation_type, $price_per_person, $description, $highlights_json, $inclusions_json, $exclusions_json, $faqs_json, $itinerary_json, $badge, $rating, $reviews_count, $is_featured, $is_active, $id);
     
     if ($stmt->execute()) {
         // Handle any newly uploaded images during update
@@ -845,6 +847,7 @@ $revenue = $conn->query("SELECT SUM(total_amount) as total FROM package_bookings
                     <table>
                         <thead>
                             <tr>
+                                <th width="40"><input type="checkbox" id="selectAllBookings"></th>
                                 <th>Booking ID</th>
                                 <th>Package</th>
                                 <th>Customer</th>
@@ -861,6 +864,9 @@ $revenue = $conn->query("SELECT SUM(total_amount) as total FROM package_bookings
                                 $totalAmount = $booking['total_amount'] ?? ($booking['price_per_person'] * ($booking['number_of_adults'] + ($booking['number_of_children'] * 0.7)));
                             ?>
                                 <tr>
+                                    <td>
+                                        <input type="checkbox" class="booking-checkbox" value="<?php echo $booking['id']; ?>">
+                                    </td>
                                     <td>
                                         <strong><?php echo $booking['booking_reference']; ?></strong><br>
                                         <small style="color: var(--text-secondary); font-size: 0.8rem;">
@@ -897,21 +903,27 @@ $revenue = $conn->query("SELECT SUM(total_amount) as total FROM package_bookings
                                     </td>
                                     <td>
                                         <div class="table-actions">
-                                            <button class="btn btn-sm btn-primary" onclick="viewBooking(<?php echo $booking['id']; ?>)">
+                                            <button class="btn btn-sm btn-primary" onclick="viewBooking(<?php echo $booking['id']; ?>)" title="View">
                                                 <i class="ri-eye-line"></i>
                                             </button>
-                                            <button class="btn btn-sm btn-warning" onclick="updateBookingStatus(<?php echo $booking['id']; ?>)">
+                                            <button class="btn btn-sm btn-warning" onclick="updateBookingStatus(<?php echo $booking['id']; ?>)" title="Status">
                                                 <i class="ri-edit-line"></i>
                                             </button>
-                                            <a href="mailto:<?php echo $booking['customer_email']; ?>" class="btn btn-sm btn-success">
-                                                <i class="ri-mail-line"></i>
-                                            </a>
+                                            <button class="btn btn-sm btn-danger" onclick="deleteBooking(<?php echo $booking['id']; ?>)" title="Delete">
+                                                <i class="ri-delete-bin-line"></i>
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
                             <?php endwhile; ?>
                         </tbody>
                     </table>
+                </div>
+                <div style="margin-top: 15px; display: flex; align-items: center; gap: 10px;">
+                    <button class="btn btn-danger btn-sm" onclick="bulkDeleteBookings()">
+                        <i class="ri-delete-bin-line"></i> Delete Selected
+                    </button>
+                    <span id="selected-booking-count" style="font-size: 0.85rem; color: var(--text-secondary);">0 selected</span>
                 </div>
             </div>
 
@@ -2060,11 +2072,86 @@ $revenue = $conn->query("SELECT SUM(total_amount) as total FROM package_bookings
             });
             
             // Initialize date pickers
-            const today = new Date().toISOString().split('T')[0];
-            document.querySelectorAll('input[type="date"]').forEach(input => {
-                input.min = today;
             });
         });
+
+        // Booking Deletion Functions
+        function toggleAllBookings(source) {
+            const checkboxes = document.querySelectorAll('.booking-checkbox');
+            checkboxes.forEach(cb => cb.checked = source.checked);
+            updateSelectedBookingCount();
+        }
+
+        function updateSelectedBookingCount() {
+            const count = document.querySelectorAll('.booking-checkbox:checked').length;
+            const countDisplay = document.getElementById('selected-booking-count');
+            if (countDisplay) {
+                countDisplay.textContent = `${count} selected`;
+            }
+        }
+
+        // Add listener for select all
+        document.addEventListener('DOMContentLoaded', function() {
+            const selectAll = document.getElementById('selectAllBookings');
+            if (selectAll) {
+                selectAll.addEventListener('change', function() {
+                    toggleAllBookings(this);
+                });
+            }
+
+            // Listen for individual checkboxes
+            document.querySelectorAll('.booking-checkbox').forEach(cb => {
+                cb.addEventListener('change', updateSelectedBookingCount);
+            });
+        });
+
+        async function deleteBooking(id) {
+            if (!confirm('Are you sure you want to delete this booking?')) return;
+            
+            try {
+                const response = await fetch('../logic/delete_booking.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: id })
+                });
+                const result = await response.json();
+                if (result.success) {
+                    location.reload();
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to delete booking');
+            }
+        }
+
+        async function bulkDeleteBookings() {
+            const selected = Array.from(document.querySelectorAll('.booking-checkbox:checked')).map(cb => cb.value);
+            if (selected.length === 0) {
+                alert('Please select at least one booking to delete.');
+                return;
+            }
+            
+            if (!confirm(`Are you sure you want to delete ${selected.length} selected bookings?`)) return;
+            
+            try {
+                const response = await fetch('../logic/delete_booking.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ids: selected })
+                });
+                const result = await response.json();
+                if (result.success) {
+                    location.reload();
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to delete bookings');
+            }
+        }
     </script>
 </body>
 </html>

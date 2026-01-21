@@ -1,3 +1,4 @@
+<?php require_once '../admin/includes/connection.php'; ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,11 +7,11 @@
   <title>404 - Page Not Found | Zubi Tours & Holidays</title>
   
   <!-- Favicon -->
-  <link rel="icon" href="../assets/img/zubilogo.jpg" type="image/jpg" />
+  <link rel="icon" href="<?php echo BASE_URL; ?>assets/img/zubilogo.jpg" type="image/jpg" />
 
   <!-- CSS & Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/3.5.0/remixicon.css" />
-  <link rel="stylesheet" href="../assets/css/styles.css" />
+  <link rel="stylesheet" href="<?php echo BASE_URL; ?>assets/css/styles.css" />
 
   <style>
     .error-page {
@@ -94,7 +95,7 @@
       <h1 class="error-title">Page Not Found</h1>
       <p class="error-message">Oops! The page you are looking for might have been removed, had its name changed, or is temporarily unavailable.</p>
       
-      <a href="../index.php" class="home-btn">
+      <a href="<?php echo BASE_URL; ?>" class="home-btn">
         Back to Home
         <i class="ri-arrow-right-line"></i>
       </a>

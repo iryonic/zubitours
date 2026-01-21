@@ -75,9 +75,9 @@ $filtered_count = ($active_filter !== 'all') ? $total_count : null;
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/3.5.0/remixicon.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
     <!--=============== CSS ===============-->
-    <link rel="stylesheet" href="../assets/css/styles.css" />
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>assets/css/styles.css" />
     <!-- --==============Favicon =============-- -->
-    <link rel="icon" type="image/png" href="../assets/img/zubilogo.jpg" />
+    <link rel="icon" type="image/png" href="<?php echo BASE_URL; ?>assets/img/zubilogo.jpg" />
     <title>Zubi tours & Holiday - Gallery</title>
     
     <style>
@@ -102,7 +102,7 @@ $filtered_count = ($active_filter !== 'all') ? $total_count : null;
             left: 0;
             right: 0;
             bottom: 0;
-            background: url('../assets/img/bg1.jpg') center/cover;
+            background: url('<?php echo BASE_URL; ?>assets/img/bg1.jpg') center/cover;
             opacity: 0.3;
             z-index: -1;
         }
@@ -546,7 +546,7 @@ $filtered_count = ($active_filter !== 'all') ? $total_count : null;
         <?php if (count($filtered_gallery) > 0): ?>
             <?php foreach ($filtered_gallery as $index => $item): 
                 // FIXED: Correct image path - remove duplicate ../admin
-                $image_path = !empty($item['image_path']) ? '../admin/' . $item['image_path'] : '../assets/img/bg2.jpg';
+                $image_path = !empty($item['image_path']) ? BASE_URL . 'admin/' . $item['image_path'] : BASE_URL . 'assets/img/bg2.jpg';
                 $categories = explode(' ', $item['categories']);
             ?>
                 <div class="gallery-card" 
@@ -557,7 +557,7 @@ $filtered_count = ($active_filter !== 'all') ? $total_count : null;
                          alt="<?php echo htmlspecialchars($item['title']); ?>"
                          class="gallery-image image-loading"
                          onload="this.classList.remove('image-loading')"
-                         onerror="this.src='../assets/img/bg2.jpg'; this.classList.remove('image-loading')">
+                         onerror="this.src='<?php echo BASE_URL; ?>assets/img/bg2.jpg'; this.classList.remove('image-loading')">
                     
                     <div class="gallery-overlay">
                         <h3 class="gallery-title"><?php echo htmlspecialchars($item['title']); ?></h3>
@@ -617,62 +617,12 @@ $filtered_count = ($active_filter !== 'all') ? $total_count : null;
     </div>
 
     <!-- FOOTER -->
-    <footer class="footer">
-        <div class="footer-container">
-            <div class="footer-col">
-                <h3>Zubi Tours & Holidays</h3>
-                <p>Creating unforgettable experiences in the paradise of Kashmir and the majestic landscapes of Ladakh.</p>
-                <div class="social-links">
-                    <a href="#"><i class="ri-facebook-fill"></i></a>
-                    <a href="#"><i class="ri-instagram-line"></i></a>
-                    <a href="#"><i class="ri-twitter-fill"></i></a>
-                    <a href="#"><i class="ri-youtube-fill"></i></a>
-                </div>
-            </div>
-            
-            <div class="footer-col">
-                <h4>Quick Links</h4>
-                <ul>
-                    <li><a href="../index.php">Home</a></li>
-                    <li><a href="/public/about.php">About Us</a></li>
-                    <li><a href="/public/destinations.php">Destinations</a></li>
-                    <li><a href="/public/packages.php">Packages</a></li>
-                    <li><a href="/public/gallery.php">Gallery</a></li>
-                </ul>
-            </div>
-            
-            <div class="footer-col">
-                <h4>Services</h4>
-                <ul>
-                    <li><a href="/public/packages.php">Tour Packages</a></li>
-                    <li><a href="/public/car-rentals.php">Car Rentals</a></li>
-                    <li><a href="#">Hotel Booking</a></li>
-                    <li><a href="#">Adventure Activities</a></li>
-                    <li><a href="#">Pilgrimage Tours</a></li>
-                </ul>
-            </div>
-            
-            <div class="footer-col">
-                <h4>Contact Info</h4>
-                <div class="contact-info">
-                    <p><i class="ri-map-pin-line"></i> Srinagar, Jammu & Kashmir</p>
-                    <p><i class="ri-phone-line"></i> +91 7006296814</p>
-                    <p><i class="ri-mail-line"></i> info@zubitours.com</p>
-                    <p><i class="ri-time-line"></i> Mon-Sat: 9AM - 6PM</p>
-                </div>
-            </div>
-        </div>
-        
-        <div class="footer-bottom">
-            <p>&copy; <span id="getYear"></span> Zubi Tours & Holidays. All rights reserved.</p>
-            <p> Powered By <a href="https://irfanmanzoor.in">KRYON</a></p>
-        </div>
-    </footer>
+    <?php include '../admin/includes/footer.php'; ?>
 
     <!-- Linking Swiper script -->
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
     <!--=============== MAIN JS ===============-->
-    <script src="../assets/js/main.js"></script>
+    <script src="<?php echo BASE_URL; ?>assets/js/main.js"></script>
     
     <script>
         // Gallery data from PHP
@@ -719,7 +669,7 @@ $filtered_count = ($active_filter !== 'all') ? $total_count : null;
             if (!item) return;
             
             // FIXED: Correct image path construction
-            const imagePath = item.image_path ? '../admin/' + item.image_path : '../assets/img/bg2.jpg';
+            const imagePath = item.image_path ? '<?php echo BASE_URL; ?>admin/' + item.image_path : '<?php echo BASE_URL; ?>assets/img/bg2.jpg';
             
             document.getElementById('lightbox-img').src = imagePath;
             document.getElementById('lightbox-img').alt = item.title || '';
@@ -783,7 +733,7 @@ $filtered_count = ($active_filter !== 'all') ? $total_count : null;
             // Image error handling
             document.querySelectorAll('.gallery-image').forEach(img => {
                 img.addEventListener('error', function() {
-                    this.src = '../assets/img/bg2.jpg';
+                    this.src = '<?php echo BASE_URL; ?>assets/img/bg2.jpg';
                     this.classList.remove('image-loading');
                 });
             });

@@ -294,6 +294,16 @@ $message_stats = $conn->query("
 
             <!-- Messages Tab -->
             <div id="messages-tab" class="tab-content active">
+                <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px; border-radius: 12px; border: 1px solid #eee;">
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <input type="checkbox" id="selectAllMessages" style="width: 18px; height: 18px; cursor: pointer;">
+                        <label for="selectAllMessages" style="font-weight: 600; cursor: pointer;">Select All</label>
+                        <span id="selected-msg-count" style="font-size: 0.85rem; color: var(--text-secondary); margin-left: 10px;">0 selected</span>
+                    </div>
+                    <button class="btn btn-danger btn-sm" onclick="bulkDeleteMessages()" id="bulkDeleteBtn" style="display: none;">
+                        <i class="ri-delete-bin-line"></i> Delete Selected
+                    </button>
+                </div>
                 <div class="messages-container">
                     <?php if ($messages->num_rows > 0): ?>
                         <ul class="message-list">
@@ -301,20 +311,28 @@ $message_stats = $conn->query("
                                 <li class="message-item <?php echo $msg['status']; ?> <?php echo $msg['status'] == 'new' ? 'unread' : 'read'; ?>" 
                                     onclick="viewMessage(<?php echo $msg['id']; ?>)">
                                     <div class="message-header">
-                                        <div class="message-sender">
-                                            <div class="sender-avatar">
-                                                <?php echo strtoupper(substr($msg['name'], 0, 1)); ?>
-                                            </div>
-                                            <div class="sender-info">
-                                                <h4><?php echo htmlspecialchars($msg['name']); ?></h4>
-                                                <div class="sender-email"><?php echo $msg['email']; ?></div>
+                                        <div style="display: flex; align-items: center; gap: 15px;">
+                                            <input type="checkbox" class="message-checkbox" value="<?php echo $msg['id']; ?>" onclick="event.stopPropagation()">
+                                            <div class="message-sender">
+                                                <div class="sender-avatar">
+                                                    <?php echo strtoupper(substr($msg['name'], 0, 1)); ?>
+                                                </div>
+                                                <div class="sender-info">
+                                                    <h4><?php echo htmlspecialchars($msg['name']); ?></h4>
+                                                    <div class="sender-email"><?php echo $msg['email']; ?></div>
+                                                </div>
                                             </div>
                                         </div>
                                         <div class="message-meta">
-                                            <div class="message-time"><?php echo $msg['time_ago']; ?></div>
-                                            <span class="status-badge status-<?php echo $msg['status']; ?>">
-                                                <?php echo ucfirst($msg['status']); ?>
-                                            </span>
+                                            <div style="text-align: right; margin-bottom: 5px;">
+                                                <div class="message-time"><?php echo $msg['time_ago']; ?></div>
+                                                <span class="status-badge status-<?php echo $msg['status']; ?>">
+                                                    <?php echo ucfirst($msg['status']); ?>
+                                                </span>
+                                            </div>
+                                            <button class="btn btn-icon btn-danger" onclick="event.stopPropagation(); deleteMessage(<?php echo $msg['id']; ?>)" title="Delete" style="padding: 5px; min-width: auto; height: auto;">
+                                                <i class="ri-delete-bin-line"></i>
+                                            </button>
                                         </div>
                                     </div>
                                     <div class="message-subject">
@@ -857,11 +875,79 @@ $message_stats = $conn->query("
             
             // Auto-refresh messages every 30 seconds
             setInterval(() => {
-                if (document.getElementById('messages-tab').classList.contains('active')) {
-                    window.location.reload();
+                if (document.getElementById('messages-tab').classList.contains('active') && !document.querySelector('.message-checkbox:checked')) {
+                    // window.location.reload();
                 }
             }, 30000);
+
+            // Selection Logic
+            const selectAll = document.getElementById('selectAllMessages');
+            const checkboxes = document.querySelectorAll('.message-checkbox');
+            const bulkBtn = document.getElementById('bulkDeleteBtn');
+            const countDisplay = document.getElementById('selected-msg-count');
+
+            if (selectAll) {
+                selectAll.addEventListener('change', () => {
+                    checkboxes.forEach(cb => cb.checked = selectAll.checked);
+                    updateSelectionUI();
+                });
+            }
+
+            checkboxes.forEach(cb => {
+                cb.addEventListener('change', updateSelectionUI);
+            });
+
+            function updateSelectionUI() {
+                const count = document.querySelectorAll('.message-checkbox:checked').length;
+                countDisplay.textContent = `${count} selected`;
+                bulkBtn.style.display = count > 0 ? 'block' : 'none';
+            }
         });
+
+        async function deleteMessage(id) {
+            if (!confirm('Are you sure you want to delete this message?')) return;
+            
+            try {
+                const response = await fetch('../logic/delete_inquiry.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: id })
+                });
+                const result = await response.json();
+                if (result.success) {
+                    location.reload();
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to delete message');
+            }
+        }
+
+        async function bulkDeleteMessages() {
+            const selected = Array.from(document.querySelectorAll('.message-checkbox:checked')).map(cb => cb.value);
+            if (selected.length === 0) return;
+            
+            if (!confirm(`Are you sure you want to delete ${selected.length} selected messages?`)) return;
+            
+            try {
+                const response = await fetch('../logic/delete_inquiry.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ids: selected })
+                });
+                const result = await response.json();
+                if (result.success) {
+                    location.reload();
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to delete messages');
+            }
+        }
     </script>
 </body>
 </html>

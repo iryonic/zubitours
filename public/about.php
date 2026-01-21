@@ -18,7 +18,7 @@ $team_res = $conn->query("SELECT * FROM about_team WHERE is_active = 1 ORDER BY 
 $stats_res = $conn->query("SELECT * FROM about_stats ORDER BY display_order");
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en">  
 
 <head>
   <meta charset="UTF-8" />
@@ -59,7 +59,7 @@ best tour planner Kashmir
 ">
 
 <!-- --==============Favicon =============-- -->
-<link rel="icon" type="image/png" href="../assets/img/zubilogo.jpg" />
+<link rel="icon" type="image/png" href="<?php echo BASE_URL; ?>assets/img/zubilogo.jpg" />
 
 
   <!--=============== REMIXICONS ===============-->
@@ -69,7 +69,7 @@ best tour planner Kashmir
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
 
   <!--=============== CSS ===============-->
-  <link rel="stylesheet" href="../assets/css/styles.css" />
+  <link rel="stylesheet" href="<?php echo BASE_URL; ?>assets/css/styles.css" />
 
   
 </head>
@@ -109,9 +109,9 @@ best tour planner Kashmir
       <div class="about-image">
         <?php 
           $story_img = $about_sections['story']['image_path'] ?? '';
-          $story_src = (!empty($story_img) && file_exists('../admin/upload/' . $story_img)) 
-                       ? '../admin/upload/' . $story_img 
-                       : '../assets/img/bg1.jpg';
+          $story_src = (!empty($story_img)) 
+                       ? BASE_URL . 'admin/upload/' . $story_img 
+                       : BASE_URL . 'assets/img/bg1.jpg';
         ?>
         <img loading="lazy" src="<?php echo $story_src; ?>" alt="Our Story" onerror="this.src='../assets/img/bg1.jpg'">
       </div>
@@ -151,9 +151,9 @@ best tour planner Kashmir
         <div class="member-image">
           <?php 
             $member_img = $member['image_path'] ?? '';
-            $member_src = (!empty($member_img) && file_exists('../admin/upload/' . $member_img)) 
-                         ? '../admin/upload/' . $member_img 
-                         : '../assets/img/bg1.jpg';
+            $member_src = (!empty($member_img)) 
+                         ? BASE_URL . 'admin/upload/' . $member_img 
+                         : BASE_URL . 'assets/img/bg1.jpg';
           ?>
           <img loading="lazy" src="<?php echo $member_src; ?>" alt="<?php echo htmlspecialchars($member['name']); ?>" onerror="this.src='../assets/img/bg1.jpg'">
         </div>
@@ -185,9 +185,9 @@ best tour planner Kashmir
               <p>"<?php echo htmlspecialchars($testi['testimonial_text']); ?>"</p>
             </div>
             <div class="testimonial-author" style="display: flex; align-items: center; gap: 15px; margin-top: 20px;">
-              <img src="../admin/upload/<?php echo $testi['avatar_path'] ?: 'bg1.jpg'; ?>" 
+              <img src="<?php echo BASE_URL; ?>admin/upload/<?php echo $testi['avatar_path'] ?: 'bg1.jpg'; ?>" 
                    style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover;" 
-                   onerror="this.src='../assets/img/iry.png'">
+                   onerror="this.src='<?php echo BASE_URL; ?>assets/img/iry.png'">
               <div>
                 <h4 style="margin: 0;"><?php echo htmlspecialchars($testi['author_name']); ?></h4>
                 <p style="margin: 0; font-size: 0.85rem; color: var(--primary-color);"><?php echo htmlspecialchars($testi['package_name'] ?? 'Verified Customer'); ?></p>
@@ -208,8 +208,8 @@ best tour planner Kashmir
       <h2><?php echo htmlspecialchars($about_sections['cta']['title'] ?? 'Ready to Explore with Us?'); ?></h2>
       <p><?php echo htmlspecialchars($about_sections['cta']['subtitle'] ?? 'Join thousands of satisfied travelers...'); ?></p>
       <div class="cta-buttons">
-        <a href="./packages.php" class="cta-btn primary">View Packages</a>
-        <a href="./contact.php" class="cta-btn secondary">Contact Us</a>
+        <a href="<?php echo BASE_URL; ?>packages" class="cta-btn primary">View Packages</a>
+        <a href="<?php echo BASE_URL; ?>contact" class="cta-btn secondary">Contact Us</a>
       </div>
     </div>
   </section>
@@ -221,7 +221,7 @@ best tour planner Kashmir
   <!-- Linking Swiper script -->
   <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
   <!--=============== MAIN JS ===============-->
-  <script src="../assets/js/main.js"></script>
+  <script src="<?php echo BASE_URL; ?>assets/js/main.js"></script>
 
   <script>
     // Animate stats when they scroll into view

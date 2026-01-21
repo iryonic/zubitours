@@ -17,21 +17,21 @@
       <div class="footer-col">
         <h4>Quick Links</h4>
         <ul>
-          <li><a href="../index.php">Home</a></li>
-          <li><a href="./about.php">About Us</a></li>
-          <li><a href="./destinations.php">Destinations</a></li>
-          <li><a href="./packages.php">Packages</a></li>
-          <li><a href="./gallery.php">Gallery</a></li>
+          <li><a href="<?php echo BASE_URL; ?>">Home</a></li>
+          <li><a href="<?php echo BASE_URL; ?>about">About Us</a></li>
+          <li><a href="<?php echo BASE_URL; ?>destinations">Destinations</a></li>
+          <li><a href="<?php echo BASE_URL; ?>packages">Packages</a></li>
+          <li><a href="<?php echo BASE_URL; ?>gallery">Gallery</a></li>
         </ul>
       </div>
 
       <div class="footer-col">
         <h4>Services</h4>
         <ul>
-          <li><a href="./packages.php">Tour Packages</a></li>
-          <li><a href="./car-rentals.php">Car Rentals</a></li>
-          <li><a href="#">Our Policy</a></li>
-          <li><a href="#">Terms and Conditions</a></li>
+          <li><a href="<?php echo BASE_URL; ?>packages">Tour Packages</a></li>
+          <li><a href="<?php echo BASE_URL; ?>car-rentals">Car Rentals</a></li>
+          <li><a href="<?php echo BASE_URL; ?>privacy-policy">Our Policy</a></li>
+          <li><a href="<?php echo BASE_URL; ?>terms-conditions">Terms and Conditions</a></li>
         </ul>
       </div>
 
@@ -48,7 +48,7 @@
 
     <div class="footer-bottom">
       <p>
-        &copy; <span id="getYear"></span> Zubi Tours & Holidays. All rights
+        &copy; <span id="getYear">2024</span> Zubi Tours & Holidays. All rights
         reserved.
       </p>
       <p>Powered By <a href="https://irfanmanzoor.in">EXORA.DEVS</a></p>

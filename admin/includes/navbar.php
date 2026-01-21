@@ -1,42 +1,35 @@
  <header class="header" id="header">
       <nav class="nav nav-container">
-        <a href="#" class="nav__logo"><img src="../assets/img/zubilogo.jpg" alt="zubilogo" id="logo"></a>
+        <a href="<?php echo BASE_URL; ?>" class="nav__logo"><img src="<?php echo BASE_URL; ?>assets/img/zubilogo.jpg" alt="zubilogo" id="logo"></a>
 
         <div class="nav__menu" id="nav-menu">
           <ul class="nav__list">
             <li class="nav__item">
-              <a href="../index.php
-              " class="nav__link">Home</a>
+              <a href="<?php echo BASE_URL; ?>" class="nav__link">Home</a>
             </li>
 
             <li class="nav__item">
-              <a href="./about.php
-              " class="nav__link active">About Us</a>
+              <a href="<?php echo BASE_URL; ?>about" class="nav__link">About Us</a>
             </li>
 
             <li class="nav__item">
-              <a href="./destinations.php
-              " class="nav__link">Destinations</a>
+              <a href="<?php echo BASE_URL; ?>destinations" class="nav__link">Destinations</a>
             </li>
 
             <li class="nav__item">
-              <a href="./packages.php
-              " class="nav__link">Packages</a>
+              <a href="<?php echo BASE_URL; ?>packages" class="nav__link">Packages</a>
             </li>
 
             <li class="nav__item">
-              <a href="./gallery.php
-              " class="nav__link">Gallery</a>
+              <a href="<?php echo BASE_URL; ?>gallery" class="nav__link">Gallery</a>
             </li>
 
             <li class="nav__item">
-              <a href="./car-rentals.php
-              " class="nav__link">Car Rentals</a>
+              <a href="<?php echo BASE_URL; ?>car-rentals" class="nav__link">Car Rentals</a>
             </li>
 
             <li class="nav__item">
-              <a href="./contact.php
-              " class="nav__link">Contact Us</a>
+              <a href="<?php echo BASE_URL; ?>contact" class="nav__link">Contact Us</a>
             </li>
           </ul>
 

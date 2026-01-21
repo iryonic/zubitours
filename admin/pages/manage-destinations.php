@@ -35,9 +35,93 @@ if ($form_action === 'add_destination') {
     $reviews_count = $_POST['reviews_count'];
     $is_featured = isset($_POST['is_featured']) ? 1 : 0;
     $is_active = isset($_POST['is_active']) ? 1 : 0;
+
+    $duration_days = $_POST['duration_days'] ?? 0;
+    $price_per_person = $_POST['price_per_person'] ?? 0;
+    $max_people = $_POST['max_people'] ?? 0;
+    $accommodation_type = $_POST['accommodation_type'] ?? '';
+
+    // Handle JSON fields
+    $inclusions = [];
+    $exclusions = [];
+    $faqs = [];
     
-    $stmt = $conn->prepare("INSERT INTO destinations (destination_name, region, destination_type, best_seasons, location, short_description, detailed_description, badge, rating, reviews_count, is_featured, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-    $stmt->bind_param("ssssssssdsii", $destination_name, $region, $destination_type, $best_seasons, $location, $short_description, $detailed_description, $badge, $rating, $reviews_count, $is_featured, $is_active);
+    // Process inclusions
+    if (isset($_POST['inclusions'])) {
+        foreach ($_POST['inclusions'] as $inclusion) {
+            if (!empty(trim($inclusion))) {
+                $inclusions[] = $inclusion;
+            }
+        }
+    }
+    
+    // Process exclusions
+    if (isset($_POST['exclusions'])) {
+        foreach ($_POST['exclusions'] as $exclusion) {
+            if (!empty(trim($exclusion))) {
+                $exclusions[] = $exclusion;
+            }
+        }
+    }
+    
+    // Process FAQs
+    if (isset($_POST['faq_questions']) && isset($_POST['faq_answers'])) {
+        $questions = $_POST['faq_questions'];
+        $answers = $_POST['faq_answers'];
+        for ($i = 0; $i < count($questions); $i++) {
+            if (!empty(trim($questions[$i])) && !empty(trim($answers[$i]))) {
+                $faqs[] = [
+                    'question' => $questions[$i],
+                    'answer' => $answers[$i]
+                ];
+            }
+        }
+    }
+    
+    // Handle itinerary
+    $itinerary = [];
+    if (isset($_POST['day_numbers']) && isset($_POST['day_titles']) && isset($_POST['day_descriptions'])) {
+        $day_numbers = $_POST['day_numbers'];
+        $day_titles = $_POST['day_titles'];
+        $day_descriptions = $_POST['day_descriptions'];
+        $day_activities = $_POST['day_activities'] ?? [];
+        $day_activities_desc = $_POST['day_activities_desc'] ?? [];
+        
+        for ($i = 0; $i < count($day_numbers); $i++) {
+            $current_day = $day_numbers[$i];
+            if (!empty(trim($day_titles[$i]))) {
+                $activities_list = [];
+                if (isset($day_activities[$current_day])) {
+                    $times = $day_activities[$current_day];
+                    $descs = $day_activities_desc[$current_day] ?? [];
+                    for ($k = 0; $k < count($times); $k++) {
+                        if (!empty(trim($times[$k])) || !empty(trim($descs[$k]))) {
+                            $activities_list[] = [
+                                'time' => $times[$k],
+                                'description' => $descs[$k]
+                            ];
+                        }
+                    }
+                }
+                $itinerary[] = [
+                    'day' => $current_day,
+                    'title' => $day_titles[$i],
+                    'description' => $day_descriptions[$i],
+                    'activities' => $activities_list
+                ];
+            }
+        }
+    }
+
+    $inclusions_json = json_encode($inclusions);
+    $exclusions_json = json_encode($exclusions);
+    $faqs_json = json_encode($faqs);
+    $itinerary_json = json_encode($itinerary);
+    
+    $slug = createSlug($destination_name);
+    
+    $stmt = $conn->prepare("INSERT INTO destinations (destination_name, slug, region, destination_type, duration_days, price_per_person, max_people, accommodation_type, best_seasons, location, short_description, detailed_description, itinerary, inclusions, exclusions, faqs, badge, rating, reviews_count, is_featured, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    $stmt->bind_param("ssssiiissssssssssdsii", $destination_name, $slug, $region, $destination_type, $duration_days, $price_per_person, $max_people, $accommodation_type, $best_seasons, $location, $short_description, $detailed_description, $itinerary_json, $inclusions_json, $exclusions_json, $faqs_json, $badge, $rating, $reviews_count, $is_featured, $is_active);
     
     if ($stmt->execute()) {
         $destination_id = $conn->insert_id;
@@ -92,9 +176,88 @@ if ($form_action === 'update_destination') {
     $reviews_count = $_POST['reviews_count'];
     $is_featured = isset($_POST['is_featured']) ? 1 : 0;
     $is_active = isset($_POST['is_active']) ? 1 : 0;
+
+    $duration_days = $_POST['duration_days'] ?? 0;
+    $price_per_person = $_POST['price_per_person'] ?? 0;
+    $max_people = $_POST['max_people'] ?? 0;
+    $accommodation_type = $_POST['accommodation_type'] ?? '';
+
+    // Handle JSON fields (same as add)
+    $inclusions = [];
+    $exclusions = [];
+    $faqs = [];
     
-    $stmt = $conn->prepare("UPDATE destinations SET destination_name = ?, region = ?, destination_type = ?, best_seasons = ?, location = ?, short_description = ?, detailed_description = ?, badge = ?, rating = ?, reviews_count = ?, is_featured = ?, is_active = ? WHERE id = ?");
-    $stmt->bind_param("ssssssssdsiii", $destination_name, $region, $destination_type, $best_seasons, $location, $short_description, $detailed_description, $badge, $rating, $reviews_count, $is_featured, $is_active, $id);
+    if (isset($_POST['inclusions'])) {
+        foreach ($_POST['inclusions'] as $inclusion) {
+            if (!empty(trim($inclusion))) {
+                $inclusions[] = $inclusion;
+            }
+        }
+    }
+    
+    if (isset($_POST['exclusions'])) {
+        foreach ($_POST['exclusions'] as $exclusion) {
+            if (!empty(trim($exclusion))) {
+                $exclusions[] = $exclusion;
+            }
+        }
+    }
+    
+    if (isset($_POST['faq_questions']) && isset($_POST['faq_answers'])) {
+        $questions = $_POST['faq_questions'];
+        $answers = $_POST['faq_answers'];
+        for ($i = 0; $i < count($questions); $i++) {
+            if (!empty(trim($questions[$i])) && !empty(trim($answers[$i]))) {
+                $faqs[] = [
+                    'question' => $questions[$i],
+                    'answer' => $answers[$i]
+                ];
+            }
+        }
+    }
+    
+    $itinerary = [];
+    if (isset($_POST['day_numbers']) && isset($_POST['day_titles']) && isset($_POST['day_descriptions'])) {
+        $day_numbers = $_POST['day_numbers'];
+        $day_titles = $_POST['day_titles'];
+        $day_descriptions = $_POST['day_descriptions'];
+        $day_activities = $_POST['day_activities'] ?? [];
+        $day_activities_desc = $_POST['day_activities_desc'] ?? [];
+        
+        for ($i = 0; $i < count($day_numbers); $i++) {
+            $current_day = $day_numbers[$i];
+            if (!empty(trim($day_titles[$i]))) {
+                $activities_list = [];
+                if (isset($day_activities[$current_day])) {
+                    $times = $day_activities[$current_day];
+                    $descs = $day_activities_desc[$current_day] ?? [];
+                    for ($k = 0; $k < count($times); $k++) {
+                        if (!empty(trim($times[$k])) || !empty(trim($descs[$k]))) {
+                            $activities_list[] = [
+                                'time' => $times[$k],
+                                'description' => $descs[$k]
+                            ];
+                        }
+                    }
+                }
+                $itinerary[] = [
+                    'day' => $current_day,
+                    'title' => $day_titles[$i],
+                    'description' => $day_descriptions[$i],
+                    'activities' => $activities_list
+                ];
+            }
+        }
+    }
+
+    $inclusions_json = json_encode($inclusions);
+    $exclusions_json = json_encode($exclusions);
+    $faqs_json = json_encode($faqs);
+    $itinerary_json = json_encode($itinerary);
+    $slug = createSlug($destination_name);
+    
+    $stmt = $conn->prepare("UPDATE destinations SET destination_name = ?, slug = ?, region = ?, destination_type = ?, duration_days = ?, price_per_person = ?, max_people = ?, accommodation_type = ?, best_seasons = ?, location = ?, short_description = ?, detailed_description = ?, itinerary = ?, inclusions = ?, exclusions = ?, faqs = ?, badge = ?, rating = ?, reviews_count = ?, is_featured = ?, is_active = ? WHERE id = ?");
+    $stmt->bind_param("ssssiiissssssssssdsiii", $destination_name, $slug, $region, $destination_type, $duration_days, $price_per_person, $max_people, $accommodation_type, $best_seasons, $location, $short_description, $detailed_description, $itinerary_json, $inclusions_json, $exclusions_json, $faqs_json, $badge, $rating, $reviews_count, $is_featured, $is_active, $id);
     
     if ($stmt->execute()) {
         $destination_id = $id;
@@ -300,6 +463,7 @@ $active_destinations = $conn->query("SELECT COUNT(*) as count FROM destinations 
 $featured_destinations = $conn->query("SELECT COUNT(*) as count FROM destinations WHERE is_featured = 1")->fetch_assoc()['count'];
 $kashmir_destinations = $conn->query("SELECT COUNT(*) as count FROM destinations WHERE region = 'kashmir'")->fetch_assoc()['count'];
 $ladakh_destinations = $conn->query("SELECT COUNT(*) as count FROM destinations WHERE region = 'ladakh'")->fetch_assoc()['count'];
+$total_inquiries = $conn->query("SELECT COUNT(*) as count FROM contact_messages WHERE destination_id IS NOT NULL")->fetch_assoc()['count'];
 ?>
 
 <!DOCTYPE html>
@@ -778,6 +942,12 @@ $ladakh_destinations = $conn->query("SELECT COUNT(*) as count FROM destinations 
             margin-bottom: 20px;
             border: 1px dashed var(--border-color);
         }
+        .main-tab-content {
+            display: none;
+        }
+        .main-tab-content.active {
+            display: block;
+        }
      </style>
 </head>
 <body>
@@ -871,10 +1041,33 @@ $ladakh_destinations = $conn->query("SELECT COUNT(*) as count FROM destinations 
                         <p>Featured Destinations</p>
                     </div>
                 </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon revenue-icon">
+                        <i class="ri-message-2-line"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3><?php echo $total_inquiries; ?></h3>
+                        <p>Total Inquiries</p>
+                    </div>
+                </div>
             </div>
 
-            <!-- Destinations Table -->
-            <div class="table-container">
+            <!-- Main Tabs -->
+            <div class="tabs" style="margin-bottom: 30px;">
+                <div class="tab main-tab active" data-main-tab="destinations" onclick="switchMainTab('destinations')">
+                    Destinations List
+                    <span class="tab-badge"><?php echo $total_destinations; ?></span>
+                </div>
+                <div class="tab main-tab" data-main-tab="inquiries" onclick="switchMainTab('inquiries')">
+                    Quick Inquiries
+                    <span class="tab-badge"><?php echo $total_inquiries; ?></span>
+                </div>
+            </div>
+
+            <!-- Destinations List Tab Content -->
+            <div id="destinations-main-tab" class="main-tab-content active">
+                <div class="table-container">
                 <!-- Search -->
                 <div style="margin-bottom: 20px;">
                     <div style="position: relative;">
@@ -1020,6 +1213,16 @@ $ladakh_destinations = $conn->query("SELECT COUNT(*) as count FROM destinations 
                     </div>
                 <?php endif; ?>
             </div>
+            </div>
+
+            <!-- Inquiries List Tab Content -->
+            <div id="inquiries-main-tab" class="main-tab-content">
+                <div class="table-container">
+                    <div id="main-inquiries-container">
+                        <p style="text-align: center; color: var(--text-secondary); padding: 40px;">Loading inquires...</p>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -1034,6 +1237,8 @@ $ladakh_destinations = $conn->query("SELECT COUNT(*) as count FROM destinations 
                 
                 <div class="tabs" style="margin-bottom: 20px;">
                     <div class="tab active" data-tab="basic" onclick="switchFormTab('basic')">Basic Info</div>
+                    <div class="tab" data-tab="details" onclick="switchFormTab('details')">Details</div>
+                    <div class="tab" data-tab="itinerary" onclick="switchFormTab('itinerary')">Plan</div>
                     <div class="tab" data-tab="media" onclick="switchFormTab('media')">Media</div>
                 </div>
                 
@@ -1119,6 +1324,28 @@ $ladakh_destinations = $conn->query("SELECT COUNT(*) as count FROM destinations 
                         </select>
                     </div>
 
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="duration_days">Duration (Days) *</label>
+                            <input type="number" id="duration_days" name="duration_days" min="0" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="price_per_person">Price per Person (₹) *</label>
+                            <input type="number" id="price_per_person" name="price_per_person" step="0.01" min="0" value="0">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="max_people">Max People</label>
+                            <input type="number" id="max_people" name="max_people" min="0" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="accommodation_type">Accommodation Type</label>
+                            <input type="text" id="accommodation_type" name="accommodation_type" placeholder="e.g. 3-star Hotels">
+                        </div>
+                    </div>
+
                     <div class="form-group">
                         <label for="short_description">Short Description *</label>
                         <textarea id="short_description" name="short_description" rows="3" required placeholder="Brief description for cards and listings..."></textarea>
@@ -1127,6 +1354,76 @@ $ladakh_destinations = $conn->query("SELECT COUNT(*) as count FROM destinations 
                         <label for="detailed_description">Detailed Description</label>
                         <textarea id="detailed_description" name="detailed_description" rows="6" placeholder="Full description for the explore page..."></textarea>
                     </div>
+                </div>
+
+                <!-- Details Tab -->
+                <div id="details-tab" class="tab-content">
+                    <style>
+                        .json-section { background: var(--bg-hover); padding: 20px; border-radius: 12px; margin-bottom: 20px; }
+                        .json-section h5 { margin-bottom: 15px; color: var(--primary-color); }
+                        .json-item { display: flex; gap: 10px; margin-bottom: 10px; }
+                        .json-item input { flex: 1; }
+                        .add-json-item { margin-top: 10px; }
+                    </style>
+                    <!-- Inclusions -->
+                    <div class="json-section">
+                        <h5>Inclusions</h5>
+                        <div id="inclusions-container">
+                            <div class="json-item">
+                                <input type="text" name="inclusions[]" placeholder="Included item">
+                                <button type="button" class="btn btn-sm btn-danger" onclick="removeJsonItem(this)"><i class="ri-delete-bin-line"></i></button>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-primary add-json-item" onclick="addJsonItem('inclusions')">
+                            <i class="ri-add-line"></i> Add Inclusion
+                        </button>
+                    </div>
+
+                    <!-- Exclusions -->
+                    <div class="json-section">
+                        <h5>Exclusions</h5>
+                        <div id="exclusions-container">
+                            <div class="json-item">
+                                <input type="text" name="exclusions[]" placeholder="Excluded item">
+                                <button type="button" class="btn btn-sm btn-danger" onclick="removeJsonItem(this)"><i class="ri-delete-bin-line"></i></button>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-primary add-json-item" onclick="addJsonItem('exclusions')">
+                            <i class="ri-add-line"></i> Add Exclusion
+                        </button>
+                    </div>
+
+                    <!-- FAQs -->
+                    <div class="json-section">
+                        <h5>Frequently Asked Questions</h5>
+                        <div id="faqs-container">
+                            <div class="json-item">
+                                <input type="text" name="faq_questions[]" placeholder="Question">
+                                <input type="text" name="faq_answers[]" placeholder="Answer">
+                                <button type="button" class="btn btn-sm btn-danger" onclick="removeJsonItem(this)"><i class="ri-delete-bin-line"></i></button>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-primary add-json-item" onclick="addJsonItem('faqs')">
+                            <i class="ri-add-line"></i> Add FAQ
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Itinerary Tab -->
+                <div id="itinerary-tab" class="tab-content">
+                    <style>
+                        .day-card { background: white; border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+                        .day-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
+                        .day-number { font-weight: 700; color: var(--primary-color); }
+                        .activity-item { display: flex; gap: 10px; margin-bottom: 10px; background: var(--bg-hover); padding: 10px; border-radius: 8px; }
+                        .activity-item input[type="time"] { width: 120px; }
+                    </style>
+                    <div id="itinerary-container">
+                        <!-- Days will be added here -->
+                    </div>
+                    <button type="button" class="btn btn-primary" onclick="addDay()">
+                        <i class="ri-add-line"></i> Add New Day
+                    </button>
                 </div>
                 
                 <!-- Media Tab -->
@@ -1153,6 +1450,7 @@ $ladakh_destinations = $conn->query("SELECT COUNT(*) as count FROM destinations 
                         </div>
                     </div>
                 </div>
+
 
                 <div class="form-group" style="margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--border-color);">
                     <button type="submit" class="btn btn-primary" style="width: 100%;">
@@ -1342,6 +1640,24 @@ $ladakh_destinations = $conn->query("SELECT COUNT(*) as count FROM destinations 
             const contentEl = document.getElementById(`${tabName}-tab`);
             if (contentEl) contentEl.classList.add('active');
         }
+
+        function switchMainTab(tabName) {
+            // Remove active from all tabs/contents
+            document.querySelectorAll('.main-tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.main-tab-content').forEach(content => content.classList.remove('active'));
+
+            // Set active
+            const tabEl = document.querySelector(`.main-tab[data-main-tab="${tabName}"]`);
+            if (tabEl) tabEl.classList.add('active');
+
+            const contentEl = document.getElementById(`${tabName}-main-tab`);
+            if (contentEl) contentEl.classList.add('active');
+
+            // Load content if needed
+            if (tabName === 'inquiries') {
+                loadInquiries();
+            }
+        }
         
         // Modal functions
         function openAddDestinationModal() {
@@ -1350,6 +1666,7 @@ $ladakh_destinations = $conn->query("SELECT COUNT(*) as count FROM destinations 
             
             document.getElementById('destination-form').reset();
             document.getElementById('destination_id').value = '';
+            
             
             switchFormTab('basic');
             
@@ -1364,6 +1681,10 @@ $ladakh_destinations = $conn->query("SELECT COUNT(*) as count FROM destinations 
             // Uncheck featured and active checkboxes
             document.getElementById('is_featured').checked = false;
             document.getElementById('is_active').checked = true;
+
+            // Reset dynamic fields
+            populateJsonFields({inclusions: [], exclusions: [], faqs: []});
+            populateItinerary([]);
             
             document.getElementById('destination-modal').classList.add('active');
         }
@@ -1414,6 +1735,7 @@ $ladakh_destinations = $conn->query("SELECT COUNT(*) as count FROM destinations 
                     document.getElementById('region').value = data.region;
                     document.getElementById('destination_type').value = data.destination_type;
                     document.getElementById('location').value = data.location;
+                    
                     document.getElementById('short_description').value = data.short_description;
                     document.getElementById('detailed_description').value = data.detailed_description || '';
                     document.getElementById('badge').value = data.badge || '';
@@ -1421,6 +1743,15 @@ $ladakh_destinations = $conn->query("SELECT COUNT(*) as count FROM destinations 
                     document.getElementById('reviews_count').value = data.reviews_count || '100';
                     document.getElementById('is_featured').checked = data.is_featured == 1;
                     document.getElementById('is_active').checked = data.is_active == 1;
+
+                    document.getElementById('duration_days').value = data.duration_days || 0;
+                    document.getElementById('price_per_person').value = data.price_per_person || 0;
+                    document.getElementById('max_people').value = data.max_people || 0;
+                    document.getElementById('accommodation_type').value = data.accommodation_type || '';
+
+                    // Populate Details and Itinerary
+                    populateJsonFields(data);
+                    populateItinerary(data.itinerary);
                     
                     // Set seasons
                     document.querySelectorAll('input[name="best_seasons[]"]').forEach(cb => {
@@ -1447,7 +1778,339 @@ $ladakh_destinations = $conn->query("SELECT COUNT(*) as count FROM destinations 
             }
         }
         
-        // Manage Images
+        async function loadInquiries() {
+            const container = document.getElementById('main-inquiries-container');
+            if (!container) return;
+
+            try {
+                const response = await fetch(`../logic/get_destination_inquiries.php`);
+                const inquiries = await response.json();
+
+                if (inquiries.error) {
+                    container.innerHTML = `<p style="text-align: center; color: var(--error-color); padding: 20px;">Error: ${inquiries.error}</p>`;
+                    return;
+                }
+
+                if (inquiries.length === 0) {
+                    container.innerHTML = `<p style="text-align: center; color: var(--text-secondary); padding: 40px;">No inquiries found.</p>`;
+                    return;
+                }
+
+                let html = `
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th width="40"><input type="checkbox" id="selectAllInquiries" onclick="toggleAllInquiries(this)"></th>
+                                    <th>Date</th>
+                                    <th>Client</th>
+                                    <th>Destination</th>
+                                    <th>Travel Details</th>
+                                    <th>Message</th>
+                                    <th width="100">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+
+                inquiries.forEach(inq => {
+                    const date = new Date(inq.created_at).toLocaleDateString();
+                    html += `
+                        <tr>
+                            <td><input type="checkbox" class="inquiry-checkbox" value="${inq.id}"></td>
+                            <td>${date}</td>
+                            <td>
+                                <strong>${inq.name}</strong><br>
+                                <span style="font-size: 0.85rem; color: var(--text-secondary);">${inq.email}</span><br>
+                                <span style="font-size: 0.85rem; color: var(--text-secondary);">${inq.phone}</span>
+                            </td>
+                            <td>
+                                <span class="status-badge" style="background: rgba(37, 99, 235, 0.1); color: var(--primary-color);">
+                                    ${inq.destination_name}
+                                </span>
+                            </td>
+                            <td>
+                                <span style="font-size: 0.85rem;">
+                                    <strong>Pax:</strong> ${inq.adults}A, ${inq.children}C<br>
+                                    <strong>Date:</strong> ${inq.travel_date || 'N/A'}
+                                </span>
+                            </td>
+                            <td>
+                                <div style="max-width: 250px; font-size: 0.85rem; color: var(--text-secondary);">
+                                    ${inq.message}
+                                </div>
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-danger" onclick="deleteInquiry(${inq.id})" title="Delete">
+                                    <i class="ri-delete-bin-line"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                html += `</tbody></table></div>`;
+                
+                // Add bulk action button
+                const bulkBtnHtml = `
+                    <div style="margin-top: 15px; display: flex; align-items: center; gap: 10px;">
+                        <button class="btn btn-danger btn-sm" onclick="bulkDeleteInquiries()">
+                            <i class="ri-delete-bin-line"></i> Delete Selected
+                        </button>
+                        <span id="selected-count" style="font-size: 0.85rem; color: var(--text-secondary);">0 selected</span>
+                    </div>
+                `;
+                
+                container.innerHTML = html + bulkBtnHtml;
+
+                // Add event listeners for checkboxes to update count
+                document.querySelectorAll('.inquiry-checkbox').forEach(cb => {
+                    cb.addEventListener('change', updateSelectedInquiryCount);
+                });
+
+            } catch (error) {
+                console.error('Error loading inquiries:', error);
+                container.innerHTML = `<p style="text-align: center; color: var(--error-color); padding: 20px;">Failed to load inquiries.</p>`;
+            }
+        }
+
+        function toggleAllInquiries(source) {
+            const checkboxes = document.querySelectorAll('.inquiry-checkbox');
+            checkboxes.forEach(cb => cb.checked = source.checked);
+            updateSelectedInquiryCount();
+        }
+
+        function updateSelectedInquiryCount() {
+            const count = document.querySelectorAll('.inquiry-checkbox:checked').length;
+            const countDisplay = document.getElementById('selected-count');
+            if (countDisplay) {
+                countDisplay.textContent = `${count} selected`;
+            }
+        }
+
+        async function deleteInquiry(id) {
+            if (!confirm('Are you sure you want to delete this inquiry?')) return;
+            
+            try {
+                const response = await fetch('../logic/delete_inquiry.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: id })
+                });
+                const result = await response.json();
+                if (result.success) {
+                    loadInquiries();
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                console.error('Error deleting inquiry:', error);
+                alert('Failed to delete inquiry');
+            }
+        }
+
+        async function bulkDeleteInquiries() {
+            const selected = Array.from(document.querySelectorAll('.inquiry-checkbox:checked')).map(cb => cb.value);
+            if (selected.length === 0) {
+                alert('Please select at least one inquiry to delete.');
+                return;
+            }
+            
+            if (!confirm(`Are you sure you want to delete ${selected.length} selected inquiries?`)) return;
+            
+            try {
+                const response = await fetch('../logic/delete_inquiry.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ids: selected })
+                });
+                const result = await response.json();
+                if (result.success) {
+                    loadInquiries();
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                console.error('Error in bulk delete:', error);
+                alert('Failed to delete inquiries');
+            }
+        }
+
+        // Helper functions for dynamic fields
+        let currentDayCount = 1;
+
+        function addJsonItem(type) {
+            const container = document.getElementById(`${type}-container`);
+            let html = '';
+            if (type === 'faqs') {
+                html = `
+                    <div class="json-item">
+                        <input type="text" name="faq_questions[]" placeholder="Question">
+                        <input type="text" name="faq_answers[]" placeholder="Answer">
+                        <button type="button" class="btn btn-sm btn-danger" onclick="removeJsonItem(this)"><i class="ri-delete-bin-line"></i></button>
+                    </div>
+                `;
+            } else {
+                html = `
+                    <div class="json-item">
+                        <input type="text" name="${type}[]" placeholder="${type.charAt(0).toUpperCase() + type.slice(1)} item">
+                        <button type="button" class="btn btn-sm btn-danger" onclick="removeJsonItem(this)"><i class="ri-delete-bin-line"></i></button>
+                    </div>
+                `;
+            }
+            container.insertAdjacentHTML('beforeend', html);
+        }
+
+        function removeJsonItem(btn) {
+            btn.parentElement.remove();
+        }
+
+        function populateJsonFields(data) {
+            ['inclusions', 'exclusions', 'faqs'].forEach(type => {
+                const container = document.getElementById(`${type}-container`);
+                container.innerHTML = '';
+                const items = data[type];
+                if (items && items.length > 0) {
+                    items.forEach(item => {
+                        let html = '';
+                        if (type === 'faqs') {
+                            html = `
+                                <div class="json-item">
+                                    <input type="text" name="faq_questions[]" value="${item.question || ''}" placeholder="Question">
+                                    <input type="text" name="faq_answers[]" value="${item.answer || ''}" placeholder="Answer">
+                                    <button type="button" class="btn btn-sm btn-danger" onclick="removeJsonItem(this)"><i class="ri-delete-bin-line"></i></button>
+                                </div>
+                            `;
+                        } else {
+                            html = `
+                                <div class="json-item">
+                                    <input type="text" name="${type}[]" value="${item}" placeholder="${type.charAt(0).toUpperCase() + type.slice(1)} item">
+                                    <button type="button" class="btn btn-sm btn-danger" onclick="removeJsonItem(this)"><i class="ri-delete-bin-line"></i></button>
+                                </div>
+                            `;
+                        }
+                        container.insertAdjacentHTML('beforeend', html);
+                    });
+                } else {
+                    addJsonItem(type);
+                }
+            });
+        }
+
+        function addDay() {
+            const container = document.getElementById('itinerary-container');
+            const day = currentDayCount++;
+            const html = `
+                <div class="day-card" data-day="${day}">
+                    <div class="day-header">
+                        <div>
+                            <span class="day-number">Day ${day}</span>
+                            <input type="hidden" name="day_numbers[]" value="${day}">
+                        </div>
+                        <button type="button" class="btn btn-sm btn-danger" onclick="removeDay(${day})">
+                            <i class="ri-delete-bin-line"></i> Remove Day
+                        </button>
+                    </div>
+                    <div class="form-group">
+                        <label>Day Title</label>
+                        <input type="text" name="day_titles[]" placeholder="e.g. Arrival in Srinagar" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Day Description</label>
+                        <textarea name="day_descriptions[]" rows="2" placeholder="Brief description..."></textarea>
+                    </div>
+                    <div class="activities-list" id="activities-${day}">
+                        <div class="activity-item">
+                            <input type="time" name="day_activities[${day}][]">
+                            <input type="text" name="day_activities_desc[${day}][]" placeholder="Activity description">
+                            <button type="button" class="btn btn-sm btn-danger" onclick="removeActivity(this)"><i class="ri-delete-bin-line"></i></button>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-primary" onclick="addActivity(${day})">
+                        <i class="ri-add-line"></i> Add Activity
+                    </button>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', html);
+        }
+
+        function removeDay(day) {
+            const card = document.querySelector(`.day-card[data-day="${day}"]`);
+            card.remove();
+            // Re-order days? Maybe not strictly necessary for now as they are sent as arrays
+        }
+
+        function addActivity(day) {
+            const container = document.getElementById(`activities-${day}`);
+            const html = `
+                <div class="activity-item">
+                    <input type="time" name="day_activities[${day}][]">
+                    <input type="text" name="day_activities_desc[${day}][]" placeholder="Activity description">
+                    <button type="button" class="btn btn-sm btn-danger" onclick="removeActivity(this)"><i class="ri-delete-bin-line"></i></button>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', html);
+        }
+
+        function removeActivity(btn) {
+            btn.parentElement.remove();
+        }
+
+        function populateItinerary(itineraryData) {
+            const container = document.getElementById('itinerary-container');
+            container.innerHTML = '';
+            currentDayCount = 1;
+            
+            if (itineraryData && itineraryData.length > 0) {
+                itineraryData.forEach(day => {
+                    const d = day.day;
+                    const html = `
+                        <div class="day-card" data-day="${d}">
+                            <div class="day-header">
+                                <div>
+                                    <span class="day-number">Day ${d}</span>
+                                    <input type="hidden" name="day_numbers[]" value="${d}">
+                                </div>
+                                <button type="button" class="btn btn-sm btn-danger" onclick="removeDay(${d})">
+                                    <i class="ri-delete-bin-line"></i> Remove Day
+                                </button>
+                            </div>
+                            <div class="form-group">
+                                <label>Day Title</label>
+                                <input type="text" name="day_titles[]" value="${day.title || ''}" placeholder="e.g. Arrival in Srinagar" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Day Description</label>
+                                <textarea name="day_descriptions[]" rows="2" placeholder="Brief description...">${day.description || ''}</textarea>
+                            </div>
+                            <div class="activities-list" id="activities-${d}">
+                                ${day.activities && day.activities.length > 0 ? 
+                                    day.activities.map(activity => `
+                                        <div class="activity-item">
+                                            <input type="time" name="day_activities[${d}][]" value="${activity.time || ''}">
+                                            <input type="text" name="day_activities_desc[${d}][]" value="${activity.description || ''}" placeholder="Activity description">
+                                            <button type="button" class="btn btn-sm btn-danger" onclick="removeActivity(this)"><i class="ri-delete-bin-line"></i></button>
+                                        </div>
+                                    `).join('') : 
+                                    `<div class="activity-item">
+                                        <input type="time" name="day_activities[${d}][]">
+                                        <input type="text" name="day_activities_desc[${d}][]" placeholder="Activity description">
+                                        <button type="button" class="btn btn-sm btn-danger" onclick="removeActivity(this)"><i class="ri-delete-bin-line"></i></button>
+                                    </div>`
+                                }
+                            </div>
+                            <button type="button" class="btn btn-sm btn-primary" onclick="addActivity(${d})">
+                                <i class="ri-add-line"></i> Add Activity
+                            </button>
+                        </div>
+                    `;
+                    container.insertAdjacentHTML('beforeend', html);
+                    currentDayCount = Math.max(currentDayCount, parseInt(d, 10) + 1);
+                });
+            } else {
+                addDay();
+            }
+        }
         function manageDestinationImages(destinationId) {
             document.getElementById('images_destination_id').value = destinationId;
             currentDestinationId = destinationId;

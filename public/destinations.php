@@ -93,7 +93,7 @@ while($r = $regions_res->fetch_assoc()) $all_dist_regions[] = $r['region'];
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:site" content="@zubitours">
 <!-- --==============Favicon =============-- -->
-<link rel="icon" type="image/png" href="../assets/img/zubilogo.jpg" />
+<link rel="icon" type="image/png" href="<?php echo BASE_URL; ?>assets/img/zubilogo.jpg" />
 
 
 <title>Kashmir Tourist Destinations | Srinagar, Gulmarg, Pahalgam</title>
@@ -130,7 +130,7 @@ places to visit in Kashmir
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
 
     <!--=============== CSS ===============-->
-    <link rel="stylesheet" href="../assets/css/styles.css" />
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>assets/css/styles.css" />
 
    
     
@@ -178,7 +178,7 @@ places to visit in Kashmir
                              data-region="<?php echo $row['region']; ?>">
                             <div class="relative h-64 overflow-hidden">
                                 <?php 
-                                $imgPath = !empty($row['image_path']) ? '../admin/upload/'.$row['image_path'] : '../assets/img/bg1.jpg';
+                                $imgPath = !empty($row['image_path']) ? BASE_URL.'admin/upload/'.$row['image_path'] : BASE_URL.'assets/img/bg1.jpg';
                                 ?>
                                 <img src="<?php echo $imgPath; ?>" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
                                 <div class="absolute top-4 right-4 bg-white/90 backdrop-blur px-4 py-1.5 rounded-full text-xs font-black text-primary shadow-sm">
@@ -201,7 +201,7 @@ places to visit in Kashmir
                                         <i class="ri-map-pin-line text-primary"></i>
                                         <?php echo htmlspecialchars($row['location']); ?>
                                     </div>
-                                    <a href="destination-details.php?id=<?php echo $row['id']; ?>" class="bg-slate-900 text-white px-6 py-2.5 rounded-xl text-xs font-black uppercase hover:bg-primary transition-all">Explore</a>
+                                    <a href="<?php echo BASE_URL; ?>destination/<?php echo $row['slug']; ?>" class="bg-slate-900 text-white px-6 py-2.5 rounded-xl text-xs font-black uppercase hover:bg-primary transition-all">Explore</a>
                                 </div>
                             </div>
                         </div>
@@ -1708,3 +1708,4 @@ places to visit in Kashmir
     </script>
 </body>
 </html>
+            

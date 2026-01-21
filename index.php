@@ -1,5 +1,7 @@
-  <!DOCTYPE html>
+  <?php require_once 'admin/includes/connection.php'; ?>
+<!DOCTYPE html>
 <html lang="en">
+
 
 <head>
   <meta charset="UTF-8" />
@@ -47,7 +49,7 @@ Kashmir tour company
 ">
 
   <!--=============== FAVICON ===============-->
-  <link rel="icon" href="./assets/img/zubilogo.jpg" type="image/jpg" />
+  <link rel="icon" href="<?php echo BASE_URL; ?>assets/img/zubilogo.jpg" type="image/jpg" />
 
 
   <!--=============== REMIXICONS ===============-->
@@ -59,7 +61,7 @@ Kashmir tour company
     href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
 
   <!--=============== CSS ===============-->
-  <link rel="stylesheet" href="./assets/css/styles.css" />
+  <link rel="stylesheet" href="<?php echo BASE_URL; ?>assets/css/styles.css" />
 
  <title>Kashmir Tour Packages | Best Travel Agency in Srinagar – Zubi Tours</title>
 
@@ -1274,47 +1276,47 @@ Kashmir tour company
 <body>
  
   <!-- Loader -->
-    <div id="loader">
+    <!-- <div id="loader">
       <div class="travel-loader">
         <span class="path"></span>
         <i class="ri-flight-takeoff-line plane"></i>
       </div>
       <h2 class="brand-name">Zubi Tours & Holiday</h2>
-    </div>
+    </div> -->
 
   <!--==================== HEADER ====================-->
   <header class="header" id="header">
     <nav class="nav nav-container">
-      <a href="#" class="nav__logo"><img src="./assets/img/zubilogo.jpg" alt="zubilogo" id="logo"></a>
+      <a href="<?php echo BASE_URL; ?>" class="nav__logo"><img src="<?php echo BASE_URL; ?>assets/img/zubilogo.jpg" alt="zubilogo" id="logo"></a>
 
       <div class="nav__menu" id="nav-menu">
         <ul class="nav__list">
           <li class="nav__item">
-            <a href="index.php" class="nav__link active">Home</a>
+            <a href="<?php echo BASE_URL; ?>" class="nav__link active">Home</a>
           </li>
 
           <li class="nav__item">
-            <a href="./public/about.php" class="nav__link">About Us</a>
+            <a href="<?php echo BASE_URL; ?>about" class="nav__link">About Us</a>
           </li>
 
           <li class="nav__item">
-            <a href="./public/destinations.php" class="nav__link">Destinations</a>
+            <a href="<?php echo BASE_URL; ?>destinations" class="nav__link">Destinations</a>
           </li>
 
           <li class="nav__item">
-            <a href="./public/packages.php" class="nav__link">Packages</a>
+            <a href="<?php echo BASE_URL; ?>packages" class="nav__link">Packages</a>
           </li>
 
           <li class="nav__item">
-            <a href="./public/gallery.php" class="nav__link">Gallery</a>
+            <a href="<?php echo BASE_URL; ?>gallery" class="nav__link">Gallery</a>
           </li>
 
           <li class="nav__item">
-            <a href="./public/car-rentals.php" class="nav__link">Car Rentals</a>
+            <a href="<?php echo BASE_URL; ?>car-rentals" class="nav__link">Car Rentals</a>
           </li>
 
           <li class="nav__item">
-            <a href="./public/contact.php" class="nav__link">Contact Us</a>
+            <a href="<?php echo BASE_URL; ?>contact" class="nav__link">Contact Us</a>
           </li>
         </ul>
 
@@ -1482,13 +1484,14 @@ Kashmir tour company
             searchBtn.innerHTML = 'Search Tours';
             searchResults.innerHTML = '';
             
+            const baseUrl = '<?php echo BASE_URL; ?>';
             if (packages.length === 0) {
                 searchResults.innerHTML = '<div style="color: white; grid-column: 1/-1; padding: 20px;">No matching tours found. Try different filters.</div>';
             } else {
                 packages.forEach(pkg => {
-                    const img = pkg.image_path ? `./admin/upload/${pkg.image_path}` : './assets/img/bg1.jpg';
+                    const img = pkg.image_path ? `${baseUrl}admin/upload/${pkg.image_path}` : `${baseUrl}assets/img/bg1.jpg`;
                     const card = `
-                        <a href="public/package-details.php?id=${pkg.id}" class="live-result-card">
+                        <a href="${baseUrl}package/${pkg.slug}" class="live-result-card">
                             <img src="${img}" class="live-result-img" alt="${pkg.package_name}">
                             <div class="live-result-info">
                                 <h4>${pkg.package_name}</h4>
@@ -1567,7 +1570,7 @@ Kashmir tour company
                         <div class="rating"><i class="ri-star-fill"></i> <?php echo htmlspecialchars($destination['rating']); ?></div>
                       <?php endif; ?>
                     </div>
-                    <a href="public/destination-details.php?id=<?php echo $destination['id']; ?>" class="card-button">Explore</a>
+                    <a href="<?php echo BASE_URL; ?>destination/<?php echo $destination['slug']; ?>" class="card-button">Explore</a>
                   </div>
                 </div>
               </div>
@@ -1586,7 +1589,7 @@ Kashmir tour company
       <?php endif; ?>
 
       <div class="view-all-container">
-        <a href="/public/destinations.php" class="view-all-btn">View All Destinations</a>
+        <a href="<?php echo BASE_URL; ?>destinations" class="view-all-btn">View All Destinations</a>
       </div>
     </section>
   </main>
@@ -1672,7 +1675,7 @@ Kashmir tour company
                   </div>
                 <?php endif; ?>
               </div>
-              <a href="/public/package-details.php?id=<?php echo $package['id']; ?>" class="card-button">View Details</a>
+              <a href="<?php echo BASE_URL; ?>package/<?php echo $package['slug']; ?>" class="card-button">View Details</a>
             </div>
           </div>
         <?php endwhile; ?>
@@ -1684,7 +1687,7 @@ Kashmir tour company
     <?php endif; ?>
 
     <div class="view-all-container">
-      <a href="/public/packages.php" class="view-all-btn">View All Packages</a>
+      <a href="<?php echo BASE_URL; ?>packages" class="view-all-btn">View All Packages</a>
     </div>
   </section>
 
@@ -1718,12 +1721,12 @@ Kashmir tour company
           <?php while ($gallery_image = mysqli_fetch_assoc($gallery_query)): ?>
             <!-- Gallery Image -->
             <div class="masonry-item fade-up" data-category="<?php echo htmlspecialchars($gallery_image['category']); ?>">
-              <a href="./admin/upload/<?php echo htmlspecialchars($gallery_image['image_path']); ?>"
+              <a href="<?php echo BASE_URL; ?>admin/upload/<?php echo htmlspecialchars($gallery_image['image_path']); ?>"
                  data-fancybox="gallery"
                  data-caption="<?php echo htmlspecialchars($gallery_image['title'] . ' - ' . $gallery_image['location']); ?>">
-                <img src="./admin/upload/<?php echo htmlspecialchars($gallery_image['image_path']); ?>" 
+                <img src="<?php echo BASE_URL; ?>admin/upload/<?php echo htmlspecialchars($gallery_image['image_path']); ?>" 
                      alt="<?php echo htmlspecialchars($gallery_image['title']); ?>"
-                     onerror="this.src='./assets/img/bg1.jpg'" />
+                     onerror="this.src='<?php echo BASE_URL; ?>assets/img/bg1.jpg'" />
                 <div class="image-overlay">
                   <h3><?php echo htmlspecialchars($gallery_image['title']); ?></h3>
                   <p><?php echo htmlspecialchars($gallery_image['location']); ?></p>
@@ -1923,62 +1926,7 @@ Kashmir tour company
 
    
 
-  <footer class="footer">
-    <div class="footer-container">
-      <div class="footer-col">
-        <h3>Zubi Tours & Holidays</h3>
-        <p>
-          Creating unforgettable experiences in the paradise of Kashmir and
-          the majestic landscapes of Ladakh.
-        </p>
-        <div class="social-links">
-          <a href="https://www.facebook.com/dartoursandtravels?mibextid=ZbWKwL"><i class="ri-facebook-fill"></i></a>
-          <a href="https://www.instagram.com/zubi_tours_n_holidays_kashmir?igsh=OXhwMG04MWZtdnp6"><i class="ri-instagram-line"></i></a>
-          <a href="https://x.com/TravelsZubi?t=Atj8gU4GAK00qI-TJkrjrg&s=08"><i class="ri-twitter-fill"></i></a>
-          <a href="https://wa.link/76iska"><i class="ri-whatsapp-fill"></i></a>
-        </div>
-      </div>
-
-      <div class="footer-col">
-        <h4>Quick Links</h4>
-        <ul>
-          <li><a href="./index.php">Home</a></li>
-          <li><a href="./public/about.php">About Us</a></li>
-          <li><a href="./public/destinations.php">Destinations</a></li>
-          <li><a href="./public/packages.php">Packages</a></li>
-          <li><a href="./public/gallery.php">Gallery</a></li>
-        </ul>
-      </div>
-
-      <div class="footer-col">
-        <h4>Services</h4>
-        <ul>
-          <li><a href="./public/packages.php">Tour Packages</a></li>
-          <li><a href="./public/car-rentals.php">Car Rentals</a></li>
-          <li><a href="#">Our Policy</a></li>
-          <li><a href="#">Terms and Conditions</a></li>
-        </ul>
-      </div>
-
-      <div class="footer-col">
-        <h4>Contact Info</h4>
-        <div class="contact-info">
-          <p><i class="ri-map-pin-line"></i> R-13 Wichka Complex Naqashpora Barbar Shah- Bab-demb Rd, Srinagar, 190001.</p>
-          <a href="tel:+917006296814" style="color: rgba(255, 255, 255, 0.8);"><i class="ri-phone-line"></i> +91 7006296814</a> <br />
-          <a href="mailto:info@zubitours.com" style="color: rgba(255, 255, 255, 0.8);"><i class="ri-mail-line"></i> info@zubitours.com</a>
-          <p><i class="ri-time-line"></i> Mon-Sat: 9AM - 6PM</p>
-        </div>
-      </div>
-    </div>
-
-    <div class="footer-bottom">
-      <p>
-        &copy; <span id="getYear"></span> Zubi Tours & Holidays. All rights
-        reserved.
-      </p>
-      <p>Powered By <a href="https://irfanmanzoor.in">EXORA.DEVS</a></p>
-    </div>
-  </footer>
+  <?php include 'admin/includes/footer.php'; ?>
 
   <!-- GSAP & ScrollTrigger -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
@@ -1987,7 +1935,7 @@ Kashmir tour company
   <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
 
   <!-- Your GSAP animations file -->
-  <script src="./assets/js/gsap.js"></script>
+  <script src="<?php echo BASE_URL; ?>assets/js/gsap.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', function() {
       // Swiper Init

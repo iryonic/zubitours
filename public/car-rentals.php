@@ -138,7 +138,7 @@ while ($row = $capacities_result->fetch_assoc()) {
 
   
 <!-- --==============Favicon =============-- -->
-<link rel="icon" type="image/png" href="../assets/img/zubilogo.jpg" />
+<link rel="icon" type="image/png" href="<?php echo BASE_URL; ?>assets/img/zubilogo.jpg" />
 
 
   <!--=============== REMIXICONS ===============-->
@@ -146,7 +146,7 @@ while ($row = $capacities_result->fetch_assoc()) {
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
 
   <!--=============== CSS ===============-->
-  <link rel="stylesheet" href="../assets/css/styles.css" />
+  <link rel="stylesheet" href="<?php echo BASE_URL; ?>assets/css/styles.css" />
 <title>Kashmir Taxi & Car Rental Service | Zubi Tours & Holidays</title>
 
 <meta name="description" content="Book reliable Kashmir taxi and car rental services for airport transfers, sightseeing and full tour packages at best prices.">
@@ -405,12 +405,12 @@ Kashmir airport taxi
             data-price="<?php echo $car['price_per_day']; ?>">
             <div class="car-image">
               <?php
-              $image_path = !empty($car['image_path']) ? '../admin/upload/' . $car['image_path'] : '../assets/img/car1.jpg';
+              $image_path = !empty($car['image_path']) ? BASE_URL . 'admin/upload/' . $car['image_path'] : BASE_URL . 'assets/img/car1.jpg';
               ?>
               <img loading="lazy"
                 src="<?php echo $image_path; ?>"
                 alt="<?php echo htmlspecialchars($car['car_name']); ?>"
-                onerror="this.src='../assets/img/car1.jpg'">
+                onerror="this.src='<?php echo BASE_URL; ?>assets/img/car1.jpg'">
               <?php if ($car['badge']): ?>
                 <span class="car-badge <?php echo strtolower($car['badge']); ?>">
                   <?php echo $car['badge']; ?>
@@ -559,7 +559,7 @@ Kashmir airport taxi
   <!-- Linking Swiper script -->
   <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
   <!--=============== MAIN JS ===============-->
-  <script src="../assets/js/main.js"></script>
+  <script src="<?php echo BASE_URL; ?>assets/js/main.js"></script>
 
   <script>
     // Car filtering

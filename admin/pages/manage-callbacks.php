@@ -136,7 +136,14 @@ $bot_leads = $conn->query("SELECT COUNT(*) as count FROM callback_leads WHERE is
             <?php endif; ?>
             
             <div class="section-header">
-                <h1>Callback Leads</h1>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h1>Callback Leads</h1>
+                    <div id="bulk-actions" style="display: none;">
+                        <button class="btn btn-danger" onclick="bulkDeleteLeads()">
+                            <i class="ri-delete-bin-line"></i> Delete Selected (<span id="selected-count">0</span>)
+                        </button>
+                    </div>
+                </div>
             </div>
             
             <!-- Stats -->
@@ -187,6 +194,7 @@ $bot_leads = $conn->query("SELECT COUNT(*) as count FROM callback_leads WHERE is
                 <table>
                     <thead>
                         <tr>
+                            <th width="40"><input type="checkbox" id="selectAll" onclick="toggleAll(this)"></th>
                             <th>ID</th>
                             <th>Name</th>
                             <th>Phone</th>
@@ -199,6 +207,7 @@ $bot_leads = $conn->query("SELECT COUNT(*) as count FROM callback_leads WHERE is
                     <tbody>
                         <?php while ($lead = $leads->fetch_assoc()): ?>
                         <tr>
+                            <td><input type="checkbox" class="lead-checkbox" value="<?php echo $lead['id']; ?>" onclick="updateSelection()"></td>
                             <td><?php echo $lead['id']; ?></td>
                             <td><?php echo htmlspecialchars($lead['name']); ?></td>
                             <td>
@@ -221,11 +230,9 @@ $bot_leads = $conn->query("SELECT COUNT(*) as count FROM callback_leads WHERE is
                                         class="btn btn-sm btn-primary">
                                     <i class="ri-eye-line"></i> View
                                 </button>
-                                <a href="?delete_lead=<?php echo $lead['id']; ?>" 
-                                   class="btn btn-sm btn-danger"
-                                   onclick="return confirm('Delete this lead?')">
+                                <button class="btn btn-sm btn-danger" onclick="deleteLead(<?php echo $lead['id']; ?>)">
                                     <i class="ri-delete-bin-line"></i>
-                                </a>
+                                </button>
                             </td>
                         </tr>
                         <?php endwhile; ?>
@@ -307,6 +314,71 @@ $bot_leads = $conn->query("SELECT COUNT(*) as count FROM callback_leads WHERE is
     
     function closeLeadModal() {
         document.getElementById('leadModal').classList.remove('active');
+    }
+
+    // Selection & Deletion Logic
+    function toggleAll(source) {
+        const checkboxes = document.querySelectorAll('.lead-checkbox');
+        checkboxes.forEach(cb => cb.checked = source.checked);
+        updateSelection();
+    }
+
+    function updateSelection() {
+        const selected = document.querySelectorAll('.lead-checkbox:checked').length;
+        const bulkActions = document.getElementById('bulk-actions');
+        const countSpan = document.getElementById('selected-count');
+        
+        if (selected > 0) {
+            bulkActions.style.display = 'block';
+            countSpan.textContent = selected;
+        } else {
+            bulkActions.style.display = 'none';
+        }
+    }
+
+    async function deleteLead(id) {
+        if (!confirm('Are you sure you want to delete this lead?')) return;
+        
+        try {
+            const response = await fetch('../logic/delete_callback.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: id })
+            });
+            const result = await response.json();
+            if (result.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + result.error);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Failed to delete lead');
+        }
+    }
+
+    async function bulkDeleteLeads() {
+        const selected = Array.from(document.querySelectorAll('.lead-checkbox:checked')).map(cb => cb.value);
+        if (selected.length === 0) return;
+        
+        if (!confirm(`Are you sure you want to delete ${selected.length} selected leads?`)) return;
+        
+        try {
+            const response = await fetch('../logic/delete_callback.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ids: selected })
+            });
+            const result = await response.json();
+            if (result.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + result.error);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Failed to delete leads');
+        }
     }
     </script>
 </body>

@@ -285,7 +285,7 @@ $contact_phones = [
 <meta name="twitter:site" content="@zubitours">
 
 <!-- --==============Favicon =============-- -->
-<link rel="icon" type="image/png" href="../assets/img/zubilogo.jpg" />
+<link rel="icon" type="image/png" href="<?php echo BASE_URL; ?>assets/img/zubilogo.jpg" />
 
     
     <!--=============== REMIXICONS ===============-->
@@ -293,7 +293,7 @@ $contact_phones = [
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
     
     <!--=============== CSS ===============-->
-    <link rel="stylesheet" href="../assets/css/styles.css" />
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>assets/css/styles.css" />
     
     <title>Zubi Tours & Holidays - Contact Us</title>
     
@@ -622,7 +622,7 @@ $contact_phones = [
     <!-- Linking Swiper script -->
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
     <!--=============== MAIN JS ===============-->
-    <script src="../assets/js/main.js"></script>
+    <script src="<?php echo BASE_URL; ?>assets/js/main.js"></script>
     
     <script>
         // FAQ functionality

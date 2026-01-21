@@ -625,7 +625,7 @@ $brands = $conn->query("SELECT * FROM homepage_brands ORDER BY created_at DESC")
                                     <div class="image-preview-item">
                                         <img src="../upload/<?php echo $image['image_path']; ?>" 
                                              alt="<?php echo htmlspecialchars($image['title']); ?>"
-                                             onerror="this.src='../assets/img/bg1.jpg'">
+                                             onerror="this.src='./assets/img/bg1.jpg'">
                                         <div class="image-overlay">
                                             <div style="text-align: center; color: white;">
                                                 <div style="font-weight: 600; margin-bottom: 5px;"><?php echo htmlspecialchars($image['title']); ?></div>
@@ -708,7 +708,7 @@ $brands = $conn->query("SELECT * FROM homepage_brands ORDER BY created_at DESC")
                                     <div class="image-preview-item">
                                         <img src="../upload/<?php echo $brand['logo_path']; ?>" 
                                              alt="<?php echo htmlspecialchars($brand['brand_name']); ?>"
-                                             onerror="this.src='../assets/img/bg1.jpg'"
+                                             onerror="this.src='./assets/img/bg1.jpg'"
                                              style="object-fit: contain; background: white;">
                                         <div class="image-overlay">
                                             <div style="text-align: center; color: white;">

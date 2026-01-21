@@ -23,6 +23,10 @@ if (isset($_GET['id'])) {
         
         // Decode JSON fields
         $destination['best_seasons'] = json_decode($destination['best_seasons'], true) ?: [];
+        $destination['itinerary'] = json_decode($destination['itinerary'], true) ?: [];
+        $destination['inclusions'] = json_decode($destination['inclusions'], true) ?: [];
+        $destination['exclusions'] = json_decode($destination['exclusions'], true) ?: [];
+        $destination['faqs'] = json_decode($destination['faqs'], true) ?: [];
         
         echo json_encode($destination);
     } else {

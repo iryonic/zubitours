@@ -1,12 +1,16 @@
 <?php
 require_once '../admin/includes/connection.php';
 
-if (!isset($_GET['id'])) {
+if (isset($_GET['id'])) {
+    $identifier = $_GET['id'];
+    $where_clause = "p.id = ?";
+} elseif (isset($_GET['slug'])) {
+    $identifier = $_GET['slug'];
+    $where_clause = "p.slug = ?";
+} else {
     header('Location: packages.php');
     exit();
 }
-
-$package_id = $_GET['id'];
 
 // Fetch package details with all images
 $package_query = $conn->prepare("
@@ -15,19 +19,21 @@ $package_query = $conn->prepare("
            COUNT(DISTINCT pi.id) as image_count
     FROM packages p 
     LEFT JOIN package_images pi ON p.id = pi.package_id 
-    WHERE p.id = ? AND p.is_active = 1
+    WHERE $where_clause AND p.is_active = 1
     GROUP BY p.id
 ");
-$package_query->bind_param("i", $package_id);
+$param_type = is_numeric($identifier) && isset($_GET['id']) ? "i" : "s";
+$package_query->bind_param($param_type, $identifier);
 $package_query->execute();
 $package_result = $package_query->get_result();
 
 if ($package_result->num_rows === 0) {
-    header('Location: packages.php');
+    header('Location: packages.php');incl
     exit();
 }
 
 $package = $package_result->fetch_assoc();
+$package_id = $package['id'];
 
 // Decode JSON fields
 $package['highlights'] = json_decode($package['highlights'], true) ?: [];
@@ -176,7 +182,7 @@ Kashmir package details,
 Srinagar tour itinerary
 ">
  <!-- --==============Favicon =============-- -->
-<link rel="icon" type="image/png" href="../assets/img/zubilogo.jpg" />
+ <link rel="icon" type="image/png" href="<?php echo BASE_URL; ?>assets/img/zubilogo.jpg" />
 
 
     <!--=============== REMIXICONS ===============-->
@@ -186,7 +192,7 @@ Srinagar tour itinerary
     />
 
     <!--=============== CSS ===============-->
-    <link rel="stylesheet" href="../assets/css/styles.css" />
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>assets/css/styles.css" />
 
     <title><?php echo htmlspecialchars($package['package_name']); ?> - Zubi Tours</title>
     <style>
@@ -1203,7 +1209,7 @@ Srinagar tour itinerary
 
     <!-- Package Hero Section -->
     <section class="package-detail-hero">
-      <div class="hero-background" style="background-image: url('../admin/upload/<?php echo $package_images[0] ?? 'bg1.jpg'; ?>');"></div>
+      <div class="hero-background" style="background-image: url('<?php echo BASE_URL; ?>admin/upload/<?php echo $package_images[0] ?? 'bg1.jpg'; ?>');"></div>
       <div class="hero-content">
         <div class="badge-container">
           <?php if ($package['badge']): ?>
@@ -1367,9 +1373,9 @@ Srinagar tour itinerary
             <div class="gallery-grid">
               <?php foreach ($package_images as $index => $image): ?>
                 <div class="gallery-item">
-                  <img src="../admin/upload/<?php echo $image; ?>" 
+                  <img src="<?php echo BASE_URL; ?>admin/upload/<?php echo $image; ?>" 
                        alt="<?php echo htmlspecialchars($package['package_name']); ?> - Image <?php echo $index + 1; ?>"
-                       onerror="this.src='../assets/img/bg1.jpg'">
+                       onerror="this.src='<?php echo BASE_URL; ?>assets/img/bg1.jpg'">
                 </div>
               <?php endforeach; ?>
             </div>
@@ -1543,8 +1549,11 @@ Srinagar tour itinerary
       </div>
     </div>
 
+    <!--==================== FOOTER ====================-->
+    <?php include '../admin/includes/footer.php'; ?>
+
     <!--=============== MAIN JS ===============-->
-    <script src="../assets/js/main.js"></script>
+    <script src="<?php echo BASE_URL; ?>assets/js/main.js"></script>
     
     <script>
       // Itinerary Tab Functionality

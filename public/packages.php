@@ -179,7 +179,7 @@ $package_types = $types_query->fetch_all(MYSQLI_ASSOC);
 <meta name="twitter:site" content="@zubitours">
 
 <!-- --==============Favicon =============-- -->
-<link rel="icon" type="image/png" href="../assets/img/zubilogo.jpg" />
+<link rel="icon" type="image/png" href="<?php echo BASE_URL; ?>assets/img/zubilogo.jpg" />
 
 <title>Kashmir Tour Packages | Honeymoon, Family & Group Tours</title>
 
@@ -187,7 +187,7 @@ $package_types = $types_query->fetch_all(MYSQLI_ASSOC);
 
 <meta name="keywords" content="
 Kashmir tour packages,
-Kashmir honeymoon packages,
+Kashmir honeymoon packages, 
 Kashmir family tour packages,
 cheap Kashmir tour packages,
 luxury Kashmir tours,
@@ -205,7 +205,7 @@ custom Kashmir tour
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
 
     <!--=============== CSS ===============-->
-    <link rel="stylesheet" href="../assets/css/styles.css" />
+     <link rel="stylesheet" href="<?php echo BASE_URL; ?>assets/css/styles.css" />    
 
  
     <style>
@@ -648,9 +648,9 @@ custom Kashmir tour
                data-type="<?php echo $package['package_type']; ?>" 
                data-price="<?php echo getPriceRange($package['price_per_person']); ?>">
             <div class="card-image">
-              <img loading="lazy" src="../admin/upload/<?php echo $package['image_path'] ?: 'bg1.jpg'; ?>" 
+              <img loading="lazy" src="<?php echo BASE_URL; ?>admin/upload/<?php echo $package['image_path'] ?: 'bg1.jpg'; ?>" 
                    alt="<?php echo htmlspecialchars($package['package_name']); ?>"
-                   onerror="this.src='../assets/img/bg1.jpg'">
+                   onerror="this.src='<?php echo BASE_URL; ?>assets/img/bg1.jpg'">
               <?php foreach ($badges as $badge): ?>
                 <span class="card-badge"><?php echo $badge; ?></span>
               <?php endforeach; ?>
@@ -709,8 +709,8 @@ custom Kashmir tour
                 </div>
               </div>
               <div class="card-buttons">
-                <a href="./package-details.php?id=<?php echo $package['id']; ?>" class="card-button">View Details</a>
-                <a href="./package-details.php?id=<?php echo $package['id']; ?>#booking" class="card-button outline">Book Now</a>
+                <a href="<?php echo BASE_URL; ?>package/<?php echo $package['slug']; ?>" class="card-button">View Details</a>
+                <a href="<?php echo BASE_URL; ?>package/<?php echo $package['slug']; ?>#booking" class="card-button outline">Book Now</a>
               </div>
             </div>
           </div>
@@ -903,7 +903,7 @@ custom Kashmir tour
     </section>
 
      <!-- FOOTER -->
-<?php include '../admin/includes/footer.php'; ?>
+<?php include '../admin/includes/footer.php'; ?>  
 
     <!-- Linking Swiper script -->
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
