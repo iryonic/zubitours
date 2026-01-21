@@ -1,17 +1,15 @@
 RewriteEngine On
 RewriteBase /
 
-# Prevent directory listing
+# Prevent directory listing and handle potential MultiViews issues
 Options -Indexes -MultiViews
 
-# Custom Error Pages
-ErrorDocument 404 /public/404.php
-ErrorDocument 500 /public/505.php
-
-# Redirect root index request
-RewriteRule ^index/?$ index.php [L]
+# Details pages rules (placed first for priority)
+RewriteRule ^destination/([^/]+)/?$ public/destination-details.php?slug=$1 [L,QSA]
+RewriteRule ^package/([^/]+)/?$ public/package-details.php?slug=$1 [L,QSA]
 
 # Friendly URLs for main pages
+RewriteRule ^index/?$ index.php [L]
 RewriteRule ^destinations/?$ public/destinations.php [L,QSA]
 RewriteRule ^packages/?$ public/packages.php [L,QSA]
 RewriteRule ^about/?$ public/about.php [L,QSA]
@@ -21,11 +19,6 @@ RewriteRule ^contact/?$ public/contact.php [L,QSA]
 RewriteRule ^privacy-policy/?$ public/privacy-policy.php [L,QSA]
 RewriteRule ^terms-conditions/?$ public/terms-conditions.php [L,QSA]
 
-# Friendly URLs for details pages
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^destination/([^/]+)/?$ public/destination-details.php?slug=$1 [L,QSA]
-
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^package/([^/]+)/?$ public/package-details.php?slug=$1 [L,QSA]
+# Custom Error Pages
+ErrorDocument 404 /public/404.php
+ErrorDocument 500 /public/505.php
