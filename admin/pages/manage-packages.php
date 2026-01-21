@@ -2072,6 +2072,9 @@ $revenue = $conn->query("SELECT SUM(total_amount) as total FROM package_bookings
             });
             
             // Initialize date pickers
+            const today = new Date().toISOString().split('T')[0];
+            document.querySelectorAll('input[type="date"]').forEach(input => {
+                input.min = today;
             });
         });
 
