@@ -8,7 +8,7 @@ if (isset($_GET['id'])) {
     $identifier = $_GET['slug'];
     $where_clause = "p.slug = ?";
 } else {
-    header('Location: packages.php');
+    header('Location: ' . BASE_URL . 'packages');
     exit();
 }
 
@@ -28,7 +28,7 @@ $package_query->execute();
 $package_result = $package_query->get_result();
 
 if ($package_result->num_rows === 0) {
-    header('Location: packages.php');incl
+    header('Location: ' . BASE_URL . 'packages');
     exit();
 }
 

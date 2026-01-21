@@ -8,7 +8,7 @@ if (isset($_GET['id'])) {
     $identifier = $_GET['slug'];
     $where_clause = "d.slug = ?";
 } else {
-    header('Location: destinations.php');
+    header('Location: ' . BASE_URL . 'destinations');
     exit();
 }
 
@@ -27,7 +27,7 @@ $dest_query->execute();
 $dest_result = $dest_query->get_result();
 
 if ($dest_result->num_rows === 0) {
-    header('Location: destinations.php');
+    header('Location: ' . BASE_URL . 'destinations');
     exit();
 }
 

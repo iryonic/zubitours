@@ -1,24 +1,34 @@
 RewriteEngine On
 RewriteBase /
 
-# Prevent directory listing and handle potential MultiViews issues
+# Prevent directory listing
 Options -Indexes -MultiViews
 
-# Details pages rules (placed first for priority)
-RewriteRule ^destination/([^/]+)/?$ public/destination-details.php?slug=$1 [L,QSA]
-RewriteRule ^package/([^/]+)/?$ public/package-details.php?slug=$1 [L,QSA]
+# Ensure trailing slashes don't break logic (redirect /page/ to /page)
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)/$ /$1 [L,R=301]
 
-# Friendly URLs for main pages
-RewriteRule ^index/?$ index.php [L]
-RewriteRule ^destinations/?$ public/destinations.php [L,QSA]
-RewriteRule ^packages/?$ public/packages.php [L,QSA]
-RewriteRule ^about/?$ public/about.php [L,QSA]
-RewriteRule ^gallery/?$ public/gallery.php [L,QSA]
-RewriteRule ^car-rentals/?$ public/car-rentals.php [L,QSA]
-RewriteRule ^contact/?$ public/contact.php [L,QSA]
-RewriteRule ^privacy-policy/?$ public/privacy-policy.php [L,QSA]
-RewriteRule ^terms-conditions/?$ public/terms-conditions.php [L,QSA]
+# Core Redirects for Detail Pages
+# Note: No leading slash in the pattern, and [L,QSA] to handle parameters
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^destination/([^/]+)$ public/destination-details.php?slug=$1 [L,QSA,NC]
 
-# Custom Error Pages
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^package/([^/]+)$ public/package-details.php?slug=$1 [L,QSA,NC]
+
+# Primary Page Mappings
+RewriteRule ^destinations$ public/destinations.php [L,QSA,NC]
+RewriteRule ^packages$ public/packages.php [L,QSA,NC]
+RewriteRule ^about$ public/about.php [L,QSA,NC]
+RewriteRule ^gallery$ public/gallery.php [L,QSA,NC]
+RewriteRule ^car-rentals$ public/car-rentals.php [L,QSA,NC]
+RewriteRule ^contact$ public/contact.php [L,QSA,NC]
+RewriteRule ^privacy-policy$ public/privacy-policy.php [L,QSA,NC]
+RewriteRule ^terms-conditions$ public/terms-conditions.php [L,QSA,NC]
+RewriteRule ^index$ index.php [L,QSA,NC]
+
+# Error Pages
 ErrorDocument 404 /public/404.php
 ErrorDocument 500 /public/505.php
