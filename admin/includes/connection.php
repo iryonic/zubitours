@@ -27,9 +27,16 @@ $username = 'u255290550_zubitours';
 
  $conn = mysqli_connect($host, $username, $password, $dbname);
 
- if (!defined('BASE_URL')) {
-     define('BASE_URL', '/zubitours/');
+//  if (!defined('BASE_URL')) {
+//      define('BASE_URL', '/zubitours/');
+//  }
+
+
+// production ENVIRONMENT  setup 
+  if (!defined('BASE_URL')) {
+     define('BASE_URL', 'http://zubitours.com/');
  }
+
 
  if (!function_exists('createSlug')) {
      function createSlug($string) {
