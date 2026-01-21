@@ -1654,7 +1654,7 @@ $revenue = $conn->query("SELECT SUM(total_amount) as total FROM package_bookings
                         </div>
                     `;
                     container.insertAdjacentHTML('beforeend', html);
-                    currentDayCount = Math.max(currentDayCount, day.day + 1);
+                    currentDayCount = Math.max(currentDayCount, parseInt(day.day, 10) + 1);
                 });
             } else {
                 // Add at least one day
