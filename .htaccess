@@ -1,29 +1,31 @@
 RewriteEngine On
-
-# Base Path
 RewriteBase /
 
 # Prevent directory listing
-Options -Indexes
+Options -Indexes -MultiViews
 
 # Custom Error Pages
 ErrorDocument 404 /public/404.php
 ErrorDocument 500 /public/505.php
-ErrorDocument 505 /public/505.php
 
-# Redirect root to index
-RewriteRule ^index$ index.php [L]
+# Redirect root index request
+RewriteRule ^index/?$ index.php [L]
 
 # Friendly URLs for main pages
-RewriteRule ^destinations$ public/destinations.php [L]
-RewriteRule ^packages$ public/packages.php [L]
-RewriteRule ^about$ public/about.php [L]
-RewriteRule ^gallery$ public/gallery.php [L]
-RewriteRule ^car-rentals$ public/car-rentals.php [L]
-RewriteRule ^contact$ public/contact.php [L]
-RewriteRule ^privacy-policy$ public/privacy-policy.php [L]
-RewriteRule ^terms-conditions$ public/terms-conditions.php [L]
+RewriteRule ^destinations/?$ public/destinations.php [L,QSA]
+RewriteRule ^packages/?$ public/packages.php [L,QSA]
+RewriteRule ^about/?$ public/about.php [L,QSA]
+RewriteRule ^gallery/?$ public/gallery.php [L,QSA]
+RewriteRule ^car-rentals/?$ public/car-rentals.php [L,QSA]
+RewriteRule ^contact/?$ public/contact.php [L,QSA]
+RewriteRule ^privacy-policy/?$ public/privacy-policy.php [L,QSA]
+RewriteRule ^terms-conditions/?$ public/terms-conditions.php [L,QSA]
 
 # Friendly URLs for details pages
-RewriteRule ^destination/([^/]+)$ public/destination-details.php?slug=$1 [L,QSA]
-RewriteRule ^package/([^/]+)$ public/package-details.php?slug=$1 [L,QSA]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^destination/([^/]+)/?$ public/destination-details.php?slug=$1 [L,QSA]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^package/([^/]+)/?$ public/package-details.php?slug=$1 [L,QSA]
