@@ -1,15 +1,15 @@
 RewriteEngine On
 
 # Base Path
-RewriteBase /zubitours/
+RewriteBase /
 
 # Prevent directory listing
 Options -Indexes
 
 # Custom Error Pages
-ErrorDocument 404 /zubitours/public/404.php
-ErrorDocument 500 /zubitours/public/505.php
-ErrorDocument 505 /zubitours/public/505.php
+ErrorDocument 404 /public/404.php
+ErrorDocument 500 /public/505.php
+ErrorDocument 505 /public/505.php
 
 # Redirect root to index
 RewriteRule ^index$ index.php [L]
