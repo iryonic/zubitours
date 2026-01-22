@@ -1976,28 +1976,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         },
       });
 
-      // SEARCH TOUR
-      const tourForm = document.getElementById("tourForm");
-      if(tourForm) {
-        tourForm.addEventListener("submit", function(e) {
-          e.preventDefault();
-
-          const destination = document.getElementById("destination").value;
-          const checkin = document.getElementById("checkin").value;
-          const duration = document.getElementById("duration").value;
-          const travelers = document.getElementById("travelers").value;
-
-          if (destination && checkin && duration && travelers) {
-            alert(`Searching tours for:
-  Destination: ${destination}
-  Check-in: ${checkin}
-  Duration: ${duration} days
-  Travelers: ${travelers}`);
-          } else {
-            alert("Please fill all fields.");
-          }
-        });
-      }
+     
 
       // Get today's date in YYYY-MM-DD format
       const today = new Date().toISOString().split("T")[0];
