@@ -80,28 +80,49 @@ $form_message = '';
 $form_success = false;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_inquiry'])) {
-    $name = trim($_POST['name'] ?? '');
-    $email = trim($_POST['email'] ?? '');
-    $phone = trim($_POST['phone'] ?? '');
-    $adults = intval($_POST['adults'] ?? 0);
-    $children = intval($_POST['children'] ?? 0);
-    $travel_date = $_POST['travel_date'] ?? null;
-    $message = "Inquiry for: " . $destination['destination_name'] . "\n" . trim($_POST['message'] ?? '');
-    $subject = "Destination Inquiry: " . $destination['destination_name'];
     
-    if (!empty($name) && !empty($email)) {
+    // 1. Honeypot Check (Hidden field that bots fill but humans don't)
+    if (!empty($_POST['website_hp'])) {
+        // Silently fail or redirect bots
+        header("Location: " . BASE_URL . "thank-you"); // Fake success
+        exit();
+    }
+
+    // 2. Simple Math Challenge Check
+    $math_answer = trim($_POST['math_captcha'] ?? '');
+    if ($math_answer !== '12') { // 5 + 7 = 12
+        $form_message = "Incorrect math answer. Please try again.";
+        $form_success = false;
+    } else {
+        $name = trim($_POST['name'] ?? '');
+        $email = trim($_POST['email'] ?? '');
+        $phone = trim($_POST['phone'] ?? '');
+        $adults = intval($_POST['adults'] ?? 0);
+        $children = intval($_POST['children'] ?? 0);
+        $travel_date = $_POST['travel_date'] ?? null;
+        $message = "Inquiry for: " . $destination['destination_name'] . "\n" . trim($_POST['message'] ?? '');
+        $subject = "Destination Inquiry: " . $destination['destination_name'];
+        
+        // 3. Rate Limiting by IP (Optional but recommended)
         $ip_address = $_SERVER['REMOTE_ADDR'] ?? '';
-        $user_agent = $_SERVER['HTTP_USER_AGENT'] ?? '';
-        $source = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
+        $check_limit = $conn->query("SELECT COUNT(*) as cnt FROM contact_messages WHERE ip_address = '$ip_address' AND created_at > DATE_SUB(NOW(), INTERVAL 10 MINUTE)");
+        $limit_row = $check_limit->fetch_assoc();
         
-        $stmt = $conn->prepare("INSERT INTO contact_messages (destination_id, name, email, phone, adults, children, travel_date, subject, message, ip_address, user_agent, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt->bind_param("isssiissssss", $destination_id, $name, $email, $phone, $adults, $children, $travel_date, $subject, $message, $ip_address, $user_agent, $source);
-        
-        if ($stmt->execute()) {
-            header("Location: " . BASE_URL . "thank-you");
-            exit();
-        } else {
-            $form_message = "Sorry, something went wrong. Please try again.";
+        if ($limit_row['cnt'] > 3) {
+             $form_message = "Too many requests. Please try again later.";
+        } else if (!empty($name) && !empty($email)) {
+            $user_agent = $_SERVER['HTTP_USER_AGENT'] ?? '';
+            $source = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
+            
+            $stmt = $conn->prepare("INSERT INTO contact_messages (destination_id, name, email, phone, adults, children, travel_date, subject, message, ip_address, user_agent, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt->bind_param("isssiissssss", $destination_id, $name, $email, $phone, $adults, $children, $travel_date, $subject, $message, $ip_address, $user_agent, $source);
+            
+            if ($stmt->execute()) {
+                header("Location: " . BASE_URL . "thank-you");
+                exit();
+            } else {
+                $form_message = "Sorry, something went wrong. Please try again.";
+            }
         }
     }
 }
@@ -687,6 +708,20 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                                     <input type="tel" name="phone" placeholder="Phone Number" class="w-full bg-white/5 border border-white/10 rounded-xl px-5 py-4 text-sm focus:border-primary focus:bg-white/10 transition outline-none">
                                 </div>
                                 
+                                <!-- Bot Traps -->
+                                <div style="display:none; opacity:0; visibility:hidden; height:0; width:0; overflow:hidden;">
+                                    <label for="website_hp">Website</label>
+                                    <input type="text" name="website_hp" id="website_hp" value="" tabindex="-1">
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Human Verification</label>
+                                    <div class="flex items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                                        <span class="text-slate-900 font-bold">5 + 7 = </span>
+                                        <input type="number" name="math_captcha" required placeholder="?" class="w-20 bg-white border border-slate-200 rounded-lg px-3 py-2 text-center font-bold focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all">
+                                    </div>
+                                </div>
+
                                 <?php if ($price_per_person > 0): ?>
                                 <div class="bg-white/5 rounded-2xl p-6 mt-4 space-y-3">
                                     <div class="flex justify-between text-xs font-bold text-slate-400">
