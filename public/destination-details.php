@@ -380,7 +380,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                             <span class="text-primary font-black uppercase tracking-widest text-xs sm:text-sm block mb-2">Why Book This Tour</span>
                             <h2 class="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">Package Highlights</h2>
                         </div>
-                        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             <?php foreach ($package['highlights'] as $index => $h): 
                                 $icons = ['ri-hotel-line', 'ri-restaurant-line', 'ri-car-line', 'ri-guide-line', 'ri-camera-line', 'ri-landscape-line', 'ri-heart-line', 'ri-shield-flash-line'];
                                 $icon = $icons[$index % count($icons)];
