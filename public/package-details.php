@@ -111,27 +111,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['book_package'])) {
         $booking_message_type = "error";
     } else {
         // Insert booking
+        $source = "Package: " . $package['package_name'];
         $stmt = $conn->prepare("
             INSERT INTO package_bookings (
                 booking_reference, package_id, customer_name, customer_email, 
                 customer_phone, customer_notes, checkin_date, checkout_date, 
-                total_days, number_of_adults, number_of_children, total_amount
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                total_days, number_of_adults, number_of_children, total_amount, source
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
         
         $stmt->bind_param(
-            "sissssssiiid", 
+            "sissssssiiids", 
             $booking_reference, $package_id, $customer_name, $customer_email,
             $customer_phone, $customer_notes, $checkin_date, $checkout_date,
-            $total_days, $number_of_adults, $number_of_children, $total_amount
+            $total_days, $number_of_adults, $number_of_children, $total_amount, $source
         );
         
         if ($stmt->execute()) {
-            $booking_message = "Booking successful! Your booking reference is: <strong>{$booking_reference}</strong>. We'll contact you shortly for confirmation.";
-            $booking_message_type = "success";
-            
-            // Clear form
-            $_POST = [];
+            header("Location: thank-you.php");
+            exit();
         } else {
             $booking_message = "Error creating booking. Please try again or contact us directly.";
             $booking_message_type = "error";

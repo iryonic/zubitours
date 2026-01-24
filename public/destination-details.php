@@ -92,13 +92,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_inquiry'])) {
     if (!empty($name) && !empty($email)) {
         $ip_address = $_SERVER['REMOTE_ADDR'] ?? '';
         $user_agent = $_SERVER['HTTP_USER_AGENT'] ?? '';
+        $source = "Destination: " . $destination['destination_name'];
         
-        $stmt = $conn->prepare("INSERT INTO contact_messages (destination_id, name, email, phone, adults, children, travel_date, subject, message, ip_address, user_agent) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt->bind_param("isssiisssss", $destination_id, $name, $email, $phone, $adults, $children, $travel_date, $subject, $message, $ip_address, $user_agent);
+        $stmt = $conn->prepare("INSERT INTO contact_messages (destination_id, name, email, phone, adults, children, travel_date, subject, message, ip_address, user_agent, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->bind_param("isssiissssss", $destination_id, $name, $email, $phone, $adults, $children, $travel_date, $subject, $message, $ip_address, $user_agent, $source);
         
         if ($stmt->execute()) {
-            $form_message = "Thank you! Our travel expert will contact you shortly.";
-            $form_success = true;
+            header("Location: thank-you.php");
+            exit();
         } else {
             $form_message = "Sorry, something went wrong. Please try again.";
         }

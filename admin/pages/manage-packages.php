@@ -856,6 +856,7 @@ $revenue = $conn->query("SELECT SUM(total_amount) as total FROM package_bookings
                                 <th>Amount</th>
                                 <th>Status</th>
                                 <th>Payment</th>
+                                <th>Source</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -900,6 +901,11 @@ $revenue = $conn->query("SELECT SUM(total_amount) as total FROM package_bookings
                                         <span class="status-badge status-<?php echo $booking['payment_status']; ?>">
                                             <?php echo ucfirst($booking['payment_status']); ?>
                                         </span>
+                                    </td>
+                                    <td>
+                                        <small style="color: var(--text-secondary);">
+                                            <?php echo htmlspecialchars($booking['source'] ?? 'Website'); ?>
+                                        </small>
                                     </td>
                                     <td>
                                         <div class="table-actions">
@@ -1746,6 +1752,7 @@ $revenue = $conn->query("SELECT SUM(total_amount) as total FROM package_bookings
                             <p><strong>Customer:</strong> ${data.customer_name}</p>
                             <p><strong>Email:</strong> ${data.customer_email}</p>
                             <p><strong>Phone:</strong> ${data.customer_phone}</p>
+                            <p><strong>Source:</strong> ${data.source || 'Website'}</p>
                         </div>
                         
                         <div style="margin-bottom: 20px;">

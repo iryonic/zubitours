@@ -167,20 +167,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
         // Get IP and user agent for security logging
         $ip_address = $_SERVER['REMOTE_ADDR'] ?? '';
         $user_agent = $_SERVER['HTTP_USER_AGENT'] ?? '';
+        $source = 'Contact Page';
         
         // Insert into database
         $stmt = $conn->prepare("
             INSERT INTO contact_messages 
-            (name, email, phone, subject, message, ip_address, user_agent) 
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            (name, email, phone, subject, message, ip_address, user_agent, source) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ");
         
-        $stmt->bind_param("sssssss", $name, $email, $phone, $subject, $message, $ip_address, $user_agent);
+        $stmt->bind_param("ssssssss", $name, $email, $phone, $subject, $message, $ip_address, $user_agent, $source);
         
         if ($stmt->execute()) {
-            $form_message = "Thank you for your message! We'll get back to you within 24 hours.";
-            $form_success = true;
-            
             // Optionally send email notification to admin
             $to = "info@zubitours.com";
             $email_subject = "New Contact Form Submission: " . $subject;
@@ -191,6 +189,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
                 Subject: $subject\n
                 Message:\n$message\n\n
                 IP Address: $ip_address\n
+                Source: $source\n
                 Time: " . date('Y-m-d H:i:s') . "
             ";
             $headers = "From: $email\r\n" .
@@ -200,8 +199,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
             // Uncomment to enable email sending
             // mail($to, $email_subject, $email_body, $headers);
             
-            // Clear form data on success
-            $_POST = array();
+            header("Location: thank-you.php");
+            exit();
             
         } else {
             throw new Exception("Error sending message. Please try again.");

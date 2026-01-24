@@ -320,6 +320,9 @@ $message_stats = $conn->query("
                                                 <div class="sender-info">
                                                     <h4><?php echo htmlspecialchars($msg['name']); ?></h4>
                                                     <div class="sender-email"><?php echo $msg['email']; ?></div>
+                                                    <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px;">
+                                                        <i class="ri-links-line"></i> <?php echo htmlspecialchars($msg['source'] ?? 'Website'); ?>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -674,6 +677,11 @@ $message_stats = $conn->query("
                                 <strong>Status:</strong>
                                 <span class="status-badge status-${data.status}">${data.status.charAt(0).toUpperCase() + data.status.slice(1)}</span>
                             </div>
+                        </div>
+                        
+                        <div class="message-details-item">
+                            <strong>Source:</strong>
+                            <span>${data.source || 'Website'}</span>
                         </div>
                         
                         <div class="message-content">
