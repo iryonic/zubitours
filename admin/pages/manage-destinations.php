@@ -1805,6 +1805,7 @@ $total_inquiries = $conn->query("SELECT COUNT(*) as count FROM contact_messages 
                                     <th>Date</th>
                                     <th>Client</th>
                                     <th>Destination</th>
+                                    <th>Source</th>
                                     <th>Travel Details</th>
                                     <th>Message</th>
                                     <th width="100">Actions</th>
@@ -1828,6 +1829,9 @@ $total_inquiries = $conn->query("SELECT COUNT(*) as count FROM contact_messages 
                                 <span class="status-badge" style="background: rgba(37, 99, 235, 0.1); color: var(--primary-color);">
                                     ${inq.destination_name}
                                 </span>
+                            </td>
+                            <td>
+                                <small style="color: var(--text-secondary);">${inq.source || 'Website'}</small>
                             </td>
                             <td>
                                 <span style="font-size: 0.85rem;">

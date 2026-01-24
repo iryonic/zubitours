@@ -11,7 +11,7 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
 $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
 if ($id > 0) {
-    $query = "SELECT cm.*, d.destination_name FROM contact_messages cm JOIN destinations d ON cm.destination_id = d.id WHERE cm.destination_id = ? ORDER BY cm.created_at DESC";
+    $query = "SELECT cm.*, d.destination_name FROM contact_messages cm JOIN destinations d ON cm.destination_id = d.id WHERE cm.destination_id = ?";
     $stmt = $conn->prepare($query);
     $stmt->bind_param("i", $id);
 } else {

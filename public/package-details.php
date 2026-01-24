@@ -111,7 +111,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['book_package'])) {
         $booking_message_type = "error";
     } else {
         // Insert booking
-        $source = "Package: " . $package['package_name'];
+        $source = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
         $stmt = $conn->prepare("
             INSERT INTO package_bookings (
                 booking_reference, package_id, customer_name, customer_email, 
