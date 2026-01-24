@@ -128,7 +128,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['book_package'])) {
         );
         
         if ($stmt->execute()) {
-            header("Location: thank-you.php");
+            header("Location: " . BASE_URL . "thank-you");
             exit();
         } else {
             $booking_message = "Error creating booking. Please try again or contact us directly.";

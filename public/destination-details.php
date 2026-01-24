@@ -98,7 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_inquiry'])) {
         $stmt->bind_param("isssiissssss", $destination_id, $name, $email, $phone, $adults, $children, $travel_date, $subject, $message, $ip_address, $user_agent, $source);
         
         if ($stmt->execute()) {
-            header("Location: thank-you.php");
+            header("Location: " . BASE_URL . "thank-you");
             exit();
         } else {
             $form_message = "Sorry, something went wrong. Please try again.";

@@ -1,41 +1,35 @@
 <?php
 
-// local ENVIRONMENT  setup 
+// Environment Setup (Database & Base URL)
+if ($_SERVER['HTTP_HOST'] == 'localhost' || $_SERVER['HTTP_HOST'] == '127.0.0.1') {
+    // Local Environment
+    $host = 'localhost';
+    $dbname = 'travel_db';
+    $username = 'root';
+    $password = '';
+    
+    if (!defined('BASE_URL')) {
+        define('BASE_URL', 'http://localhost/zubitours/');
+    }
+} else {
+    // Production Environment
+    $host = 'localhost';
+    $dbname = 'u255290550_zubitours';
+    $username = 'u255290550_zubitours';
+    $password = 'Zubi@1234#';
+    
+    if (!defined('BASE_URL')) {
+        define('BASE_URL', 'http://zubitours.com/');
+    }
+}
 
+// Create Connection
+$conn = mysqli_connect($host, $username, $password, $dbname);
 
-
-// $host = 'localhost';
-// $dbname = 'travel_db';
-// $username = 'root';
-// $password = '';
-
-
-// Production ENVIRONMENT  setup 
-
-
-
-
-$host = 'localhost';
-$dbname = 'u255290550_zubitours';
-$password = 'Zubi@1234#';
-$username = 'u255290550_zubitours';
-
-
-
-
-
-
- $conn = mysqli_connect($host, $username, $password, $dbname);
-
-//  if (!defined('BASE_URL')) {
-//      define('BASE_URL', '/zubitours/');
-//  }
-
-
-// production ENVIRONMENT  setup 
-  if (!defined('BASE_URL')) {
-     define('BASE_URL', 'http://zubitours.com/');
- }
+// Check connection
+if (!$conn) {
+    die("Connection failed: " . mysqli_connect_error());
+}
 
 
  if (!function_exists('createSlug')) {

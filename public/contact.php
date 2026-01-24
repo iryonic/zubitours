@@ -199,7 +199,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
             // Uncomment to enable email sending
             // mail($to, $email_subject, $email_body, $headers);
             
-            header("Location: thank-you.php");
+            header("Location: " . BASE_URL . "thank-you");
             exit();
             
         } else {
