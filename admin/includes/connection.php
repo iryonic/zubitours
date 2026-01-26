@@ -1,7 +1,10 @@
 <?php
 
 // Environment Setup (Database & Base URL)
-if ($_SERVER['HTTP_HOST'] == 'localhost' || $_SERVER['HTTP_HOST'] == '127.0.0.1') {
+$protocol = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? "https" : "http";
+$host_name = $_SERVER['HTTP_HOST'];
+
+if ($host_name == 'localhost' || $host_name == '127.0.0.1' || strpos($host_name, '192.168.') !== false || strpos($host_name, '.local') !== false) {
     // Local Environment
     $host = 'localhost';
     $dbname = 'travel_db';
@@ -9,7 +12,9 @@ if ($_SERVER['HTTP_HOST'] == 'localhost' || $_SERVER['HTTP_HOST'] == '127.0.0.1'
     $password = '';
     
     if (!defined('BASE_URL')) {
-        define('BASE_URL', 'http://localhost/zubitours/');
+        // Automatically detect the correct local path
+        $path = (strpos($_SERVER['REQUEST_URI'], '/zubitours/') !== false) ? '/zubitours/' : '/';
+        define('BASE_URL', $protocol . '://' . $host_name . $path);
     }
 } else {
     // Production Environment
@@ -19,7 +24,7 @@ if ($_SERVER['HTTP_HOST'] == 'localhost' || $_SERVER['HTTP_HOST'] == '127.0.0.1'
     $password = 'Zubi@1234#';
     
     if (!defined('BASE_URL')) {
-        define('BASE_URL', 'http://zubitours.com/');
+        define('BASE_URL', $protocol . '://zubitours.com/');
     }
 }
 
