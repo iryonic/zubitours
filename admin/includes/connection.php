@@ -1,8 +1,13 @@
 <?php
 
 // Environment Setup (Database & Base URL)
-$protocol = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? "https" : "http";
-$host_name = $_SERVER['HTTP_HOST'];
+$protocol = 'http';
+if (isset($_SERVER['HTTPS']) && ($_SERVER['HTTPS'] === 'on' || $_SERVER['HTTPS'] === 1)) {
+    $protocol = 'https';
+} elseif (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
+    $protocol = 'https';
+}
+$host_name = $_SERVER['HTTP_HOST'] ?? 'zubitours.com';
 
 if ($host_name == 'localhost' || $host_name == '127.0.0.1' || strpos($host_name, '192.168.') !== false || strpos($host_name, '.local') !== false) {
     // Local Environment

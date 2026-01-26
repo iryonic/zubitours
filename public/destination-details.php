@@ -27,7 +27,8 @@ $dest_query->execute();
 $dest_result = $dest_query->get_result();
 
 if ($dest_result->num_rows === 0) {
-    header('Location: ' . BASE_URL . 'destinations');
+    http_response_code(404);
+    include '404.php';
     exit();
 }
 
