@@ -1295,13 +1295,13 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <!-- End Google Tag Manager (noscript) -->
  
   <!-- Loader -->
-    <div id="loader">
+    <!-- <div id="loader">
       <div class="travel-loader">
         <span class="path"></span>
         <i class="ri-flight-takeoff-line plane"></i>
       </div>
       <h2 class="brand-name">Zubi Tours & Holiday</h2>
-    </div>
+    </div> -->
 
   <!--==================== HEADER ====================-->
   <header class="header" id="header">
